@@ -59,9 +59,9 @@ function cnUtil(...classes: (string | undefined | null | false)[]): string {
 // Use the utility if cn is not available
 const cnFallback = typeof cn !== 'undefined' ? cn : cnUtil;
 
-// Hook for click outside
+// Hook for click outside - Fixed type definition
 function useClickOutside<T extends HTMLElement = HTMLElement>(
-  ref: React.RefObject<T>,
+  ref: React.RefObject<T | null>,
   handler: (event: MouseEvent | TouchEvent) => void,
   mouseEvent: 'mousedown' | 'mouseup' = 'mousedown'
 ): void {
@@ -2867,9 +2867,7 @@ export function HairvanaInterface() {
               onClick={() => alert('Edit preferences coming soon!')}
               className="text-purple-600"
             >
-              <Chevron
-
-className="w-5 h-5" />
+              <ChevronRight className="w-5 h-5" />
             </motion.button>
           </div>
         </div>

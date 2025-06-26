@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   experimental: {
     // Disable the new searchParams handling that's causing the invariant error
     ppr: false,
+    // Add this to mitigate hydration-related issues
+    serverComponentsExternalPackages: [],
   },
   // Ensure proper hydration
   reactStrictMode: true,

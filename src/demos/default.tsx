@@ -125,12 +125,10 @@ function AnimatedTextCycle({
     hidden: {
       y: -20,
       opacity: 0,
-      filter: "blur(8px)"
     },
     visible: {
       y: 0,
       opacity: 1,
-      filter: "blur(0px)",
       transition: {
         duration: 0.4,
         ease: "easeOut"
@@ -139,7 +137,6 @@ function AnimatedTextCycle({
     exit: {
       y: 20,
       opacity: 0,
-      filter: "blur(8px)",
       transition: {
         duration: 0.3,
         ease: "easeIn"
@@ -747,7 +744,7 @@ export function HairvanaInterface() {
     {
       id: '2',
       name: 'Marcus Rodriguez',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit:crop',
+      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
       rating: 4.8,
       reviewCount: 89,
       specialties: ['Cuts', 'Beard', 'Styling'],
@@ -2870,7 +2867,9 @@ export function HairvanaInterface() {
               onClick={() => alert('Edit preferences coming soon!')}
               className="text-purple-600"
             >
-              <ChevronRight className="w-5 h-5" />
+              <Chevron
+
+className="w-5 h-5" />
             </motion.button>
           </div>
         </div>

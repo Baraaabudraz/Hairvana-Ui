@@ -5,7 +5,20 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 
-const activities = [
+type ActivityStatus = 'pending' | 'urgent' | 'success';
+
+interface Activity {
+  id: number;
+  type: string;
+  title: string;
+  description: string;
+  user: string;
+  avatar: string;
+  timestamp: Date;
+  status: ActivityStatus;
+}
+
+const activities: Activity[] = [
   {
     id: 1,
     type: 'salon_registration',
@@ -58,7 +71,7 @@ const activities = [
   },
 ];
 
-const statusColors = {
+const statusColors: Record<ActivityStatus, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   urgent: 'bg-red-100 text-red-800',
   success: 'bg-green-100 text-green-800',

@@ -14,7 +14,25 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Search, MoreHorizontal, Eye, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
 
-const salons = [
+type SalonStatus = 'active' | 'pending' | 'suspended';
+type SubscriptionType = 'Basic' | 'Standard' | 'Premium';
+
+interface Salon {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  status: SalonStatus;
+  subscription: SubscriptionType;
+  joinDate: string;
+  revenue: string;
+  bookings: number;
+  rating: number;
+  avatar: string;
+}
+
+const salons: Salon[] = [
   {
     id: 1,
     name: 'Luxe Hair Studio',
@@ -73,13 +91,13 @@ const salons = [
   },
 ];
 
-const statusColors = {
+const statusColors: Record<SalonStatus, string> = {
   active: 'bg-green-100 text-green-800',
   pending: 'bg-yellow-100 text-yellow-800',
   suspended: 'bg-red-100 text-red-800',
 };
 
-const subscriptionColors = {
+const subscriptionColors: Record<SubscriptionType, string> = {
   Basic: 'bg-gray-100 text-gray-800',
   Standard: 'bg-blue-100 text-blue-800',
   Premium: 'bg-purple-100 text-purple-800',
@@ -87,7 +105,7 @@ const subscriptionColors = {
 
 export default function SalonsPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | SalonStatus>('all');
 
   const filteredSalons = salons.filter(salon => {
     const matchesSearch = salon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

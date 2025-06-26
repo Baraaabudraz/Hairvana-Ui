@@ -1,0 +1,248 @@
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Search, MoreHorizontal, Eye, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
+
+const salons = [
+  {
+    id: 1,
+    name: 'Luxe Hair Studio',
+    email: 'contact@luxehair.com',
+    phone: '+1 (555) 123-4567',
+    location: 'Beverly Hills, CA',
+    status: 'active',
+    subscription: 'Premium',
+    joinDate: '2024-01-15',
+    revenue: '$12,450',
+    bookings: 156,
+    rating: 4.9,
+    avatar: 'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
+  },
+  {
+    id: 2,
+    name: 'Urban Cuts',
+    email: 'info@urbancuts.com',
+    phone: '+1 (555) 234-5678',
+    location: 'Manhattan, NY',
+    status: 'active',
+    subscription: 'Standard',
+    joinDate: '2024-02-20',
+    revenue: '$9,820',
+    bookings: 134,
+    rating: 4.8,
+    avatar: 'https://images.pexels.com/photos/3992656/pexels-photo-3992656.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
+  },
+  {
+    id: 3,
+    name: 'Style & Grace',
+    email: 'hello@styleandgrace.com',
+    phone: '+1 (555) 345-6789',
+    location: 'Miami, FL',
+    status: 'pending',
+    subscription: 'Basic',
+    joinDate: '2024-03-10',
+    revenue: '$0',
+    bookings: 0,
+    rating: 0,
+    avatar: 'https://images.pexels.com/photos/3993456/pexels-photo-3993456.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
+  },
+  {
+    id: 4,
+    name: 'The Hair Lounge',
+    email: 'contact@hairlounge.com',
+    phone: '+1 (555) 456-7890',
+    location: 'Austin, TX',
+    status: 'suspended',
+    subscription: 'Standard',
+    joinDate: '2024-01-05',
+    revenue: '$7,230',
+    bookings: 87,
+    rating: 4.6,
+    avatar: 'https://images.pexels.com/photos/3992660/pexels-photo-3992660.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
+  },
+];
+
+const statusColors = {
+  active: 'bg-green-100 text-green-800',
+  pending: 'bg-yellow-100 text-yellow-800',
+  suspended: 'bg-red-100 text-red-800',
+};
+
+const subscriptionColors = {
+  Basic: 'bg-gray-100 text-gray-800',
+  Standard: 'bg-blue-100 text-blue-800',
+  Premium: 'bg-purple-100 text-purple-800',
+};
+
+export default function SalonsPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const filteredSalons = salons.filter(salon => {
+    const matchesSearch = salon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         salon.location.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || salon.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Salon Management</h1>
+          <p className="text-gray-600">Manage registered salons and their subscriptions</p>
+        </div>
+        <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+          Add New Salon
+        </Button>
+      </div>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row gap-4 justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search salons..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('all')}
+                size="sm"
+              >
+                All
+              </Button>
+              <Button
+                variant={statusFilter === 'active' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('active')}
+                size="sm"
+              >
+                Active
+              </Button>
+              <Button
+                variant={statusFilter === 'pending' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('pending')}
+                size="sm"
+              >
+                Pending
+              </Button>
+              <Button
+                variant={statusFilter === 'suspended' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('suspended')}
+                size="sm"
+              >
+                Suspended
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {filteredSalons.map((salon) => (
+              <div key={salon.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-center space-x-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={salon.avatar} alt={salon.name} />
+                    <AvatarFallback>{salon.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{salon.name}</h3>
+                    <p className="text-sm text-gray-600">{salon.location}</p>
+                    <p className="text-xs text-gray-500">{salon.email}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-6">
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-gray-900">{salon.revenue}</p>
+                    <p className="text-xs text-gray-500">Revenue</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-gray-900">{salon.bookings}</p>
+                    <p className="text-xs text-gray-500">Bookings</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {salon.rating > 0 ? `★ ${salon.rating}` : 'N/A'}
+                    </p>
+                    <p className="text-xs text-gray-500">Rating</p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Badge className={statusColors[salon.status]}>
+                      {salon.status}
+                    </Badge>
+                    <Badge className={subscriptionColors[salon.subscription]}>
+                      {salon.subscription}
+                    </Badge>
+                  </div>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      {salon.status === 'pending' && (
+                        <>
+                          <DropdownMenuItem className="text-green-600">
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Approve
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600">
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Reject
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {salon.status === 'active' && (
+                        <DropdownMenuItem className="text-red-600">
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Suspend
+                        </DropdownMenuItem>
+                      )}
+                      {salon.status === 'suspended' && (
+                        <DropdownMenuItem className="text-green-600">
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Reactivate
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem className="text-red-600">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

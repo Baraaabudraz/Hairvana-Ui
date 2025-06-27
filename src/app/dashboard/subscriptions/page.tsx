@@ -995,7 +995,7 @@ export default function SubscriptionsPage() {
             <Button 
               onClick={handleDowngradePlan}
               disabled={!selectedNewPlan}
-              className="bg-orange-600 hover:bg-orange-700 text-white font-semibold"
+              className="bg-orange-600 hover:bg-orange-700 text-black font-semibold"
             >
               <ArrowDownCircle className="h-4 w-4 mr-2" />
               Downgrade Plan

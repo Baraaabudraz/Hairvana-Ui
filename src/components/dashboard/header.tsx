@@ -36,12 +36,14 @@ export function Header() {
           />
         </div>
         <div className="flex items-center gap-x-4 lg:gap-x-6">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
-              3
-            </span>
-          </Button>
+          <Link href="/dashboard/notifications">
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
+                3
+              </span>
+            </Button>
+          </Link>
 
           <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-200" />
 

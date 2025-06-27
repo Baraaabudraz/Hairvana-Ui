@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Search, User } from 'lucide-react';
+import { Bell, Search, User, Settings as SettingsIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export function Header() {
   const { user, logout } = useAuthStore();
@@ -65,12 +66,17 @@ export function Header() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/profile" className="flex items-center w-full">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                Settings
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/settings" className="flex items-center w-full">
+                  <SettingsIcon className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>

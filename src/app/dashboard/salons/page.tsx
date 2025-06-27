@@ -385,14 +385,20 @@ export default function SalonsPage() {
                         <>
                           <DropdownMenuItem 
                             className="text-green-600 cursor-pointer"
-                            onClick={() => openApproveDialog(salon)}
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              openApproveDialog(salon);
+                            }}
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             Approve
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-red-600 cursor-pointer"
-                            onClick={() => openRejectDialog(salon)}
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              openRejectDialog(salon);
+                            }}
                           >
                             <XCircle className="mr-2 h-4 w-4" />
                             Reject
@@ -402,7 +408,10 @@ export default function SalonsPage() {
                       {salon.status === 'active' && (
                         <DropdownMenuItem 
                           className="text-red-600 cursor-pointer"
-                          onClick={() => openSuspendDialog(salon)}
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            openSuspendDialog(salon);
+                          }}
                         >
                           <XCircle className="mr-2 h-4 w-4" />
                           Suspend
@@ -411,7 +420,10 @@ export default function SalonsPage() {
                       {salon.status === 'suspended' && (
                         <DropdownMenuItem 
                           className="text-green-600 cursor-pointer"
-                          onClick={() => openReactivateDialog(salon)}
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            openReactivateDialog(salon);
+                          }}
                         >
                           <CheckCircle className="mr-2 h-4 w-4" />
                           Reactivate
@@ -419,7 +431,10 @@ export default function SalonsPage() {
                       )}
                       <DropdownMenuItem 
                         className="text-red-600 cursor-pointer"
-                        onClick={() => openDeleteDialog(salon)}
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          openDeleteDialog(salon);
+                        }}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete

@@ -1,24 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
-// Demo admin users
-const adminUsers = [
-  {
-    id: '1',
-    email: 'admin@hairvana.com',
-    password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
-    name: 'Admin User',
-    role: 'admin' as const,
-  },
-  {
-    id: '2',
-    email: 'superadmin@hairvana.com',
-    password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
-    name: 'Super Admin',
-    role: 'super_admin' as const,
-  },
-];
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,9 +14,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user
-    const user = adminUsers.find(u => u.email === email);
-    if (!user) {
+    // Find user in Supabase
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error || !user) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -46,7 +34,7 @@ export async function POST(request: NextRequest) {
     if (password === 'admin123') {
       isValidPassword = true;
     } else {
-      isValidPassword = await bcrypt.compare(password, user.password);
+      isValidPassword = await bcrypt.compare(password, user.password_hash);
     }
 
     if (!isValidPassword) {
@@ -55,6 +43,12 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Update last login time
+    await supabase
+      .from('users')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', user.id);
 
     // Generate JWT token
     const token = jwt.sign(
@@ -68,7 +62,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Return user data (without password) and token
-    const { password: _, ...userWithoutPassword } = user;
+    const { password_hash, ...userWithoutPassword } = user;
     
     return NextResponse.json({
       user: userWithoutPassword,

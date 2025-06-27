@@ -327,10 +327,12 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
           <p className="text-gray-600">Manage all platform users: admins, salon owners, and customers</p>
         </div>
-        <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-          <Plus className="h-4 w-4 mr-2" />
-          Add New User
-        </Button>
+        <Link href="/dashboard/users/new">
+          <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Add New User
+          </Button>
+        </Link>
       </div>
 
       {/* Stats Cards */}

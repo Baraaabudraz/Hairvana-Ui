@@ -156,6 +156,47 @@ interface IntegrationSettings {
   }>;
 }
 
+interface BillingSettings {
+  defaultCurrency: string;
+  taxRate: number;
+  invoicePrefix: string;
+  paymentTerms: number;
+  autoInvoicing: boolean;
+  latePaymentFees: boolean;
+  paymentMethods: Array<{
+    id: string;
+    type: string;
+    provider: string;
+    enabled: boolean;
+    testMode: boolean;
+  }>;
+  subscriptionPlans: Array<{
+    id: string;
+    name: string;
+    price: number;
+    features: string[];
+    active: boolean;
+  }>;
+}
+
+interface BackupSettings {
+  autoBackup: boolean;
+  backupFrequency: string;
+  backupRetention: number;
+  backupLocation: string;
+  encryptBackups: boolean;
+  notifyOnBackup: boolean;
+  lastBackup: string;
+  backupSize: string;
+  restorePoints: Array<{
+    id: string;
+    date: string;
+    size: string;
+    type: string;
+    status: string;
+  }>;
+}
+
 const settingsSections: SettingsSection[] = [
   {
     id: 'profile',
@@ -296,6 +337,93 @@ export default function SettingsPage() {
         url: 'https://api.hairvana.com/webhooks/payments',
         events: ['payment.succeeded', 'payment.failed'],
         active: true
+      }
+    ]
+  });
+  const [billingSettings, setBillingSettings] = useState<BillingSettings>({
+    defaultCurrency: 'USD',
+    taxRate: 8.5,
+    invoicePrefix: 'INV',
+    paymentTerms: 30,
+    autoInvoicing: true,
+    latePaymentFees: true,
+    paymentMethods: [
+      {
+        id: '1',
+        type: 'Credit Card',
+        provider: 'Stripe',
+        enabled: true,
+        testMode: false
+      },
+      {
+        id: '2',
+        type: 'PayPal',
+        provider: 'PayPal',
+        enabled: true,
+        testMode: false
+      },
+      {
+        id: '3',
+        type: 'Bank Transfer',
+        provider: 'Manual',
+        enabled: false,
+        testMode: false
+      }
+    ],
+    subscriptionPlans: [
+      {
+        id: 'basic',
+        name: 'Basic',
+        price: 19.99,
+        features: ['Up to 100 bookings', 'Basic support', 'Online booking'],
+        active: true
+      },
+      {
+        id: 'standard',
+        name: 'Standard',
+        price: 49.99,
+        features: ['Up to 500 bookings', 'Priority support', 'Advanced features'],
+        active: true
+      },
+      {
+        id: 'premium',
+        name: 'Premium',
+        price: 99.99,
+        features: ['Unlimited bookings', '24/7 support', 'All features'],
+        active: true
+      }
+    ]
+  });
+  const [backupSettings, setBackupSettings] = useState<BackupSettings>({
+    autoBackup: true,
+    backupFrequency: 'daily',
+    backupRetention: 30,
+    backupLocation: 'cloud',
+    encryptBackups: true,
+    notifyOnBackup: true,
+    lastBackup: '2024-06-15T02:00:00Z',
+    backupSize: '2.4 GB',
+    restorePoints: [
+      {
+        id: '1',
+        date: '2024-06-15T02:00:00Z',
+        size: '2.4 GB',
+        type: 'Full Backup',
+        status: 'completed'
+      },
+      {
+        id: '2',
+        date: '2024-06-14T02:00:00Z',
+        size: '2.3 GB',
+        type: 'Full Backup',
+        status: 'completed'
+      },
+      {
+        id: '3',
+        date: '2024-06-13T02:00:00Z',
+        size: '2.2 GB',
+        type: 'Full Backup',
+        status: 'completed'
       }
     ]
   });
@@ -847,6 +975,184 @@ export default function SettingsPage() {
     </div>
   );
 
+  const renderBillingSettings = () => (
+    <div className="space-y-6">
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle>Billing Configuration</CardTitle>
+          <CardDescription>
+            Configure billing settings and payment methods
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="defaultCurrency">Default Currency</Label>
+              <Select value={billingSettings.defaultCurrency} onValueChange={(value) => setBillingSettings(prev => ({ ...prev, defaultCurrency: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD - US Dollar</SelectItem>
+                  <SelectItem value="EUR">EUR - Euro</SelectItem>
+                  <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                  <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="taxRate">Tax Rate (%)</Label>
+              <Input
+                id="taxRate"
+                type="number"
+                step="0.1"
+                value={billingSettings.taxRate}
+                onChange={(e) => setBillingSettings(prev => ({ ...prev, taxRate: parseFloat(e.target.value) }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invoicePrefix">Invoice Prefix</Label>
+              <Input
+                id="invoicePrefix"
+                value={billingSettings.invoicePrefix}
+                onChange={(e) => setBillingSettings(prev => ({ ...prev, invoicePrefix: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="paymentTerms">Payment Terms (days)</Label>
+              <Input
+                id="paymentTerms"
+                type="number"
+                value={billingSettings.paymentTerms}
+                onChange={(e) => setBillingSettings(prev => ({ ...prev, paymentTerms: parseInt(e.target.value) }))}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Auto Invoicing</p>
+                <p className="text-sm text-gray-600">Automatically generate invoices for subscriptions</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={billingSettings.autoInvoicing}
+                onChange={(e) => setBillingSettings(prev => ({ ...prev, autoInvoicing: e.target.checked }))}
+                className="rounded"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Late Payment Fees</p>
+                <p className="text-sm text-gray-600">Apply fees for overdue payments</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={billingSettings.latePaymentFees}
+                onChange={(e) => setBillingSettings(prev => ({ ...prev, latePaymentFees: e.target.checked }))}
+                className="rounded"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => handleSaveSettings('Billing')}
+              disabled={loading}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {loading ? 'Saving...' : 'Save Billing Settings'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle>Payment Methods</CardTitle>
+          <CardDescription>
+            Configure available payment methods for customers
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {billingSettings.paymentMethods.map((method) => (
+              <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="h-5 w-5 text-gray-600" />
+                  <div>
+                    <p className="font-medium">{method.type}</p>
+                    <p className="text-sm text-gray-600">Provider: {method.provider}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  {method.testMode && (
+                    <Badge variant="outline" className="text-yellow-600">Test Mode</Badge>
+                  )}
+                  <input
+                    type="checkbox"
+                    checked={method.enabled}
+                    onChange={(e) => setBillingSettings(prev => ({
+                      ...prev,
+                      paymentMethods: prev.paymentMethods.map(pm =>
+                        pm.id === method.id ? { ...pm, enabled: e.target.checked } : pm
+                      )
+                    }))}
+                    className="rounded"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle>Subscription Plans</CardTitle>
+          <CardDescription>
+            Manage available subscription plans and pricing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {billingSettings.subscriptionPlans.map((plan) => (
+              <div key={plan.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-semibold">{plan.name}</h4>
+                    <Badge className="bg-purple-100 text-purple-800">${plan.price}/month</Badge>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {plan.features.join(' • ')}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <input
+                    type="checkbox"
+                    checked={plan.active}
+                    onChange={(e) => setBillingSettings(prev => ({
+                      ...prev,
+                      subscriptionPlans: prev.subscriptionPlans.map(sp =>
+                        sp.id === plan.id ? { ...sp, active: e.target.checked } : sp
+                      )
+                    }))}
+                    className="rounded"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   const renderIntegrationSettings = () => (
     <div className="space-y-6">
       <Card className="border-0 shadow-sm">
@@ -1120,6 +1426,161 @@ export default function SettingsPage() {
     </div>
   );
 
+  const renderBackupSettings = () => (
+    <div className="space-y-6">
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle>Backup Configuration</CardTitle>
+          <CardDescription>
+            Configure automatic backup settings and schedules
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="backupFrequency">Backup Frequency</Label>
+              <Select value={backupSettings.backupFrequency} onValueChange={(value) => setBackupSettings(prev => ({ ...prev, backupFrequency: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hourly">Hourly</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="backupRetention">Retention Period (days)</Label>
+              <Input
+                id="backupRetention"
+                type="number"
+                value={backupSettings.backupRetention}
+                onChange={(e) => setBackupSettings(prev => ({ ...prev, backupRetention: parseInt(e.target.value) }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="backupLocation">Backup Location</Label>
+              <Select value={backupSettings.backupLocation} onValueChange={(value) => setBackupSettings(prev => ({ ...prev, backupLocation: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="local">Local Storage</SelectItem>
+                  <SelectItem value="cloud">Cloud Storage</SelectItem>
+                  <SelectItem value="both">Both Local & Cloud</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Auto Backup</p>
+                <p className="text-sm text-gray-600">Enable automatic backups</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={backupSettings.autoBackup}
+                onChange={(e) => setBackupSettings(prev => ({ ...prev, autoBackup: e.target.checked }))}
+                className="rounded"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Encrypt Backups</p>
+                <p className="text-sm text-gray-600">Encrypt backup files for security</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={backupSettings.encryptBackups}
+                onChange={(e) => setBackupSettings(prev => ({ ...prev, encryptBackups: e.target.checked }))}
+                className="rounded"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Backup Notifications</p>
+                <p className="text-sm text-gray-600">Get notified when backups complete</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={backupSettings.notifyOnBackup}
+                onChange={(e) => setBackupSettings(prev => ({ ...prev, notifyOnBackup: e.target.checked }))}
+                className="rounded"
+              />
+            </div>
+          </div>
+
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-3 mb-2">
+              <Cloud className="h-5 w-5 text-blue-600" />
+              <h4 className="font-semibold text-blue-900">Last Backup</h4>
+            </div>
+            <p className="text-sm text-blue-800">
+              {new Date(backupSettings.lastBackup).toLocaleString()} • Size: {backupSettings.backupSize}
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Create Backup Now
+            </Button>
+            <Button 
+              onClick={() => handleSaveSettings('Backup')}
+              disabled={loading}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {loading ? 'Saving...' : 'Save Backup Settings'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle>Restore Points</CardTitle>
+          <CardDescription>
+            Available backup restore points
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {backupSettings.restorePoints.map((restore) => (
+              <div key={restore.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Database className="h-5 w-5 text-gray-600" />
+                  <div>
+                    <p className="font-medium">{restore.type}</p>
+                    <p className="text-sm text-gray-600">
+                      {new Date(restore.date).toLocaleString()} • {restore.size}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className={restore.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                    {restore.status}
+                  </Badge>
+                  <Button variant="outline" size="sm">
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    Restore
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   const renderContent = () => {
     switch (activeSection) {
       case 'profile':
@@ -1130,10 +1591,14 @@ export default function SettingsPage() {
         return renderNotificationSettings();
       case 'platform':
         return renderPlatformSettings();
+      case 'billing':
+        return renderBillingSettings();
       case 'integrations':
         return renderIntegrationSettings();
       case 'system':
         return renderSystemSettings();
+      case 'backup':
+        return renderBackupSettings();
       default:
         return renderProfileSettings();
     }

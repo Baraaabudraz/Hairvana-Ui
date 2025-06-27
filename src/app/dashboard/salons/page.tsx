@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, MoreHorizontal, Eye, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { Search, MoreHorizontal, Eye, Edit, Trash2, CheckCircle, XCircle, Plus } from 'lucide-react';
 
 type SalonStatus = 'active' | 'pending' | 'suspended';
 type SubscriptionType = 'Basic' | 'Standard' | 'Premium';
@@ -121,9 +122,12 @@ export default function SalonsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Salon Management</h1>
           <p className="text-gray-600">Manage registered salons and their subscriptions</p>
         </div>
-        <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-          Add New Salon
-        </Button>
+        <Link href="/dashboard/salons/new">
+          <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Add New Salon
+          </Button>
+        </Link>
       </div>
 
       <Card className="border-0 shadow-sm">

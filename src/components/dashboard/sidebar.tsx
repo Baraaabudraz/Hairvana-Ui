@@ -1,8 +1,5 @@
-'use client';
-
 import { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
   BarChart3,
@@ -32,7 +29,7 @@ const navigation = [
 
 export function Sidebar() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const pathname = usePathname();
+  const location = useLocation();
 
   return (
     <>
@@ -94,11 +91,12 @@ export function Sidebar() {
             <li>
               <ul role="list" className="-mx-2 space-y-1">
                 {navigation.map((item) => {
-                  const isActive = pathname === item.href;
+                  const isActive = location.pathname === item.href || 
+                                  (item.href !== '/dashboard' && location.pathname.startsWith(item.href));
                   return (
                     <li key={item.name}>
                       <Link
-                        href={item.href}
+                        to={item.href}
                         className={cn(
                           'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors',
                           isActive

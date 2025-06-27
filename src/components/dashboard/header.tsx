@@ -1,5 +1,3 @@
-'use client';
-
 import { Bell, Search, User, Settings as SettingsIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,17 +11,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/stores/auth-store';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useNavigate, Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 
 export function Header() {
   const { user, logout } = useAuthStore();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    router.push('/auth/login');
+    navigate('/auth/login');
   };
 
   // Mock notifications data
@@ -75,7 +72,7 @@ export function Header() {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium">Notifications</p>
-                  <Link href="/dashboard/notifications" className="text-xs text-purple-600 hover:text-purple-800">
+                  <Link to="/dashboard/notifications" className="text-xs text-purple-600 hover:text-purple-800">
                     View all
                   </Link>
                 </div>
@@ -101,7 +98,7 @@ export function Header() {
                   <DropdownMenuSeparator />
                   <div className="p-2 text-center">
                     <Button variant="outline" size="sm" className="w-full" asChild>
-                      <Link href="/dashboard/notifications">
+                      <Link to="/dashboard/notifications">
                         See all notifications
                       </Link>
                     </Button>
@@ -139,13 +136,13 @@ export function Header() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/profile" className="flex items-center w-full">
+                <Link to="/dashboard/profile" className="flex items-center w-full">
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/settings" className="flex items-center w-full">
+                <Link to="/dashboard/settings" className="flex items-center w-full">
                   <SettingsIcon className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </Link>

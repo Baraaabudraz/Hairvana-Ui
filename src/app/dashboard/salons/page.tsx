@@ -222,14 +222,16 @@ export default function SalonsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
-                        <Link href={`/dashboard/salons/${salon.id}`}>
+                        <Link href={`/dashboard/salons/${salon.id}`} className="flex items-center w-full">
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
+                      <DropdownMenuItem asChild>
+                        <Link href={`/dashboard/salons/${salon.id}/edit`} className="flex items-center w-full">
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </Link>
                       </DropdownMenuItem>
                       {salon.status === 'pending' && (
                         <>

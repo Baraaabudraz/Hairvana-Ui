@@ -843,7 +843,7 @@ export default function SubscriptionsPage() {
             <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmCancel}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               Cancel Subscription
             </AlertDialogAction>
@@ -917,7 +917,7 @@ export default function SubscriptionsPage() {
             <Button 
               onClick={handleUpgradePlan}
               disabled={!selectedNewPlan}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 text-white"
             >
               <ArrowUpCircle className="h-4 w-4 mr-2" />
               Upgrade Plan
@@ -995,7 +995,7 @@ export default function SubscriptionsPage() {
             <Button 
               onClick={handleDowngradePlan}
               disabled={!selectedNewPlan}
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-orange-600 hover:bg-orange-700 text-white"
             >
               <ArrowDownCircle className="h-4 w-4 mr-2" />
               Downgrade Plan
@@ -1084,7 +1084,7 @@ export default function SubscriptionsPage() {
             <Button 
               onClick={handleUpdatePaymentMethod}
               disabled={!newPaymentMethod.cardNumber || !newPaymentMethod.cardholderName}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <CreditCard className="h-4 w-4 mr-2" />
               Update Payment Method

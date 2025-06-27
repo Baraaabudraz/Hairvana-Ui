@@ -23,6 +23,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Search, 
@@ -152,7 +161,18 @@ export default function SubscriptionsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | SubscriptionStatus>('all');
   const [planFilter, setPlanFilter] = useState<'all' | PlanType>('all');
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
+  const [editBillingDialogOpen, setEditBillingDialogOpen] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
+  const [selectedNewPlan, setSelectedNewPlan] = useState<Plan | null>(null);
+  const [newPaymentMethod, setNewPaymentMethod] = useState({
+    cardNumber: '',
+    expiryMonth: '',
+    expiryYear: '',
+    cvv: '',
+    cardholderName: '',
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -224,9 +244,170 @@ export default function SubscriptionsPage() {
     }
   };
 
+  const handleUpgradePlan = async () => {
+    if (!selectedSubscription || !selectedNewPlan) return;
+
+    try {
+      const response = await fetch(`/api/subscriptions/${selectedSubscription.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          plan: selectedNewPlan.name,
+          amount: selectedNewPlan.price,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upgrade subscription');
+      }
+
+      setSubscriptions(prev => prev.map(sub => 
+        sub.id === selectedSubscription.id 
+          ? { ...sub, plan: selectedNewPlan.name as PlanType, amount: selectedNewPlan.price }
+          : sub
+      ));
+
+      toast({
+        title: 'Plan upgraded successfully',
+        description: `${selectedSubscription.salonName} has been upgraded to ${selectedNewPlan.name} plan.`,
+      });
+
+      setUpgradeDialogOpen(false);
+      setSelectedSubscription(null);
+      setSelectedNewPlan(null);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to upgrade plan. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDowngradePlan = async () => {
+    if (!selectedSubscription || !selectedNewPlan) return;
+
+    try {
+      const response = await fetch(`/api/subscriptions/${selectedSubscription.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          plan: selectedNewPlan.name,
+          amount: selectedNewPlan.price,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to downgrade subscription');
+      }
+
+      setSubscriptions(prev => prev.map(sub => 
+        sub.id === selectedSubscription.id 
+          ? { ...sub, plan: selectedNewPlan.name as PlanType, amount: selectedNewPlan.price }
+          : sub
+      ));
+
+      toast({
+        title: 'Plan downgraded successfully',
+        description: `${selectedSubscription.salonName} has been downgraded to ${selectedNewPlan.name} plan.`,
+      });
+
+      setDowngradeDialogOpen(false);
+      setSelectedSubscription(null);
+      setSelectedNewPlan(null);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to downgrade plan. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUpdatePaymentMethod = async () => {
+    if (!selectedSubscription) return;
+
+    try {
+      const response = await fetch(`/api/subscriptions/${selectedSubscription.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          paymentMethod: {
+            type: 'card',
+            last4: newPaymentMethod.cardNumber.slice(-4),
+            brand: 'Visa', // In real app, detect from card number
+            expiryMonth: parseInt(newPaymentMethod.expiryMonth),
+            expiryYear: parseInt(newPaymentMethod.expiryYear),
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update payment method');
+      }
+
+      setSubscriptions(prev => prev.map(sub => 
+        sub.id === selectedSubscription.id 
+          ? { 
+              ...sub, 
+              paymentMethod: {
+                type: 'card',
+                last4: newPaymentMethod.cardNumber.slice(-4),
+                brand: 'Visa',
+                expiryMonth: parseInt(newPaymentMethod.expiryMonth),
+                expiryYear: parseInt(newPaymentMethod.expiryYear),
+              }
+            }
+          : sub
+      ));
+
+      toast({
+        title: 'Payment method updated',
+        description: 'The payment method has been updated successfully.',
+      });
+
+      setEditBillingDialogOpen(false);
+      setSelectedSubscription(null);
+      setNewPaymentMethod({
+        cardNumber: '',
+        expiryMonth: '',
+        expiryYear: '',
+        cvv: '',
+        cardholderName: '',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update payment method. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const openCancelDialog = (subscription: Subscription) => {
     setSelectedSubscription(subscription);
     setCancelDialogOpen(true);
+  };
+
+  const openUpgradeDialog = (subscription: Subscription) => {
+    setSelectedSubscription(subscription);
+    setUpgradeDialogOpen(true);
+  };
+
+  const openDowngradeDialog = (subscription: Subscription) => {
+    setSelectedSubscription(subscription);
+    setDowngradeDialogOpen(true);
+  };
+
+  const openEditBillingDialog = (subscription: Subscription) => {
+    setSelectedSubscription(subscription);
+    setEditBillingDialogOpen(true);
   };
 
   const confirmCancel = () => {
@@ -235,6 +416,18 @@ export default function SubscriptionsPage() {
       setCancelDialogOpen(false);
       setSelectedSubscription(null);
     }
+  };
+
+  const getAvailableUpgrades = (currentPlan: PlanType) => {
+    const planOrder = ['Basic', 'Standard', 'Premium'];
+    const currentIndex = planOrder.indexOf(currentPlan);
+    return plans.filter(plan => planOrder.indexOf(plan.name) > currentIndex);
+  };
+
+  const getAvailableDowngrades = (currentPlan: PlanType) => {
+    const planOrder = ['Basic', 'Standard', 'Premium'];
+    const currentIndex = planOrder.indexOf(currentPlan);
+    return plans.filter(plan => planOrder.indexOf(plan.name) < currentIndex);
   };
 
   const getUsagePercentage = (current: number, limit: number | 'unlimited') => {
@@ -573,17 +766,35 @@ export default function SubscriptionsPage() {
                         </DropdownMenuItem>
                         {subscription.status === 'active' && (
                           <>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="cursor-pointer"
+                              onSelect={(e) => {
+                                e.preventDefault();
+                                openUpgradeDialog(subscription);
+                              }}
+                            >
                               <ArrowUpCircle className="mr-2 h-4 w-4" />
                               Upgrade Plan
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="cursor-pointer"
+                              onSelect={(e) => {
+                                e.preventDefault();
+                                openDowngradeDialog(subscription);
+                              }}
+                            >
                               <ArrowDownCircle className="mr-2 h-4 w-4" />
                               Downgrade Plan
                             </DropdownMenuItem>
                           </>
                         )}
-                        <DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="cursor-pointer"
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            openEditBillingDialog(subscription);
+                          }}
+                        >
                           <Edit className="mr-2 h-4 w-4" />
                           Edit Billing
                         </DropdownMenuItem>
@@ -637,6 +848,248 @@ export default function SubscriptionsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Upgrade Plan Dialog */}
+      <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Upgrade Subscription Plan</DialogTitle>
+            <DialogDescription>
+              Choose a higher tier plan for "{selectedSubscription?.salonName}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Current Plan:</strong> {selectedSubscription?.plan} - ${selectedSubscription?.amount}/month
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {getAvailableUpgrades(selectedSubscription?.plan || 'Basic').map((plan) => {
+                const PlanIcon = planIcons[plan.name as PlanType];
+                const isSelected = selectedNewPlan?.id === plan.id;
+                return (
+                  <div
+                    key={plan.id}
+                    onClick={() => setSelectedNewPlan(plan)}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      isSelected ? 'border-purple-200 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`p-2 rounded-lg bg-gradient-to-r ${
+                        plan.name === 'Standard' ? 'from-blue-600 to-blue-700' : 'from-purple-600 to-purple-700'
+                      }`}>
+                        <PlanIcon className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900">{plan.name}</h3>
+                        <p className="text-lg font-semibold text-gray-900">${plan.price}/month</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{plan.description}</p>
+                    <ul className="space-y-1">
+                      {plan.features.slice(0, 4).map((feature, index) => (
+                        <li key={index} className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <span className="text-xs text-gray-700">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+            {getAvailableUpgrades(selectedSubscription?.plan || 'Basic').length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <Crown className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>Already on the highest plan</p>
+                <p className="text-sm">This subscription is already on the Premium plan.</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpgradePlan}
+              disabled={!selectedNewPlan}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <ArrowUpCircle className="h-4 w-4 mr-2" />
+              Upgrade Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Downgrade Plan Dialog */}
+      <Dialog open={downgradeDialogOpen} onOpenChange={setDowngradeDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Downgrade Subscription Plan</DialogTitle>
+            <DialogDescription>
+              Choose a lower tier plan for "{selectedSubscription?.salonName}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-yellow-50 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Current Plan:</strong> {selectedSubscription?.plan} - ${selectedSubscription?.amount}/month
+              </p>
+              <p className="text-xs text-yellow-700 mt-1">
+                Downgrading will reduce available features and limits.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {getAvailableDowngrades(selectedSubscription?.plan || 'Premium').map((plan) => {
+                const PlanIcon = planIcons[plan.name as PlanType];
+                const isSelected = selectedNewPlan?.id === plan.id;
+                return (
+                  <div
+                    key={plan.id}
+                    onClick={() => setSelectedNewPlan(plan)}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      isSelected ? 'border-orange-200 bg-orange-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`p-2 rounded-lg bg-gradient-to-r ${
+                        plan.name === 'Basic' ? 'from-gray-600 to-gray-700' : 'from-blue-600 to-blue-700'
+                      }`}>
+                        <PlanIcon className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900">{plan.name}</h3>
+                        <p className="text-lg font-semibold text-gray-900">${plan.price}/month</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{plan.description}</p>
+                    <ul className="space-y-1">
+                      {plan.features.slice(0, 4).map((feature, index) => (
+                        <li key={index} className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <span className="text-xs text-gray-700">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+            {getAvailableDowngrades(selectedSubscription?.plan || 'Basic').length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <Zap className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>Already on the lowest plan</p>
+                <p className="text-sm">This subscription is already on the Basic plan.</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDowngradeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleDowngradePlan}
+              disabled={!selectedNewPlan}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <ArrowDownCircle className="h-4 w-4 mr-2" />
+              Downgrade Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Billing Dialog */}
+      <Dialog open={editBillingDialogOpen} onOpenChange={setEditBillingDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Payment Method</DialogTitle>
+            <DialogDescription>
+              Update the payment method for "{selectedSubscription?.salonName}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedSubscription?.paymentMethod && (
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-800">
+                  <strong>Current:</strong> {selectedSubscription.paymentMethod.brand} ending in {selectedSubscription.paymentMethod.last4}
+                </p>
+                <p className="text-xs text-gray-600">
+                  Expires {selectedSubscription.paymentMethod.expiryMonth}/{selectedSubscription.paymentMethod.expiryYear}
+                </p>
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="cardholderName">Cardholder Name</Label>
+                <Input
+                  id="cardholderName"
+                  placeholder="John Doe"
+                  value={newPaymentMethod.cardholderName}
+                  onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cardholderName: e.target.value }))}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="cardNumber">Card Number</Label>
+                <Input
+                  id="cardNumber"
+                  placeholder="1234 5678 9012 3456"
+                  value={newPaymentMethod.cardNumber}
+                  onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cardNumber: e.target.value }))}
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="expiryMonth">Month</Label>
+                  <Input
+                    id="expiryMonth"
+                    placeholder="MM"
+                    value={newPaymentMethod.expiryMonth}
+                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, expiryMonth: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expiryYear">Year</Label>
+                  <Input
+                    id="expiryYear"
+                    placeholder="YYYY"
+                    value={newPaymentMethod.expiryYear}
+                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, expiryYear: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cvv">CVV</Label>
+                  <Input
+                    id="cvv"
+                    placeholder="123"
+                    value={newPaymentMethod.cvv}
+                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cvv: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditBillingDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdatePaymentMethod}
+              disabled={!newPaymentMethod.cardNumber || !newPaymentMethod.cardholderName}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <CreditCard className="h-4 w-4 mr-2" />
+              Update Payment Method
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

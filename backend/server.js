@@ -15,10 +15,32 @@ const analyticsRoutes = require('./routes/analytics');
 const authRoutes = require('./routes/auth');
 const notificationRoutes = require('./routes/notifications');
 
-// Initialize Supabase client
+// Validate environment variables
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+
+if (!supabaseUrl || supabaseUrl === 'your_supabase_url' || !supabaseUrl.startsWith('http')) {
+  console.error('❌ Error: SUPABASE_URL is not properly configured in .env file');
+  console.error('Please set SUPABASE_URL to your actual Supabase project URL');
+  console.error('Example: SUPABASE_URL=https://your-project.supabase.co');
+  process.exit(1);
+}
+
+if (!supabaseKey || supabaseKey === 'your_supabase_service_role_key') {
+  console.error('❌ Error: SUPABASE_SERVICE_ROLE_KEY is not properly configured in .env file');
+  console.error('Please set SUPABASE_SERVICE_ROLE_KEY to your actual Supabase service role key');
+  process.exit(1);
+}
+
+// Initialize Supabase client
+let supabase;
+try {
+  supabase = createClient(supabaseUrl, supabaseKey);
+  console.log('✅ Supabase client initialized successfully');
+} catch (error) {
+  console.error('❌ Error initializing Supabase client:', error.message);
+  process.exit(1);
+}
 
 // Initialize Express app
 const app = express();
@@ -64,7 +86,8 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 module.exports = app;

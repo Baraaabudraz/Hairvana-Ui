@@ -7,22 +7,22 @@ import LoginPage from './pages/auth/login';
 
 // Dashboard Pages
 import DashboardLayout from './layouts/dashboard-layout';
-import DashboardPage from './pages/dashboard';
-import SalonsPage from './pages/dashboard/salons';
+import DashboardPage from './pages/dashboard/index';
+import SalonsPage from './pages/dashboard/salons/index';
 import SalonDetailsPage from './pages/dashboard/salons/details';
 import EditSalonPage from './pages/dashboard/salons/edit';
 import NewSalonPage from './pages/dashboard/salons/new';
-import UsersPage from './pages/dashboard/users';
+import UsersPage from './pages/dashboard/users/index';
 import UserDetailsPage from './pages/dashboard/users/details';
 import NewUserPage from './pages/dashboard/users/new';
-import SubscriptionsPage from './pages/dashboard/subscriptions';
+import SubscriptionsPage from './pages/dashboard/subscriptions/index';
 import SubscriptionDetailsPage from './pages/dashboard/subscriptions/details';
 import NewSubscriptionPage from './pages/dashboard/subscriptions/new';
 import AnalyticsPage from './pages/dashboard/analytics';
 import ReportsPage from './pages/dashboard/reports';
 import NotificationsPage from './pages/dashboard/notifications';
 import SettingsPage from './pages/dashboard/settings';
-import ProfilePage from './pages/dashboard/profile';
+import ProfilePage from './pages/dashboard/profile/index';
 
 function App() {
   const { user, isLoading } = useAuthStore();

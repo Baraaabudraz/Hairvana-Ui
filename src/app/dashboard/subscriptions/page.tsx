@@ -828,15 +828,17 @@ export default function SubscriptionsPage() {
             <AlertDialogDescription>
               Are you sure you want to cancel the subscription for "{selectedSubscription?.salonName}"? 
               This action will immediately revoke access to premium features and cannot be undone.
-              The salon will lose access to:
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Advanced booking features</li>
-                <li>Analytics and reporting</li>
-                <li>Priority support</li>
-                <li>Custom branding options</li>
-              </ul>
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="mt-4">
+            <p className="text-sm text-gray-600 mb-2">The salon will lose access to:</p>
+            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+              <li>Advanced booking features</li>
+              <li>Analytics and reporting</li>
+              <li>Priority support</li>
+              <li>Custom branding options</li>
+            </ul>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
             <AlertDialogAction 

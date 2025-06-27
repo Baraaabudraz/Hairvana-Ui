@@ -31,7 +31,10 @@ import {
   Printer,
   FileText,
   Receipt,
-  Eye
+  Eye,
+  ExternalLink,
+  Mail,
+  Phone
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -287,106 +290,324 @@ export default function SubscriptionDetailsPage() {
     fetchSubscription();
   }, [params.id]);
 
-  const handlePrintInvoice = (invoice: BillingHistory) => {
-    // Create a new window for printing
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const invoiceHTML = `
+  const generateInvoiceHTML = (invoice: BillingHistory) => {
+    return `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Invoice ${invoice.invoiceNumber}</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
-            .header { text-align: center; margin-bottom: 40px; }
-            .company-name { font-size: 24px; font-weight: bold; color: #8b5cf6; }
-            .invoice-title { font-size: 20px; margin: 20px 0; }
-            .invoice-details { display: flex; justify-content: space-between; margin: 30px 0; }
-            .billing-info { margin: 20px 0; }
-            .table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-            .table th { background-color: #f8f9fa; font-weight: bold; }
-            .total-section { margin-top: 30px; text-align: right; }
-            .total-row { margin: 5px 0; }
-            .grand-total { font-size: 18px; font-weight: bold; }
-            .footer { margin-top: 50px; text-align: center; color: #666; font-size: 12px; }
-            @media print {
-              body { margin: 0; }
-              .no-print { display: none; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+              line-height: 1.6; 
+              color: #333; 
+              background: #fff;
+              padding: 40px;
             }
+            .invoice-container { max-width: 800px; margin: 0 auto; }
+            .header { 
+              display: flex; 
+              justify-content: space-between; 
+              align-items: center; 
+              margin-bottom: 40px; 
+              padding-bottom: 20px;
+              border-bottom: 3px solid #8b5cf6;
+            }
+            .company-info h1 { 
+              font-size: 32px; 
+              font-weight: bold; 
+              background: linear-gradient(135deg, #8b5cf6, #ec4899);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
+              margin-bottom: 5px;
+            }
+            .company-info p { color: #666; font-size: 14px; }
+            .invoice-info { text-align: right; }
+            .invoice-info h2 { 
+              font-size: 28px; 
+              color: #8b5cf6; 
+              margin-bottom: 10px;
+            }
+            .invoice-details { 
+              display: flex; 
+              justify-content: space-between; 
+              margin: 40px 0; 
+              gap: 40px;
+            }
+            .bill-to, .invoice-meta { flex: 1; }
+            .bill-to h3, .invoice-meta h3 { 
+              font-size: 16px; 
+              color: #8b5cf6; 
+              margin-bottom: 15px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            .bill-to p, .invoice-meta p { 
+              margin-bottom: 8px; 
+              font-size: 14px;
+            }
+            .invoice-table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin: 40px 0; 
+              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+              border-radius: 8px;
+              overflow: hidden;
+            }
+            .invoice-table th { 
+              background: linear-gradient(135deg, #8b5cf6, #ec4899);
+              color: white; 
+              padding: 15px; 
+              text-align: left; 
+              font-weight: 600;
+              font-size: 14px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .invoice-table td { 
+              padding: 15px; 
+              border-bottom: 1px solid #eee; 
+              font-size: 14px;
+            }
+            .invoice-table tbody tr:hover { background-color: #f8f9fa; }
+            .totals-section { 
+              margin-top: 40px; 
+              text-align: right; 
+            }
+            .totals-table { 
+              margin-left: auto; 
+              width: 300px;
+            }
+            .totals-table tr td { 
+              padding: 8px 15px; 
+              border: none;
+            }
+            .totals-table tr:last-child td { 
+              border-top: 2px solid #8b5cf6;
+              font-weight: bold; 
+              font-size: 18px;
+              color: #8b5cf6;
+            }
+            .status-badge { 
+              display: inline-block;
+              padding: 4px 12px; 
+              border-radius: 20px; 
+              font-size: 12px; 
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .status-paid { background: #dcfce7; color: #166534; }
+            .status-pending { background: #fef3c7; color: #92400e; }
+            .status-failed { background: #fee2e2; color: #991b1b; }
+            .footer { 
+              margin-top: 60px; 
+              text-align: center; 
+              color: #666; 
+              font-size: 12px;
+              border-top: 1px solid #eee;
+              padding-top: 30px;
+            }
+            .footer p { margin-bottom: 5px; }
+            .payment-info {
+              background: #f8f9fa;
+              padding: 20px;
+              border-radius: 8px;
+              margin: 30px 0;
+              border-left: 4px solid #8b5cf6;
+            }
+            .payment-info h4 {
+              color: #8b5cf6;
+              margin-bottom: 10px;
+              font-size: 14px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            @media print {
+              body { padding: 20px; }
+              .no-print { display: none !important; }
+              .invoice-container { box-shadow: none; }
+            }
+            @page { margin: 1in; }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="company-name">Hairvana</div>
-            <div>Admin Dashboard</div>
-          </div>
-          
-          <div class="invoice-title">INVOICE</div>
-          
-          <div class="invoice-details">
-            <div>
-              <strong>Invoice Number:</strong> ${invoice.invoiceNumber}<br>
-              <strong>Date:</strong> ${format(new Date(invoice.date), 'MMMM dd, yyyy')}<br>
-              <strong>Status:</strong> ${invoice.status.toUpperCase()}
+          <div class="invoice-container">
+            <!-- Header -->
+            <div class="header">
+              <div class="company-info">
+                <h1>Hairvana</h1>
+                <p>Professional Salon Management Platform</p>
+                <p>admin@hairvana.com | (555) 123-4567</p>
+              </div>
+              <div class="invoice-info">
+                <h2>INVOICE</h2>
+                <span class="status-badge status-${invoice.status}">${invoice.status.toUpperCase()}</span>
+              </div>
             </div>
-            <div>
-              <strong>Bill To:</strong><br>
-              ${subscription?.salonName}<br>
-              ${subscription?.ownerName}<br>
-              ${subscription?.ownerEmail}
+
+            <!-- Invoice Details -->
+            <div class="invoice-details">
+              <div class="bill-to">
+                <h3>Bill To</h3>
+                <p><strong>${subscription?.salonName}</strong></p>
+                <p>${subscription?.ownerName}</p>
+                <p>${subscription?.ownerEmail}</p>
+                <p>Salon ID: ${subscription?.salonId}</p>
+              </div>
+              <div class="invoice-meta">
+                <h3>Invoice Details</h3>
+                <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
+                <p><strong>Date:</strong> ${format(new Date(invoice.date), 'MMMM dd, yyyy')}</p>
+                <p><strong>Due Date:</strong> ${format(new Date(invoice.date), 'MMMM dd, yyyy')}</p>
+                <p><strong>Billing Period:</strong> ${format(new Date(invoice.date), 'MMM dd')} - ${format(new Date(new Date(invoice.date).getTime() + 30 * 24 * 60 * 60 * 1000), 'MMM dd, yyyy')}</p>
+              </div>
+            </div>
+
+            <!-- Service Details -->
+            <table class="invoice-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Plan</th>
+                  <th>Billing Cycle</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <strong>${invoice.description}</strong><br>
+                    <small>Subscription service for salon management platform</small>
+                  </td>
+                  <td>${subscription?.plan} Plan</td>
+                  <td>${subscription?.billingCycle}</td>
+                  <td>$${invoice.subtotal?.toFixed(2) || (invoice.amount - (invoice.taxAmount || 0)).toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Payment Information -->
+            <div class="payment-info">
+              <h4>Payment Information</h4>
+              <p><strong>Payment Method:</strong> ${subscription?.paymentMethod?.brand} ending in ${subscription?.paymentMethod?.last4}</p>
+              <p><strong>Transaction ID:</strong> txn_${invoice.id}</p>
+              <p><strong>Payment Date:</strong> ${format(new Date(invoice.date), 'MMMM dd, yyyy')}</p>
+            </div>
+
+            <!-- Totals -->
+            <div class="totals-section">
+              <table class="totals-table">
+                <tr>
+                  <td>Subtotal:</td>
+                  <td>$${invoice.subtotal?.toFixed(2) || (invoice.amount - (invoice.taxAmount || 0)).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td>Tax (8%):</td>
+                  <td>$${invoice.taxAmount?.toFixed(2) || '0.00'}</td>
+                </tr>
+                <tr>
+                  <td><strong>Total Amount:</strong></td>
+                  <td><strong>$${invoice.amount.toFixed(2)}</strong></td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+              <p><strong>Thank you for your business!</strong></p>
+              <p>This invoice was generated automatically by the Hairvana platform.</p>
+              <p>For questions about this invoice, please contact our support team.</p>
+              <p style="margin-top: 20px; font-size: 10px; color: #999;">
+                Hairvana Inc. | 123 Business Ave, Suite 100 | Business City, BC 12345
+              </p>
             </div>
           </div>
-          
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th>Period</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>${invoice.description}</td>
-                <td>${format(new Date(invoice.date), 'MMM dd')} - ${format(new Date(new Date(invoice.date).getTime() + 30 * 24 * 60 * 60 * 1000), 'MMM dd, yyyy')}</td>
-                <td>$${invoice.subtotal?.toFixed(2) || (invoice.amount - (invoice.taxAmount || 0)).toFixed(2)}</td>
-              </tr>
-            </tbody>
-          </table>
-          
-          <div class="total-section">
-            <div class="total-row">Subtotal: $${invoice.subtotal?.toFixed(2) || (invoice.amount - (invoice.taxAmount || 0)).toFixed(2)}</div>
-            <div class="total-row">Tax: $${invoice.taxAmount?.toFixed(2) || '0.00'}</div>
-            <div class="total-row grand-total">Total: $${invoice.amount.toFixed(2)}</div>
-          </div>
-          
-          <div class="footer">
-            <p>Thank you for your business!</p>
-            <p>This is a computer-generated invoice.</p>
-          </div>
-          
+
           <script>
             window.onload = function() {
-              window.print();
-              window.onafterprint = function() {
-                window.close();
-              }
+              setTimeout(() => {
+                window.print();
+                window.onafterprint = function() {
+                  window.close();
+                }
+              }, 500);
             }
           </script>
         </body>
       </html>
     `;
+  };
 
+  const handlePrintInvoice = (invoice: BillingHistory) => {
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) {
+      alert('Please allow popups to print invoices');
+      return;
+    }
+
+    const invoiceHTML = generateInvoiceHTML(invoice);
     printWindow.document.write(invoiceHTML);
     printWindow.document.close();
   };
 
   const handleDownloadInvoice = (invoice: BillingHistory) => {
-    // In a real app, this would download a PDF
-    // For demo purposes, we'll show a toast
-    alert(`Downloading invoice ${invoice.invoiceNumber} as PDF...`);
+    // Create a blob with the HTML content
+    const invoiceHTML = generateInvoiceHTML(invoice);
+    const blob = new Blob([invoiceHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create a temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `invoice-${invoice.invoiceNumber}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    // Show success message
+    alert(`Invoice ${invoice.invoiceNumber} downloaded successfully!`);
+  };
+
+  const handleViewInvoice = (invoice: BillingHistory) => {
+    const viewWindow = window.open('', '_blank', 'width=900,height=700,scrollbars=yes');
+    if (!viewWindow) {
+      alert('Please allow popups to view invoices');
+      return;
+    }
+
+    const invoiceHTML = generateInvoiceHTML(invoice).replace(
+      '<script>',
+      '<!-- Auto-print disabled for view mode --><script style="display:none;">'
+    );
+    
+    viewWindow.document.write(invoiceHTML);
+    viewWindow.document.close();
+  };
+
+  const handleEmailInvoice = (invoice: BillingHistory) => {
+    const subject = `Invoice ${invoice.invoiceNumber} - ${subscription?.salonName}`;
+    const body = `Dear ${subscription?.ownerName},
+
+Please find attached your invoice ${invoice.invoiceNumber} for ${subscription?.salonName}.
+
+Invoice Details:
+- Amount: $${invoice.amount.toFixed(2)}
+- Date: ${format(new Date(invoice.date), 'MMMM dd, yyyy')}
+- Status: ${invoice.status.toUpperCase()}
+
+Thank you for your business!
+
+Best regards,
+Hairvana Team`;
+
+    const mailtoLink = `mailto:${subscription?.ownerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoLink);
   };
 
   if (loading) {
@@ -723,6 +944,7 @@ export default function SubscriptionDetailsPage() {
                       size="sm"
                       onClick={() => handlePrintInvoice(invoice)}
                       title="Print Invoice"
+                      className="hover:bg-blue-50 hover:text-blue-600"
                     >
                       <Printer className="h-4 w-4" />
                     </Button>
@@ -730,16 +952,28 @@ export default function SubscriptionDetailsPage() {
                       variant="ghost" 
                       size="sm"
                       onClick={() => handleDownloadInvoice(invoice)}
-                      title="Download PDF"
+                      title="Download Invoice"
+                      className="hover:bg-green-50 hover:text-green-600"
                     >
                       <Download className="h-4 w-4" />
                     </Button>
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      title="View Details"
+                      onClick={() => handleViewInvoice(invoice)}
+                      title="View Invoice"
+                      className="hover:bg-purple-50 hover:text-purple-600"
                     >
                       <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleEmailInvoice(invoice)}
+                      title="Email Invoice"
+                      className="hover:bg-orange-50 hover:text-orange-600"
+                    >
+                      <Mail className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

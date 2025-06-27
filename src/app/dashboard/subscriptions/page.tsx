@@ -268,10 +268,12 @@ export default function SubscriptionsPage() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Sync Billing
           </Button>
-          <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Subscription
-          </Button>
+          <Link href="/dashboard/subscriptions/new">
+            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Subscription
+            </Button>
+          </Link>
         </div>
       </div>
 

@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
+import { loginUser, logoutUser } from '@/api/auth';
 
 interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'super_admin';
+  role: 'admin' | 'super_admin' | 'salon' | 'user';
   avatar?: string;
 }
 
@@ -18,6 +19,7 @@ interface AuthState {
   logout: () => void;
   setUser: (user: User) => void;
   setToken: (token: string) => void;
+  checkSession: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -30,57 +32,13 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
-          // In a real app with a backend, you would make an API call
-          // For this demo, we'll simulate a login
-          if (email === 'admin@hairvana.com' && password === 'admin123') {
-            const mockUser = {
-              id: '1',
-              email: 'admin@hairvana.com',
-              name: 'John Smith',
-              role: 'admin' as const,
-              avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2'
-            };
-            
-            const mockToken = 'mock-jwt-token';
-            
-            set({ 
-              user: mockUser, 
-              token: mockToken,
-              isLoading: false 
-            });
-            return;
-          }
+          const { user, token } = await loginUser(email, password);
           
-          // For Supabase integration
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password
+          set({ 
+            user, 
+            token,
+            isLoading: false 
           });
-          
-          if (error) throw error;
-          
-          if (data.user && data.session) {
-            // Fetch user details from your users table
-            const { data: userData, error: userError } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', data.user.id)
-              .single();
-              
-            if (userError) throw userError;
-            
-            set({ 
-              user: {
-                id: userData.id,
-                email: userData.email,
-                name: userData.name,
-                role: userData.role,
-                avatar: userData.avatar
-              }, 
-              token: data.session.access_token,
-              isLoading: false 
-            });
-          }
         } catch (error) {
           console.error('Login error:', error);
           set({ isLoading: false });
@@ -88,12 +46,13 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
-        // Sign out from Supabase
-        supabase.auth.signOut().catch(console.error);
-        
-        // Clear local state
-        set({ user: null, token: null });
+      logout: async () => {
+        try {
+          await logoutUser();
+          set({ user: null, token: null });
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
       },
 
       setUser: (user: User) => {
@@ -102,6 +61,45 @@ export const useAuthStore = create<AuthState>()(
 
       setToken: (token: string) => {
         set({ token });
+      },
+      
+      checkSession: async () => {
+        set({ isLoading: true });
+        try {
+          const { data, error } = await supabase.auth.getSession();
+          
+          if (error || !data.session) {
+            set({ user: null, token: null, isLoading: false });
+            return;
+          }
+          
+          // Fetch user details from your users table
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', data.session.user.id)
+            .single();
+          
+          if (userError || !userData) {
+            set({ user: null, token: null, isLoading: false });
+            return;
+          }
+          
+          set({ 
+            user: {
+              id: userData.id,
+              email: userData.email,
+              name: userData.name,
+              role: userData.role,
+              avatar: userData.avatar
+            }, 
+            token: data.session.access_token,
+            isLoading: false 
+          });
+        } catch (error) {
+          console.error('Session check error:', error);
+          set({ user: null, token: null, isLoading: false });
+        }
       },
     }),
     {

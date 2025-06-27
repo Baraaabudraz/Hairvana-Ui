@@ -25,15 +25,20 @@ import SettingsPage from './pages/dashboard/settings';
 import ProfilePage from './pages/dashboard/profile/index';
 
 function App() {
-  const { user, isLoading } = useAuthStore();
+  const { user, isLoading, checkSession } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    if (!isLoading) {
+    // Check for existing session on app load
+    checkSession().then(() => {
       setIsInitialized(true);
-      
+    });
+  }, [checkSession]);
+
+  useEffect(() => {
+    if (!isLoading && isInitialized) {
       // If user is not logged in and not on login page, redirect to login
       if (!user && !location.pathname.includes('/auth/login')) {
         navigate('/auth/login');
@@ -44,7 +49,7 @@ function App() {
         navigate('/dashboard');
       }
     }
-  }, [user, isLoading, navigate, location.pathname]);
+  }, [user, isLoading, navigate, location.pathname, isInitialized]);
 
   if (!isInitialized || isLoading) {
     return (

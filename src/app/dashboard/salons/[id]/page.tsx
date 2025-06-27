@@ -164,10 +164,12 @@ export default function SalonDetailsPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
+          <Link href={`/dashboard/salons/${salon.id}/edit`}>
+            <Button variant="outline">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          </Link>
           <Button variant="outline" className="text-red-600 hover:text-red-700">
             <Trash2 className="h-4 w-4 mr-2" />
             Delete

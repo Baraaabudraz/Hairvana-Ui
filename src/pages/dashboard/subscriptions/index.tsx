@@ -12,6 +12,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -43,6 +53,7 @@ import {
   ArrowDownCircle,
   RefreshCw
 } from 'lucide-react';
+import { format } from 'date-fns';
 
 type SubscriptionStatus = 'active' | 'trial' | 'cancelled' | 'past_due';
 type PlanType = 'Basic' | 'Standard' | 'Premium';
@@ -1059,15 +1070,15 @@ export default function SubscriptionsPage() {
       </Card>
 
       {/* Cancel Confirmation Dialog */}
-      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cancel Subscription</DialogTitle>
-            <DialogDescription>
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Subscription</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to cancel the subscription for "{selectedSubscription?.salonName}"? 
               This action will immediately revoke access to premium features and cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
           <div className="mt-4">
             <p className="text-sm text-gray-600 mb-2">The salon will lose access to:</p>
             <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
@@ -1077,19 +1088,17 @@ export default function SubscriptionsPage() {
               <li>Custom branding options</li>
             </ul>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
-              Keep Subscription
-            </Button>
-            <Button 
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
+            <AlertDialogAction 
               onClick={confirmCancel}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               Cancel Subscription
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Upgrade Plan Dialog */}
       <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>

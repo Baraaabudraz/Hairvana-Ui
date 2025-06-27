@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -342,7 +342,7 @@ export default function SettingsPage() {
                 <Upload className="h-4 w-4 mr-2" />
                 Upload Photo
               </Button>
-              <p className="text-sm text-gray-500">JPG, PNG up to 2MB</p>
+              <p className="text-xs text-gray-500">JPG, PNG up to 2MB</p>
             </div>
           </div>
 
@@ -1132,6 +1132,10 @@ export default function SettingsPage() {
         return renderIntegrationSettings();
       case 'system':
         return renderSystemSettings();
+      case 'billing':
+        return renderProfileSettings(); // Using profile settings as placeholder
+      case 'backup':
+        return renderProfileSettings(); // Using profile settings as placeholder
       default:
         return renderProfileSettings();
     }

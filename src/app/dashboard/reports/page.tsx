@@ -23,6 +23,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { ReportViewer } from '@/components/reports/report-viewer';
 import {
   FileText,
   Download,
@@ -48,7 +49,9 @@ import {
   FileImage,
   Settings,
   Search,
-  RefreshCw
+  RefreshCw,
+  Play,
+  Loader2
 } from 'lucide-react';
 import { format, subDays, subMonths, subYears } from 'date-fns';
 
@@ -184,6 +187,8 @@ export default function ReportsPage() {
     filters: [] as string[],
     schedule: 'once' as 'once' | 'daily' | 'weekly' | 'monthly',
   });
+  const [generatingReports, setGeneratingReports] = useState<Set<string>>(new Set());
+  const [viewingReport, setViewingReport] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -347,11 +352,66 @@ export default function ReportsPage() {
         filters: [],
         schedule: 'once',
       });
+
+      // Simulate report generation completion
+      setTimeout(() => {
+        setReports(prev => prev.map(report => 
+          report.id === newReport.id 
+            ? { ...report, status: 'completed', generatedAt: new Date().toISOString(), size: '3.2 MB' }
+            : report
+        ));
+      }, 3000);
     } catch (error) {
       toast({
         title: 'Error creating report',
         description: 'Please try again later.',
         variant: 'destructive',
+      });
+    }
+  };
+
+  const handleShowReport = async (template: ReportTemplate) => {
+    const reportId = `temp_${Date.now()}`;
+    setGeneratingReports(prev => new Set(prev).add(reportId));
+
+    try {
+      const response = await fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          templateId: template.id,
+          parameters: {
+            dateRange: '30d',
+            format: 'interactive',
+            filters: []
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate report');
+      }
+
+      const result = await response.json();
+      setViewingReport(result.data);
+
+      toast({
+        title: 'Report generated successfully',
+        description: `${template.name} is ready for viewing.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error generating report',
+        description: 'Please try again later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingReports(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(reportId);
+        return newSet;
       });
     }
   };
@@ -623,6 +683,70 @@ export default function ReportsPage() {
         </div>
       </div>
 
+      {/* Report Templates */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle>Quick Report Templates</CardTitle>
+          <CardDescription>
+            Generate instant reports with pre-configured templates
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {reportTemplates.map((template) => {
+              const Icon = template.icon;
+              const isGenerating = Array.from(generatingReports).some(id => id.includes(template.id));
+              
+              return (
+                <div key={template.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                  {template.popular && (
+                    <Badge className="mb-2 bg-blue-600 text-white">Popular</Badge>
+                  )}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`p-2 rounded-lg bg-gradient-to-r ${template.color}`}>
+                      <Icon className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{template.name}</h3>
+                      <Badge className={typeColors[template.type]}>{template.type}</Badge>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">{template.description}</p>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleShowReport(template)}
+                      disabled={isGenerating}
+                      className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 mr-2" />
+                          Show Report
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedTemplate(template);
+                        setCreateDialogOpen(true);
+                      }}
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Filters */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-6">
@@ -741,7 +865,7 @@ export default function ReportsPage() {
                     )}
                     {report.status === 'generating' && (
                       <div className="flex items-center gap-2 text-blue-600">
-                        <Clock className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                         <span className="text-sm">Generating...</span>
                       </div>
                     )}
@@ -842,6 +966,14 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Report Viewer Modal */}
+      {viewingReport && (
+        <ReportViewer
+          reportData={viewingReport}
+          onClose={() => setViewingReport(null)}
+        />
+      )}
     </div>
   );
 }

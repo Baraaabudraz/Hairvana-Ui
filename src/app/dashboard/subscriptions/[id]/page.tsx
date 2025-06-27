@@ -27,7 +27,11 @@ import {
   BarChart3,
   RefreshCw,
   ArrowUpCircle,
-  ArrowDownCircle
+  ArrowDownCircle,
+  Printer,
+  FileText,
+  Receipt,
+  Eye
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -46,6 +50,9 @@ interface BillingHistory {
   amount: number;
   status: string;
   description: string;
+  invoiceNumber?: string;
+  taxAmount?: number;
+  subtotal?: number;
 }
 
 interface Usage {
@@ -158,35 +165,50 @@ export default function SubscriptionDetailsPage() {
                 date: '2024-06-15',
                 amount: 99.99,
                 status: 'paid',
-                description: 'Premium Plan - Monthly'
+                description: 'Premium Plan - Monthly',
+                invoiceNumber: 'INV-2024-001',
+                taxAmount: 8.00,
+                subtotal: 91.99
               },
               {
                 id: 'inv_002',
                 date: '2024-05-15',
                 amount: 99.99,
                 status: 'paid',
-                description: 'Premium Plan - Monthly'
+                description: 'Premium Plan - Monthly',
+                invoiceNumber: 'INV-2024-002',
+                taxAmount: 8.00,
+                subtotal: 91.99
               },
               {
                 id: 'inv_003',
                 date: '2024-04-15',
                 amount: 99.99,
                 status: 'paid',
-                description: 'Premium Plan - Monthly'
+                description: 'Premium Plan - Monthly',
+                invoiceNumber: 'INV-2024-003',
+                taxAmount: 8.00,
+                subtotal: 91.99
               },
               {
                 id: 'inv_004',
                 date: '2024-03-15',
                 amount: 99.99,
                 status: 'paid',
-                description: 'Premium Plan - Monthly'
+                description: 'Premium Plan - Monthly',
+                invoiceNumber: 'INV-2024-004',
+                taxAmount: 8.00,
+                subtotal: 91.99
               },
               {
                 id: 'inv_005',
                 date: '2024-02-15',
                 amount: 99.99,
                 status: 'paid',
-                description: 'Premium Plan - Monthly'
+                description: 'Premium Plan - Monthly',
+                invoiceNumber: 'INV-2024-005',
+                taxAmount: 8.00,
+                subtotal: 91.99
               }
             ]
           },
@@ -232,14 +254,20 @@ export default function SubscriptionDetailsPage() {
                 date: '2024-06-01',
                 amount: 49.99,
                 status: 'paid',
-                description: 'Standard Plan - Monthly'
+                description: 'Standard Plan - Monthly',
+                invoiceNumber: 'INV-2024-006',
+                taxAmount: 4.00,
+                subtotal: 45.99
               },
               {
                 id: 'inv_007',
                 date: '2024-05-01',
                 amount: 49.99,
                 status: 'paid',
-                description: 'Standard Plan - Monthly'
+                description: 'Standard Plan - Monthly',
+                invoiceNumber: 'INV-2024-007',
+                taxAmount: 4.00,
+                subtotal: 45.99
               }
             ]
           }
@@ -258,6 +286,108 @@ export default function SubscriptionDetailsPage() {
 
     fetchSubscription();
   }, [params.id]);
+
+  const handlePrintInvoice = (invoice: BillingHistory) => {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const invoiceHTML = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Invoice ${invoice.invoiceNumber}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
+            .header { text-align: center; margin-bottom: 40px; }
+            .company-name { font-size: 24px; font-weight: bold; color: #8b5cf6; }
+            .invoice-title { font-size: 20px; margin: 20px 0; }
+            .invoice-details { display: flex; justify-content: space-between; margin: 30px 0; }
+            .billing-info { margin: 20px 0; }
+            .table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+            .table th { background-color: #f8f9fa; font-weight: bold; }
+            .total-section { margin-top: 30px; text-align: right; }
+            .total-row { margin: 5px 0; }
+            .grand-total { font-size: 18px; font-weight: bold; }
+            .footer { margin-top: 50px; text-align: center; color: #666; font-size: 12px; }
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-name">Hairvana</div>
+            <div>Admin Dashboard</div>
+          </div>
+          
+          <div class="invoice-title">INVOICE</div>
+          
+          <div class="invoice-details">
+            <div>
+              <strong>Invoice Number:</strong> ${invoice.invoiceNumber}<br>
+              <strong>Date:</strong> ${format(new Date(invoice.date), 'MMMM dd, yyyy')}<br>
+              <strong>Status:</strong> ${invoice.status.toUpperCase()}
+            </div>
+            <div>
+              <strong>Bill To:</strong><br>
+              ${subscription?.salonName}<br>
+              ${subscription?.ownerName}<br>
+              ${subscription?.ownerEmail}
+            </div>
+          </div>
+          
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Period</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${invoice.description}</td>
+                <td>${format(new Date(invoice.date), 'MMM dd')} - ${format(new Date(new Date(invoice.date).getTime() + 30 * 24 * 60 * 60 * 1000), 'MMM dd, yyyy')}</td>
+                <td>$${invoice.subtotal?.toFixed(2) || (invoice.amount - (invoice.taxAmount || 0)).toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div class="total-section">
+            <div class="total-row">Subtotal: $${invoice.subtotal?.toFixed(2) || (invoice.amount - (invoice.taxAmount || 0)).toFixed(2)}</div>
+            <div class="total-row">Tax: $${invoice.taxAmount?.toFixed(2) || '0.00'}</div>
+            <div class="total-row grand-total">Total: $${invoice.amount.toFixed(2)}</div>
+          </div>
+          
+          <div class="footer">
+            <p>Thank you for your business!</p>
+            <p>This is a computer-generated invoice.</p>
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              window.onafterprint = function() {
+                window.close();
+              }
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(invoiceHTML);
+    printWindow.document.close();
+  };
+
+  const handleDownloadInvoice = (invoice: BillingHistory) => {
+    // In a real app, this would download a PDF
+    // For demo purposes, we'll show a toast
+    alert(`Downloading invoice ${invoice.invoiceNumber} as PDF...`);
+  };
 
   if (loading) {
     return (
@@ -532,48 +662,117 @@ export default function SubscriptionDetailsPage() {
         </Card>
       </div>
 
-      {/* Billing History */}
+      {/* Invoices & Billing History */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Billing History
-            </CardTitle>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                Invoices & Billing History
+              </CardTitle>
+              <CardDescription>
+                View and manage all invoices and billing records
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export All
+              </Button>
+              <Button variant="outline" size="sm">
+                <FileText className="h-4 w-4 mr-2" />
+                Generate Report
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {subscription.billingHistory.map((invoice) => (
-              <div key={invoice.id} className="flex items-center justify-between p-4 border rounded-lg">
+              <div key={invoice.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-gray-600" />
+                  <div className="w-12 h-12 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg flex items-center justify-center">
+                    <Receipt className="h-6 w-6 text-purple-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{invoice.description}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-gray-900">{invoice.description}</p>
+                      <Badge className={billingStatusColors[invoice.status as keyof typeof billingStatusColors]}>
+                        {invoice.status}
+                      </Badge>
+                    </div>
                     <p className="text-sm text-gray-600">
-                      {format(new Date(invoice.date), 'MMM dd, yyyy')}
+                      {format(new Date(invoice.date), 'MMM dd, yyyy')} • Invoice #{invoice.invoiceNumber}
                     </p>
+                    {invoice.taxAmount && (
+                      <p className="text-xs text-gray-500">
+                        Subtotal: ${invoice.subtotal?.toFixed(2)} + Tax: ${invoice.taxAmount.toFixed(2)}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="font-semibold text-gray-900">${invoice.amount}</p>
-                    <Badge className={billingStatusColors[invoice.status as keyof typeof billingStatusColors]}>
-                      {invoice.status}
-                    </Badge>
+                    <p className="font-semibold text-gray-900">${invoice.amount.toFixed(2)}</p>
+                    <p className="text-xs text-gray-500">Total Amount</p>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    <Download className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handlePrintInvoice(invoice)}
+                      title="Print Invoice"
+                    >
+                      <Printer className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleDownloadInvoice(invoice)}
+                      title="Download PDF"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      title="View Details"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Billing Summary */}
+          <div className="mt-6 pt-6 border-t">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <p className="text-2xl font-bold text-gray-900">{subscription.billingHistory.length}</p>
+                <p className="text-sm text-gray-600">Total Invoices</p>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">
+                  {subscription.billingHistory.filter(inv => inv.status === 'paid').length}
+                </p>
+                <p className="text-sm text-gray-600">Paid Invoices</p>
+              </div>
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <p className="text-2xl font-bold text-blue-600">
+                  ${subscription.billingHistory.reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}
+                </p>
+                <p className="text-sm text-gray-600">Total Billed</p>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <p className="text-2xl font-bold text-purple-600">
+                  ${(subscription.billingHistory.reduce((sum, inv) => sum + (inv.taxAmount || 0), 0)).toFixed(2)}
+                </p>
+                <p className="text-sm text-gray-600">Total Tax</p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

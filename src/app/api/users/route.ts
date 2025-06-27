@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Demo users data
+// Demo users data - Updated to reflect one-to-many relationship
 const users = [
   // Admin Users
   {
@@ -28,7 +28,7 @@ const users = [
     permissions: ['full_access'],
   },
   
-  // Salon Users
+  // Salon Owner Users (One owner can have multiple salons)
   {
     id: '3',
     name: 'Maria Rodriguez',
@@ -39,11 +39,30 @@ const users = [
     joinDate: '2024-01-15',
     lastLogin: '2024-06-15T14:20:00Z',
     avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
-    salonId: '1',
-    salonName: 'Luxe Hair Studio',
-    subscription: 'Premium',
-    bookingsCount: 156,
-    revenue: 12450,
+    // This owner has multiple salons
+    salons: [
+      {
+        id: '1',
+        name: 'Luxe Hair Studio',
+        location: 'Beverly Hills, CA',
+        subscription: 'Premium',
+        bookingsCount: 156,
+        revenue: 12450,
+        status: 'active'
+      },
+      {
+        id: '4',
+        name: 'Luxe Hair Downtown',
+        location: 'Downtown LA, CA',
+        subscription: 'Standard',
+        bookingsCount: 89,
+        revenue: 7800,
+        status: 'active'
+      }
+    ],
+    totalSalons: 2,
+    totalRevenue: 20250,
+    totalBookings: 245,
   },
   {
     id: '4',
@@ -55,11 +74,21 @@ const users = [
     joinDate: '2024-02-20',
     lastLogin: '2024-06-15T11:45:00Z',
     avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
-    salonId: '2',
-    salonName: 'Urban Cuts',
-    subscription: 'Standard',
-    bookingsCount: 134,
-    revenue: 9820,
+    // This owner has one salon
+    salons: [
+      {
+        id: '2',
+        name: 'Urban Cuts',
+        location: 'Manhattan, NY',
+        subscription: 'Standard',
+        bookingsCount: 134,
+        revenue: 9820,
+        status: 'active'
+      }
+    ],
+    totalSalons: 1,
+    totalRevenue: 9820,
+    totalBookings: 134,
   },
   {
     id: '5',
@@ -71,11 +100,74 @@ const users = [
     joinDate: '2024-03-10',
     lastLogin: '2024-06-14T16:30:00Z',
     avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
-    salonId: '3',
-    salonName: 'Style & Grace',
-    subscription: 'Basic',
-    bookingsCount: 0,
-    revenue: 0,
+    // This owner has multiple salons but they're pending
+    salons: [
+      {
+        id: '3',
+        name: 'Style & Grace',
+        location: 'Miami, FL',
+        subscription: 'Basic',
+        bookingsCount: 0,
+        revenue: 0,
+        status: 'pending'
+      },
+      {
+        id: '5',
+        name: 'Style & Grace Spa',
+        location: 'Miami Beach, FL',
+        subscription: 'Premium',
+        bookingsCount: 0,
+        revenue: 0,
+        status: 'pending'
+      }
+    ],
+    totalSalons: 2,
+    totalRevenue: 0,
+    totalBookings: 0,
+  },
+  {
+    id: '11',
+    name: 'Robert Wilson',
+    email: 'robert@hairempire.com',
+    phone: '+1 (555) 111-2222',
+    role: 'salon',
+    status: 'active',
+    joinDate: '2024-01-10',
+    lastLogin: '2024-06-15T16:45:00Z',
+    avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
+    // This owner has multiple salons across different cities
+    salons: [
+      {
+        id: '6',
+        name: 'Hair Empire - Austin',
+        location: 'Austin, TX',
+        subscription: 'Premium',
+        bookingsCount: 198,
+        revenue: 15600,
+        status: 'active'
+      },
+      {
+        id: '7',
+        name: 'Hair Empire - Dallas',
+        location: 'Dallas, TX',
+        subscription: 'Premium',
+        bookingsCount: 167,
+        revenue: 13200,
+        status: 'active'
+      },
+      {
+        id: '8',
+        name: 'Hair Empire - Houston',
+        location: 'Houston, TX',
+        subscription: 'Standard',
+        bookingsCount: 145,
+        revenue: 11800,
+        status: 'active'
+      }
+    ],
+    totalSalons: 3,
+    totalRevenue: 40600,
+    totalBookings: 510,
   },
   
   // Regular Users
@@ -172,7 +264,10 @@ export async function GET(request: NextRequest) {
     if (search) {
       filteredUsers = filteredUsers.filter(user =>
         user.name.toLowerCase().includes(search.toLowerCase()) ||
-        user.email.toLowerCase().includes(search.toLowerCase())
+        user.email.toLowerCase().includes(search.toLowerCase()) ||
+        (user.role === 'salon' && user.salons?.some(salon => 
+          salon.name.toLowerCase().includes(search.toLowerCase())
+        ))
       );
     }
 
@@ -220,6 +315,13 @@ export async function POST(request: NextRequest) {
       status: 'active',
       joinDate: new Date().toISOString().split('T')[0],
       lastLogin: null,
+      // Initialize salon owner specific fields
+      ...(userData.role === 'salon' ? {
+        salons: [],
+        totalSalons: 0,
+        totalRevenue: 0,
+        totalBookings: 0,
+      } : {}),
     };
 
     users.push(newUser);

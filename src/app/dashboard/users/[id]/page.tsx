@@ -32,10 +32,21 @@ import {
   Activity,
   TrendingUp,
   Scissors,
-  Heart
+  Heart,
+  Eye
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow, format } from 'date-fns';
+
+interface Salon {
+  id: string;
+  name: string;
+  location: string;
+  subscription: string;
+  bookingsCount: number;
+  revenue: number;
+  status: string;
+}
 
 interface User {
   id: string;
@@ -49,12 +60,11 @@ interface User {
   avatar: string;
   // Admin specific
   permissions?: string[];
-  // Salon specific
-  salonId?: string;
-  salonName?: string;
-  subscription?: string;
-  bookingsCount?: number;
-  revenue?: number;
+  // Salon specific - Updated for one-to-many relationship
+  salons?: Salon[];
+  totalSalons?: number;
+  totalRevenue?: number;
+  totalBookings?: number;
   // Regular user specific
   totalSpent?: number;
   favoriteServices?: string[];
@@ -138,11 +148,72 @@ export default function UserDetailsPage() {
             joinDate: '2024-01-15',
             lastLogin: '2024-06-15T14:20:00Z',
             avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-            salonId: '1',
-            salonName: 'Luxe Hair Studio',
-            subscription: 'Premium',
-            bookingsCount: 156,
-            revenue: 12450,
+            salons: [
+              {
+                id: '1',
+                name: 'Luxe Hair Studio',
+                location: 'Beverly Hills, CA',
+                subscription: 'Premium',
+                bookingsCount: 156,
+                revenue: 12450,
+                status: 'active'
+              },
+              {
+                id: '4',
+                name: 'Luxe Hair Downtown',
+                location: 'Downtown LA, CA',
+                subscription: 'Standard',
+                bookingsCount: 89,
+                revenue: 7800,
+                status: 'active'
+              }
+            ],
+            totalSalons: 2,
+            totalRevenue: 20250,
+            totalBookings: 245,
+          },
+          '11': {
+            id: '11',
+            name: 'Robert Wilson',
+            email: 'robert@hairempire.com',
+            phone: '+1 (555) 111-2222',
+            role: 'salon',
+            status: 'active',
+            joinDate: '2024-01-10',
+            lastLogin: '2024-06-15T16:45:00Z',
+            avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
+            salons: [
+              {
+                id: '6',
+                name: 'Hair Empire - Austin',
+                location: 'Austin, TX',
+                subscription: 'Premium',
+                bookingsCount: 198,
+                revenue: 15600,
+                status: 'active'
+              },
+              {
+                id: '7',
+                name: 'Hair Empire - Dallas',
+                location: 'Dallas, TX',
+                subscription: 'Premium',
+                bookingsCount: 167,
+                revenue: 13200,
+                status: 'active'
+              },
+              {
+                id: '8',
+                name: 'Hair Empire - Houston',
+                location: 'Houston, TX',
+                subscription: 'Standard',
+                bookingsCount: 145,
+                revenue: 11800,
+                status: 'active'
+              }
+            ],
+            totalSalons: 3,
+            totalRevenue: 40600,
+            totalBookings: 510,
           },
           '6': {
             id: '6',
@@ -154,7 +225,7 @@ export default function UserDetailsPage() {
             joinDate: '2024-02-01',
             lastLogin: '2024-06-15T13:20:00Z',
             avatar: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-            bookingsCount: 12,
+            totalBookings: 12,
             totalSpent: 850,
             favoriteServices: ['Haircut', 'Hair Color', 'Hair Styling'],
           },
@@ -272,11 +343,6 @@ export default function UserDetailsPage() {
                   <Badge className={statusColors[user.status]}>
                     {user.status}
                   </Badge>
-                  {user.subscription && (
-                    <Badge className={subscriptionColors[user.subscription as keyof typeof subscriptionColors]}>
-                      {user.subscription}
-                    </Badge>
-                  )}
                 </div>
                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                   <div className="flex items-center gap-1">
@@ -312,13 +378,24 @@ export default function UserDetailsPage() {
 
       {/* Role-specific Stats */}
       {user.role === 'salon' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900">${user.revenue?.toLocaleString()}</p>
+                  <p className="text-sm font-medium text-gray-600">Total Salons</p>
+                  <p className="text-2xl font-bold text-gray-900">{user.totalSalons || 0}</p>
+                </div>
+                <Building2 className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900">${user.totalRevenue?.toLocaleString()}</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-green-500" />
               </div>
@@ -329,7 +406,7 @@ export default function UserDetailsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Bookings</p>
-                  <p className="text-2xl font-bold text-gray-900">{user.bookingsCount}</p>
+                  <p className="text-2xl font-bold text-gray-900">{user.totalBookings}</p>
                 </div>
                 <Calendar className="h-8 w-8 text-blue-500" />
               </div>
@@ -339,10 +416,12 @@ export default function UserDetailsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Subscription</p>
-                  <p className="text-2xl font-bold text-gray-900">{user.subscription}</p>
+                  <p className="text-sm font-medium text-gray-600">Avg Revenue/Salon</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    ${user.totalSalons ? Math.round((user.totalRevenue || 0) / user.totalSalons).toLocaleString() : 0}
+                  </p>
                 </div>
-                <CreditCard className="h-8 w-8 text-purple-500" />
+                <TrendingUp className="h-8 w-8 text-purple-500" />
               </div>
             </CardContent>
           </Card>
@@ -367,7 +446,7 @@ export default function UserDetailsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Bookings</p>
-                  <p className="text-2xl font-bold text-gray-900">{user.bookingsCount}</p>
+                  <p className="text-2xl font-bold text-gray-900">{user.totalBookings}</p>
                 </div>
                 <Calendar className="h-8 w-8 text-blue-500" />
               </div>
@@ -475,46 +554,49 @@ export default function UserDetailsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
-                Salon Information
+                Salon Portfolio ({user.totalSalons} {user.totalSalons === 1 ? 'Salon' : 'Salons'})
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Building2 className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-sm font-medium">Salon Name</p>
-                  <p className="text-sm text-gray-600">{user.salonName}</p>
+              {user.salons?.map((salon) => (
+                <div key={salon.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{salon.name}</h4>
+                      <p className="text-sm text-gray-600">{salon.location}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge className={subscriptionColors[salon.subscription as keyof typeof subscriptionColors]}>
+                          {salon.subscription}
+                        </Badge>
+                        <Badge className={statusColors[salon.status as keyof typeof statusColors]}>
+                          {salon.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">${salon.revenue.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">{salon.bookingsCount} bookings</p>
+                      <Link href={`/dashboard/salons/${salon.id}`}>
+                        <Button variant="outline" size="sm" className="mt-2">
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <CreditCard className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-sm font-medium">Subscription Plan</p>
-                  <p className="text-sm text-gray-600">{user.subscription}</p>
+              ))}
+              
+              {user.salons && user.salons.length > 0 && (
+                <div className="mt-4 pt-4 border-t">
+                  <Link href={`/dashboard/salons?ownerId=${user.id}`}>
+                    <Button variant="outline" className="w-full">
+                      <Building2 className="h-4 w-4 mr-2" />
+                      View All Salons ({user.totalSalons})
+                    </Button>
+                  </Link>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <TrendingUp className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-sm font-medium">Monthly Revenue</p>
-                  <p className="text-sm text-gray-600">${user.revenue?.toLocaleString()}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Calendar className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-sm font-medium">Total Bookings</p>
-                  <p className="text-sm text-gray-600">{user.bookingsCount}</p>
-                </div>
-              </div>
-              <div className="mt-4">
-                <Link href={`/dashboard/salons/${user.salonId}`}>
-                  <Button variant="outline" className="w-full">
-                    <Building2 className="h-4 w-4 mr-2" />
-                    View Salon Details
-                  </Button>
-                </Link>
-              </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -539,7 +621,7 @@ export default function UserDetailsPage() {
                 <Calendar className="h-4 w-4 text-gray-400" />
                 <div>
                   <p className="text-sm font-medium">Total Bookings</p>
-                  <p className="text-sm text-gray-600">{user.bookingsCount}</p>
+                  <p className="text-sm text-gray-600">{user.totalBookings}</p>
                 </div>
               </div>
               {user.favoriteServices && user.favoriteServices.length > 0 && (

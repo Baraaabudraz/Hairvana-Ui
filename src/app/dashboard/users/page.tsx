@@ -46,6 +46,16 @@ import { formatDistanceToNow } from 'date-fns';
 type UserRole = 'admin' | 'super_admin' | 'salon' | 'user';
 type UserStatus = 'active' | 'pending' | 'suspended';
 
+interface Salon {
+  id: string;
+  name: string;
+  location: string;
+  subscription: string;
+  bookingsCount: number;
+  revenue: number;
+  status: string;
+}
+
 interface User {
   id: string;
   name: string;
@@ -58,12 +68,11 @@ interface User {
   avatar: string;
   // Admin specific
   permissions?: string[];
-  // Salon specific
-  salonId?: string;
-  salonName?: string;
-  subscription?: string;
-  bookingsCount?: number;
-  revenue?: number;
+  // Salon specific - Updated for one-to-many relationship
+  salons?: Salon[];
+  totalSalons?: number;
+  totalRevenue?: number;
+  totalBookings?: number;
   // Regular user specific
   totalSpent?: number;
   favoriteServices?: string[];
@@ -278,15 +287,21 @@ export default function UsersPage() {
           <>
             <div className="text-center">
               <p className="text-sm font-semibold text-gray-900">
-                ${user.revenue?.toLocaleString() || 0}
+                {user.totalSalons || 0}
               </p>
-              <p className="text-xs text-gray-500">Revenue</p>
+              <p className="text-xs text-gray-500">Salons</p>
             </div>
             <div className="text-center">
               <p className="text-sm font-semibold text-gray-900">
-                {user.bookingsCount || 0}
+                ${user.totalRevenue?.toLocaleString() || 0}
               </p>
-              <p className="text-xs text-gray-500">Bookings</p>
+              <p className="text-xs text-gray-500">Total Revenue</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-semibold text-gray-900">
+                {user.totalBookings || 0}
+              </p>
+              <p className="text-xs text-gray-500">Total Bookings</p>
             </div>
           </>
         );
@@ -301,7 +316,7 @@ export default function UsersPage() {
             </div>
             <div className="text-center">
               <p className="text-sm font-semibold text-gray-900">
-                {user.bookingsCount || 0}
+                {user.totalBookings || 0}
               </p>
               <p className="text-xs text-gray-500">Bookings</p>
             </div>
@@ -310,6 +325,29 @@ export default function UsersPage() {
       default:
         return null;
     }
+  };
+
+  const renderSalonOwnerDetails = (user: User) => {
+    if (user.role !== 'salon' || !user.salons || user.salons.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="mt-2">
+        <div className="flex flex-wrap gap-1">
+          {user.salons.slice(0, 2).map((salon) => (
+            <Badge key={salon.id} variant="outline" className="text-xs">
+              {salon.name}
+            </Badge>
+          ))}
+          {user.salons.length > 2 && (
+            <Badge variant="outline" className="text-xs">
+              +{user.salons.length - 2} more
+            </Badge>
+          )}
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -495,12 +533,6 @@ export default function UsersPage() {
                       <p className="text-sm text-gray-600">{user.email}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <p className="text-xs text-gray-500">{user.phone}</p>
-                        {user.salonName && (
-                          <>
-                            <span className="text-gray-300">•</span>
-                            <p className="text-xs text-gray-500">{user.salonName}</p>
-                          </>
-                        )}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-3 w-3 text-gray-400" />
@@ -516,6 +548,7 @@ export default function UsersPage() {
                           </>
                         )}
                       </div>
+                      {renderSalonOwnerDetails(user)}
                     </div>
                   </div>
                   
@@ -529,11 +562,6 @@ export default function UsersPage() {
                       <Badge className={statusColors[user.status]}>
                         {user.status}
                       </Badge>
-                      {user.subscription && (
-                        <Badge variant="outline" className="text-xs">
-                          {user.subscription}
-                        </Badge>
-                      )}
                     </div>
                     
                     <DropdownMenu>
@@ -555,6 +583,14 @@ export default function UsersPage() {
                             Edit
                           </Link>
                         </DropdownMenuItem>
+                        {user.role === 'salon' && user.salons && user.salons.length > 0 && (
+                          <DropdownMenuItem asChild>
+                            <Link href={`/dashboard/salons?ownerId=${user.id}`} className="flex items-center w-full">
+                              <Building2 className="mr-2 h-4 w-4" />
+                              View Salons ({user.totalSalons})
+                            </Link>
+                          </DropdownMenuItem>
+                        )}
                         {user.status === 'active' && (
                           <DropdownMenuItem 
                             className="text-red-600 cursor-pointer"
@@ -606,6 +642,11 @@ export default function UsersPage() {
             <AlertDialogTitle>Delete User</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete "{selectedUser?.name}"? This action cannot be undone and will permanently remove the user from the platform.
+              {selectedUser?.role === 'salon' && selectedUser.totalSalons && selectedUser.totalSalons > 0 && (
+                <span className="block mt-2 text-red-600 font-medium">
+                  Warning: This user owns {selectedUser.totalSalons} salon(s). Deleting this user will also affect their salon(s).
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -627,6 +668,11 @@ export default function UsersPage() {
             <AlertDialogTitle>Suspend User</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to suspend "{selectedUser?.name}"? This will temporarily disable their access to the platform.
+              {selectedUser?.role === 'salon' && selectedUser.totalSalons && selectedUser.totalSalons > 0 && (
+                <span className="block mt-2 text-yellow-600 font-medium">
+                  Note: This user owns {selectedUser.totalSalons} salon(s). Suspending this user may affect their salon operations.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

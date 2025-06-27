@@ -13,6 +13,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 import { Search, MoreHorizontal, Eye, Edit, Trash2, CheckCircle, XCircle, Plus } from 'lucide-react';
 
 type SalonStatus = 'active' | 'pending' | 'suspended';
@@ -33,7 +44,7 @@ interface Salon {
   avatar: string;
 }
 
-const salons: Salon[] = [
+const initialSalons: Salon[] = [
   {
     id: 1,
     name: 'Luxe Hair Studio',
@@ -105,8 +116,16 @@ const subscriptionColors: Record<SubscriptionType, string> = {
 };
 
 export default function SalonsPage() {
+  const [salons, setSalons] = useState<Salon[]>(initialSalons);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | SalonStatus>('all');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
+  const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
+  const { toast } = useToast();
 
   const filteredSalons = salons.filter(salon => {
     const matchesSearch = salon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,6 +133,135 @@ export default function SalonsPage() {
     const matchesStatus = statusFilter === 'all' || salon.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const handleStatusChange = async (salonId: number, newStatus: SalonStatus) => {
+    try {
+      // In a real app, you would make an API call here
+      const response = await fetch(`/api/salons/${salonId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update salon status');
+      }
+
+      setSalons(prev => prev.map(salon => 
+        salon.id === salonId ? { ...salon, status: newStatus } : salon
+      ));
+
+      const statusMessages = {
+        active: 'Salon has been reactivated',
+        suspended: 'Salon has been suspended',
+        pending: 'Salon status updated to pending',
+      };
+
+      toast({
+        title: 'Status updated',
+        description: statusMessages[newStatus],
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update salon status. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDelete = async (salonId: number) => {
+    try {
+      // In a real app, you would make an API call here
+      const response = await fetch(`/api/salons/${salonId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete salon');
+      }
+
+      setSalons(prev => prev.filter(salon => salon.id !== salonId));
+
+      toast({
+        title: 'Salon deleted',
+        description: 'The salon has been permanently removed from the platform.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete salon. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const openDeleteDialog = (salon: Salon) => {
+    setSelectedSalon(salon);
+    setDeleteDialogOpen(true);
+  };
+
+  const openSuspendDialog = (salon: Salon) => {
+    setSelectedSalon(salon);
+    setSuspendDialogOpen(true);
+  };
+
+  const openReactivateDialog = (salon: Salon) => {
+    setSelectedSalon(salon);
+    setReactivateDialogOpen(true);
+  };
+
+  const openApproveDialog = (salon: Salon) => {
+    setSelectedSalon(salon);
+    setApproveDialogOpen(true);
+  };
+
+  const openRejectDialog = (salon: Salon) => {
+    setSelectedSalon(salon);
+    setRejectDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedSalon) {
+      handleDelete(selectedSalon.id);
+      setDeleteDialogOpen(false);
+      setSelectedSalon(null);
+    }
+  };
+
+  const confirmSuspend = () => {
+    if (selectedSalon) {
+      handleStatusChange(selectedSalon.id, 'suspended');
+      setSuspendDialogOpen(false);
+      setSelectedSalon(null);
+    }
+  };
+
+  const confirmReactivate = () => {
+    if (selectedSalon) {
+      handleStatusChange(selectedSalon.id, 'active');
+      setReactivateDialogOpen(false);
+      setSelectedSalon(null);
+    }
+  };
+
+  const confirmApprove = () => {
+    if (selectedSalon) {
+      handleStatusChange(selectedSalon.id, 'active');
+      setApproveDialogOpen(false);
+      setSelectedSalon(null);
+    }
+  };
+
+  const confirmReject = () => {
+    if (selectedSalon) {
+      handleStatusChange(selectedSalon.id, 'suspended');
+      setRejectDialogOpen(false);
+      setSelectedSalon(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -235,29 +383,44 @@ export default function SalonsPage() {
                       </DropdownMenuItem>
                       {salon.status === 'pending' && (
                         <>
-                          <DropdownMenuItem className="text-green-600">
+                          <DropdownMenuItem 
+                            className="text-green-600 cursor-pointer"
+                            onClick={() => openApproveDialog(salon)}
+                          >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             Approve
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem 
+                            className="text-red-600 cursor-pointer"
+                            onClick={() => openRejectDialog(salon)}
+                          >
                             <XCircle className="mr-2 h-4 w-4" />
                             Reject
                           </DropdownMenuItem>
                         </>
                       )}
                       {salon.status === 'active' && (
-                        <DropdownMenuItem className="text-red-600">
+                        <DropdownMenuItem 
+                          className="text-red-600 cursor-pointer"
+                          onClick={() => openSuspendDialog(salon)}
+                        >
                           <XCircle className="mr-2 h-4 w-4" />
                           Suspend
                         </DropdownMenuItem>
                       )}
                       {salon.status === 'suspended' && (
-                        <DropdownMenuItem className="text-green-600">
+                        <DropdownMenuItem 
+                          className="text-green-600 cursor-pointer"
+                          onClick={() => openReactivateDialog(salon)}
+                        >
                           <CheckCircle className="mr-2 h-4 w-4" />
                           Reactivate
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem className="text-red-600">
+                      <DropdownMenuItem 
+                        className="text-red-600 cursor-pointer"
+                        onClick={() => openDeleteDialog(salon)}
+                      >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
                       </DropdownMenuItem>
@@ -269,6 +432,111 @@ export default function SalonsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Salon</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{selectedSalon?.name}"? This action cannot be undone and will permanently remove the salon from the platform.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Salon
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Suspend Confirmation Dialog */}
+      <AlertDialog open={suspendDialogOpen} onOpenChange={setSuspendDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Suspend Salon</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to suspend "{selectedSalon?.name}"? This will temporarily disable their access to the platform and hide them from customer searches.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmSuspend}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Suspend Salon
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reactivate Confirmation Dialog */}
+      <AlertDialog open={reactivateDialogOpen} onOpenChange={setReactivateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reactivate Salon</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reactivate "{selectedSalon?.name}"? This will restore their access to the platform and make them visible to customers again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmReactivate}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Reactivate Salon
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Approve Confirmation Dialog */}
+      <AlertDialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve Salon</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to approve "{selectedSalon?.name}"? This will activate their account and allow them to start accepting bookings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmApprove}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Approve Salon
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reject Confirmation Dialog */}
+      <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject Salon</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reject "{selectedSalon?.name}"? This will suspend their account and prevent them from accessing the platform.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmReject}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Reject Salon
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

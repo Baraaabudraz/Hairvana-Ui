@@ -1,4 +1,6 @@
-import { useState } from 'react';
+'use client';
+
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,6 +36,8 @@ import {
   Edit
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { updateProfileSettings } from '@/api/settings';
+import { updatePassword } from '@/api/auth';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -63,22 +67,24 @@ export default function ProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [uploadedAvatar, setUploadedAvatar] = useState<string>('');
+  const [userSettings, setUserSettings] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: '+1 (555) 123-4567',
+    department: 'Administration',
+    timezone: 'America/New_York',
+    language: 'en',
+    bio: 'Platform administrator with expertise in salon management systems.',
+  });
 
   const {
     register: registerProfile,
     handleSubmit: handleSubmitProfile,
     formState: { errors: profileErrors },
+    reset: resetProfile,
   } = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      name: user?.name || '',
-      email: user?.email || '',
-      phone: '+1 (555) 123-4567',
-      department: 'Administration',
-      timezone: 'America/New_York',
-      language: 'en',
-      bio: 'Platform administrator with expertise in salon management systems.',
-    },
+    defaultValues: userSettings,
   });
 
   const {
@@ -89,6 +95,22 @@ export default function ProfilePage() {
   } = useForm<PasswordForm>({
     resolver: zodResolver(passwordSchema),
   });
+
+  useEffect(() => {
+    // In a real app, you would fetch user settings from the API
+    // For now, we'll use the user data from the auth store
+    if (user) {
+      resetProfile({
+        name: user.name,
+        email: user.email,
+        phone: '+1 (555) 123-4567',
+        department: 'Administration',
+        timezone: 'America/New_York',
+        language: 'en',
+        bio: 'Platform administrator with expertise in salon management systems.',
+      });
+    }
+  }, [user, resetProfile]);
 
   const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -102,7 +124,7 @@ export default function ProfilePage() {
     setIsSubmitting(true);
     try {
       // In a real app, you would make an API call here
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await updateProfileSettings(data);
       
       // Update user in store
       if (user) {
@@ -132,8 +154,11 @@ export default function ProfilePage() {
   const onSubmitPassword = async (data: PasswordForm) => {
     setIsSubmitting(true);
     try {
-      // In a real app, you would make an API call here
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!user) {
+        throw new Error('User not found');
+      }
+      
+      await updatePassword(user.id, data.currentPassword, data.newPassword);
       
       toast({
         title: 'Password updated',

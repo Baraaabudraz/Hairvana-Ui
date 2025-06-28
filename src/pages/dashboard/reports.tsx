@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +23,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { ReportViewer } from '@/components/reports/report-viewer';
 import {
   FileText,
   Download,
@@ -51,6 +54,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { format, subDays, subMonths, subYears } from 'date-fns';
+import { generateReport } from '@/api/analytics';
 
 interface Report {
   id: string;
@@ -194,7 +198,8 @@ export default function ReportsPage() {
 
   const fetchReports = async () => {
     try {
-      // Mock data for demonstration
+      // For now, we'll use mock data since there's no specific API endpoint for reports list
+      // In a real implementation, this would be replaced with an API call
       const mockReports: Report[] = [
         {
           id: '1',
@@ -372,66 +377,13 @@ export default function ReportsPage() {
     setGeneratingReports(prev => new Set(prev).add(reportId));
 
     try {
-      // In a real app, you would make an API call here
-      // For demo purposes, we'll simulate a response
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockReportData = {
-        title: template.name,
-        metadata: {
-          templateId: template.id,
-          generatedAt: new Date().toISOString(),
-          parameters: {
-            dateRange: '30d',
-            format: 'interactive',
-            filters: []
-          },
-          reportPeriod: 'Last 30 days'
-        },
-        sections: [
-          {
-            title: 'Executive Summary',
-            type: 'summary',
-            data: {
-              totalRevenue: 127450,
-              growth: 23.5,
-              subscriptionRevenue: 89450,
-              commissionRevenue: 38000,
-              topPerformingRegion: 'California',
-              keyInsights: [
-                'Revenue increased by 23.5% compared to previous period',
-                'Subscription revenue accounts for 70% of total revenue',
-                'California region shows strongest performance with $45,230',
-                'Premium plan subscriptions grew by 35%'
-              ]
-            }
-          },
-          {
-            title: 'Revenue Breakdown',
-            type: 'chart',
-            chartType: 'bar',
-            data: [
-              { category: 'Subscriptions', amount: 89450, percentage: 70.2 },
-              { category: 'Commissions', amount: 38000, percentage: 29.8 }
-            ]
-          },
-          {
-            title: 'Monthly Trends',
-            type: 'chart',
-            chartType: 'line',
-            data: [
-              { month: 'Jan', revenue: 65000, subscriptions: 45000, commissions: 20000 },
-              { month: 'Feb', revenue: 72000, subscriptions: 52000, commissions: 20000 },
-              { month: 'Mar', revenue: 68000, subscriptions: 48000, commissions: 20000 },
-              { month: 'Apr', revenue: 85000, subscriptions: 62000, commissions: 23000 },
-              { month: 'May', revenue: 92000, subscriptions: 67000, commissions: 25000 },
-              { month: 'Jun', revenue: 127450, subscriptions: 89450, commissions: 38000 }
-            ]
-          }
-        ]
-      };
-      
-      setViewingReport(mockReportData);
+      const result = await generateReport(template.id, {
+        dateRange: '30d',
+        format: 'interactive',
+        filters: []
+      });
+
+      setViewingReport(result.data);
 
       toast({
         title: 'Report generated successfully',
@@ -471,6 +423,7 @@ export default function ReportsPage() {
 
   const handleDeleteReport = async (reportId: string) => {
     try {
+      // In a real app, you would make an API call here
       setReports(prev => prev.filter(report => report.id !== reportId));
       toast({
         title: 'Report deleted',
@@ -1002,6 +955,14 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Report Viewer Modal */}
+      {viewingReport && (
+        <ReportViewer
+          reportData={viewingReport}
+          onClose={() => setViewingReport(null)}
+        />
+      )}
     </div>
   );
 }

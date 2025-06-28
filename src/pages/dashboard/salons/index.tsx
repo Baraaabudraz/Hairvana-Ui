@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -23,7 +25,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Search, MoreHorizontal, Eye, Edit, Trash2, CheckCircle, XCircle, Plus } from 'lucide-react';
-import { fetchSalons, deleteSalon, updateSalon } from '@/api/salons';
+import { fetchSalons, deleteSalon, updateSalonStatus } from '@/api/salons';
 
 type SalonStatus = 'active' | 'pending' | 'suspended';
 type SubscriptionType = 'Basic' | 'Standard' | 'Premium';
@@ -85,8 +87,8 @@ export default function SalonsPage() {
         params.search = searchTerm;
       }
       
-      const { salons: fetchedSalons } = await fetchSalons(params);
-      setSalons(fetchedSalons);
+      const data = await fetchSalons(params);
+      setSalons(data.salons);
     } catch (error) {
       console.error('Error loading salons:', error);
       toast({
@@ -108,7 +110,7 @@ export default function SalonsPage() {
 
   const handleStatusChange = async (salonId: number, newStatus: SalonStatus) => {
     try {
-      await updateSalon(salonId.toString(), { status: newStatus });
+      await updateSalonStatus(salonId.toString(), newStatus);
 
       setSalons(prev => prev.map(salon => 
         salon.id === salonId ? { ...salon, status: newStatus } : salon
@@ -346,14 +348,20 @@ export default function SalonsPage() {
                         <>
                           <DropdownMenuItem 
                             className="text-green-600 cursor-pointer"
-                            onClick={() => openApproveDialog(salon)}
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              openApproveDialog(salon);
+                            }}
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             Approve
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-red-600 cursor-pointer"
-                            onClick={() => openRejectDialog(salon)}
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              openRejectDialog(salon);
+                            }}
                           >
                             <XCircle className="mr-2 h-4 w-4" />
                             Reject
@@ -363,7 +371,10 @@ export default function SalonsPage() {
                       {salon.status === 'active' && (
                         <DropdownMenuItem 
                           className="text-red-600 cursor-pointer"
-                          onClick={() => openSuspendDialog(salon)}
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            openSuspendDialog(salon);
+                          }}
                         >
                           <XCircle className="mr-2 h-4 w-4" />
                           Suspend
@@ -372,7 +383,10 @@ export default function SalonsPage() {
                       {salon.status === 'suspended' && (
                         <DropdownMenuItem 
                           className="text-green-600 cursor-pointer"
-                          onClick={() => openReactivateDialog(salon)}
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            openReactivateDialog(salon);
+                          }}
                         >
                           <CheckCircle className="mr-2 h-4 w-4" />
                           Reactivate
@@ -380,7 +394,10 @@ export default function SalonsPage() {
                       )}
                       <DropdownMenuItem 
                         className="text-red-600 cursor-pointer"
-                        onClick={() => openDeleteDialog(salon)}
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          openDeleteDialog(salon);
+                        }}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete

@@ -1,5 +1,7 @@
+'use client';
+
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +27,8 @@ import {
   CreditCard,
   FileText
 } from 'lucide-react';
-import { fetchSalonById } from '@/api/salons';
+import { fetchSalonById, updateSalonStatus, deleteSalon } from '@/api/salons';
+import { useToast } from '@/hooks/use-toast';
 
 interface Salon {
   id: string;
@@ -66,6 +69,8 @@ const subscriptionColors = {
 
 export default function SalonDetailsPage() {
   const params = useParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [salon, setSalon] = useState<Salon | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -77,6 +82,11 @@ export default function SalonDetailsPage() {
         setSalon(data);
       } catch (error) {
         console.error('Error loading salon:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load salon details. Please try again.',
+          variant: 'destructive',
+        });
       } finally {
         setLoading(false);
       }
@@ -85,7 +95,55 @@ export default function SalonDetailsPage() {
     if (params.id) {
       loadSalon();
     }
-  }, [params.id]);
+  }, [params.id, toast]);
+
+  const handleStatusChange = async (newStatus: 'active' | 'pending' | 'suspended') => {
+    if (!salon) return;
+    
+    try {
+      await updateSalonStatus(salon.id, newStatus);
+      
+      setSalon(prev => prev ? { ...prev, status: newStatus } : null);
+      
+      const statusMessages = {
+        active: 'Salon has been activated',
+        pending: 'Salon has been set to pending',
+        suspended: 'Salon has been suspended',
+      };
+      
+      toast({
+        title: 'Status updated',
+        description: statusMessages[newStatus],
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update salon status. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!salon) return;
+    
+    try {
+      await deleteSalon(salon.id);
+      
+      toast({
+        title: 'Salon deleted',
+        description: 'The salon has been permanently removed from the platform.',
+      });
+      
+      navigate('/dashboard/salons');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete salon. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -131,7 +189,7 @@ export default function SalonDetailsPage() {
               Edit
             </Button>
           </Link>
-          <Button variant="outline" className="text-red-600 hover:text-red-700">
+          <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={handleDelete}>
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
           </Button>
@@ -178,24 +236,24 @@ export default function SalonDetailsPage() {
             <div className="flex gap-2">
               {salon.status === 'pending' && (
                 <>
-                  <Button className="bg-green-600 hover:bg-green-700">
+                  <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusChange('active')}>
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Approve
                   </Button>
-                  <Button variant="outline" className="text-red-600 hover:text-red-700">
+                  <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={() => handleStatusChange('suspended')}>
                     <XCircle className="h-4 w-4 mr-2" />
                     Reject
                   </Button>
                 </>
               )}
               {salon.status === 'active' && (
-                <Button variant="outline" className="text-red-600 hover:text-red-700">
+                <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={() => handleStatusChange('suspended')}>
                   <XCircle className="h-4 w-4 mr-2" />
                   Suspend
                 </Button>
               )}
               {salon.status === 'suspended' && (
-                <Button className="bg-green-600 hover:bg-green-700">
+                <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusChange('active')}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Reactivate
                 </Button>

@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,47 +63,15 @@ import {
   XCircle
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
-
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'success' | 'warning' | 'error' | 'announcement' | 'promotion';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'draft' | 'scheduled' | 'sent' | 'failed';
-  targetAudience: 'all' | 'salons' | 'users' | 'admins' | 'custom';
-  channels: ('email' | 'push' | 'in-app' | 'sms')[];
-  scheduledAt?: string;
-  sentAt?: string;
-  createdAt: string;
-  createdBy: string;
-  recipients: {
-    total: number;
-    sent: number;
-    delivered: number;
-    opened: number;
-    clicked: number;
-  };
-  customFilters?: {
-    userType?: string[];
-    location?: string[];
-    subscriptionPlan?: string[];
-    registrationDate?: string;
-  };
-}
-
-interface NotificationTemplate {
-  id: string;
-  name: string;
-  description: string;
-  type: 'info' | 'success' | 'warning' | 'error' | 'announcement' | 'promotion';
-  category: 'system' | 'marketing' | 'transactional' | 'operational';
-  subject: string;
-  content: string;
-  channels: ('email' | 'push' | 'in-app' | 'sms')[];
-  variables: string[];
-  popular: boolean;
-}
+import { 
+  fetchNotifications, 
+  createNotification, 
+  deleteNotification, 
+  sendNotification, 
+  fetchNotificationTemplates,
+  Notification,
+  NotificationTemplate
+} from '@/api/notifications';
 
 const notificationTypes = {
   info: { color: 'bg-blue-100 text-blue-800', icon: Info },
@@ -133,83 +103,9 @@ const channelIcons = {
   sms: Smartphone,
 };
 
-const templates: NotificationTemplate[] = [
-  {
-    id: 'welcome-salon',
-    name: 'Welcome New Salon',
-    description: 'Welcome message for newly registered salons',
-    type: 'success',
-    category: 'transactional',
-    subject: 'Welcome to Hairvana! 🎉',
-    content: 'Welcome {{salonName}} to the Hairvana platform! We\'re excited to help you grow your business.',
-    channels: ['email', 'in-app'],
-    variables: ['salonName', 'ownerName', 'setupLink'],
-    popular: true
-  },
-  {
-    id: 'subscription-reminder',
-    name: 'Subscription Renewal Reminder',
-    description: 'Remind salons about upcoming subscription renewal',
-    type: 'warning',
-    category: 'transactional',
-    subject: 'Your subscription expires in 3 days',
-    content: 'Hi {{ownerName}}, your {{planName}} subscription for {{salonName}} expires on {{expiryDate}}.',
-    channels: ['email', 'push', 'in-app'],
-    variables: ['ownerName', 'salonName', 'planName', 'expiryDate', 'renewLink'],
-    popular: true
-  },
-  {
-    id: 'platform-update',
-    name: 'Platform Update Announcement',
-    description: 'Notify users about new features and updates',
-    type: 'announcement',
-    category: 'operational',
-    subject: 'New Features Available! 🚀',
-    content: 'We\'ve added exciting new features to improve your experience. Check out what\'s new!',
-    channels: ['email', 'push', 'in-app'],
-    variables: ['featureList', 'updateDate', 'learnMoreLink'],
-    popular: false
-  },
-  {
-    id: 'promotional-offer',
-    name: 'Promotional Offer',
-    description: 'Send promotional offers and discounts',
-    type: 'promotion',
-    category: 'marketing',
-    subject: 'Special Offer: {{discountPercent}}% Off!',
-    content: 'Limited time offer! Get {{discountPercent}}% off your next subscription upgrade.',
-    channels: ['email', 'push'],
-    variables: ['discountPercent', 'offerCode', 'expiryDate', 'upgradeLink'],
-    popular: true
-  },
-  {
-    id: 'system-maintenance',
-    name: 'System Maintenance Notice',
-    description: 'Notify about scheduled maintenance',
-    type: 'warning',
-    category: 'system',
-    subject: 'Scheduled Maintenance: {{maintenanceDate}}',
-    content: 'We\'ll be performing system maintenance on {{maintenanceDate}} from {{startTime}} to {{endTime}}.',
-    channels: ['email', 'in-app'],
-    variables: ['maintenanceDate', 'startTime', 'endTime', 'duration'],
-    popular: false
-  },
-  {
-    id: 'payment-failed',
-    name: 'Payment Failed Alert',
-    description: 'Alert when payment processing fails',
-    type: 'error',
-    category: 'transactional',
-    subject: 'Payment Failed - Action Required',
-    content: 'We couldn\'t process your payment for {{salonName}}. Please update your payment method.',
-    channels: ['email', 'push', 'in-app'],
-    variables: ['salonName', 'amount', 'failureReason', 'updateLink'],
-    popular: false
-  }
-];
-
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | Notification['type']>('all');
@@ -234,117 +130,29 @@ export default function NotificationsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchNotifications();
+    loadNotifications();
+    loadTemplates();
   }, []);
 
-  const fetchNotifications = async () => {
+  const loadNotifications = async () => {
     try {
-      // Mock data for demonstration
-      const mockNotifications: Notification[] = [
-        {
-          id: '1',
-          title: 'Welcome to Hairvana Platform',
-          message: 'Welcome to the Hairvana platform! We\'re excited to help you grow your salon business.',
-          type: 'success',
-          priority: 'medium',
-          status: 'sent',
-          targetAudience: 'salons',
-          channels: ['email', 'in-app'],
-          sentAt: '2024-06-15T10:30:00Z',
-          createdAt: '2024-06-15T09:00:00Z',
-          createdBy: 'Sarah Johnson',
-          recipients: {
-            total: 1247,
-            sent: 1247,
-            delivered: 1198,
-            opened: 856,
-            clicked: 234
-          }
-        },
-        {
-          id: '2',
-          title: 'Subscription Renewal Reminder',
-          message: 'Your Premium subscription expires in 3 days. Renew now to continue enjoying all features.',
-          type: 'warning',
-          priority: 'high',
-          status: 'sent',
-          targetAudience: 'salons',
-          channels: ['email', 'push', 'in-app'],
-          sentAt: '2024-06-14T16:45:00Z',
-          createdAt: '2024-06-14T16:00:00Z',
-          createdBy: 'John Smith',
-          recipients: {
-            total: 89,
-            sent: 89,
-            delivered: 87,
-            opened: 72,
-            clicked: 45
-          }
-        },
-        {
-          id: '3',
-          title: 'New Features Available',
-          message: 'We\'ve added exciting new analytics features to help you track your salon\'s performance better.',
-          type: 'announcement',
-          priority: 'medium',
-          status: 'scheduled',
-          targetAudience: 'all',
-          channels: ['email', 'push'],
-          scheduledAt: '2024-06-16T09:00:00Z',
-          createdAt: '2024-06-15T14:20:00Z',
-          createdBy: 'Mike Davis',
-          recipients: {
-            total: 45231,
-            sent: 0,
-            delivered: 0,
-            opened: 0,
-            clicked: 0
-          }
-        },
-        {
-          id: '4',
-          title: 'Special Promotion: 30% Off Premium',
-          message: 'Limited time offer! Upgrade to Premium and save 30% on your first year.',
-          type: 'promotion',
-          priority: 'high',
-          status: 'draft',
-          targetAudience: 'salons',
-          channels: ['email', 'push'],
-          createdAt: '2024-06-15T11:30:00Z',
-          createdBy: 'Lisa Thompson',
-          recipients: {
-            total: 0,
-            sent: 0,
-            delivered: 0,
-            opened: 0,
-            clicked: 0
-          },
-          customFilters: {
-            subscriptionPlan: ['Basic', 'Standard']
-          }
-        },
-        {
-          id: '5',
-          title: 'System Maintenance Notice',
-          message: 'Scheduled maintenance on Sunday, June 16th from 2:00 AM to 4:00 AM EST.',
-          type: 'warning',
-          priority: 'urgent',
-          status: 'failed',
-          targetAudience: 'all',
-          channels: ['email', 'in-app'],
-          createdAt: '2024-06-15T08:15:00Z',
-          createdBy: 'System Admin',
-          recipients: {
-            total: 45231,
-            sent: 12456,
-            delivered: 0,
-            opened: 0,
-            clicked: 0
-          }
-        }
-      ];
-
-      setNotifications(mockNotifications);
+      setLoading(true);
+      const params: any = {};
+      
+      if (typeFilter !== 'all') {
+        params.type = typeFilter;
+      }
+      
+      if (statusFilter !== 'all') {
+        params.status = statusFilter;
+      }
+      
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      
+      const data = await fetchNotifications(params);
+      setNotifications(data);
     } catch (error) {
       console.error('Error fetching notifications:', error);
       toast({
@@ -354,6 +162,20 @@ export default function NotificationsPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTemplates = async () => {
+    try {
+      const data = await fetchNotificationTemplates();
+      setTemplates(data);
+    } catch (error) {
+      console.error('Error fetching notification templates:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch notification templates. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -372,33 +194,21 @@ export default function NotificationsPage() {
         template: selectedTemplate,
       };
 
-      // In a real app, you would make an API call here
-      const newNotification: Notification = {
-        id: Date.now().toString(),
-        title: notificationData.title,
-        message: notificationData.message,
-        type: notificationData.type,
-        priority: notificationData.priority,
-        status: notificationData.scheduleType === 'now' ? 'sent' : 'scheduled',
-        targetAudience: notificationData.targetAudience,
-        channels: notificationData.channels,
-        scheduledAt: notificationData.scheduleType === 'later' ? notificationData.scheduledAt : undefined,
-        sentAt: notificationData.scheduleType === 'now' ? new Date().toISOString() : undefined,
-        createdAt: new Date().toISOString(),
-        createdBy: 'Current User',
-        recipients: {
-          total: notificationData.targetAudience === 'all' ? 45231 : 
-                 notificationData.targetAudience === 'salons' ? 1247 : 
-                 notificationData.targetAudience === 'users' ? 43984 : 0,
-          sent: notificationData.scheduleType === 'now' ? (notificationData.targetAudience === 'all' ? 45231 : 
-                notificationData.targetAudience === 'salons' ? 1247 : 43984) : 0,
-          delivered: 0,
-          opened: 0,
-          clicked: 0
-        },
-        customFilters: notificationData.targetAudience === 'custom' ? notificationData.customFilters : undefined
-      };
+      // Remove scheduleType as it's not part of the API model
+      const { scheduleType, ...apiData } = notificationData;
+      
+      // Set status and dates based on schedule type
+      if (scheduleType === 'now') {
+        apiData.status = 'sent';
+        apiData.sentAt = new Date().toISOString();
+      } else if (scheduleType === 'later') {
+        apiData.status = 'scheduled';
+        apiData.scheduledAt = notificationData.scheduledAt;
+      } else {
+        apiData.status = 'draft';
+      }
 
+      const newNotification = await createNotification(apiData);
       setNotifications(prev => [newNotification, ...prev]);
 
       toast({
@@ -436,6 +246,7 @@ export default function NotificationsPage() {
 
   const handleDeleteNotification = async (notificationId: string) => {
     try {
+      await deleteNotification(notificationId);
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
       toast({
         title: 'Notification deleted',
@@ -452,9 +263,10 @@ export default function NotificationsPage() {
 
   const handleResendNotification = async (notificationId: string) => {
     try {
+      const result = await sendNotification(notificationId);
       setNotifications(prev => prev.map(n => 
         n.id === notificationId 
-          ? { ...n, status: 'sent', sentAt: new Date().toISOString() }
+          ? { ...n, status: 'sent', sentAt: result.sentAt }
           : n
       ));
       toast({
@@ -497,7 +309,7 @@ export default function NotificationsPage() {
           <p className="text-gray-600">Manage and send notifications to users and salons</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchNotifications}>
+          <Button variant="outline" onClick={loadNotifications}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>

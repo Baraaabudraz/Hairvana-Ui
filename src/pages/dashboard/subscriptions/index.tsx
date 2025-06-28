@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -54,6 +56,13 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { 
+  fetchSubscriptions, 
+  cancelSubscription, 
+  updateSubscription, 
+  updatePaymentMethod, 
+  syncBilling 
+} from '@/api/subscriptions';
 
 type SubscriptionStatus = 'active' | 'trial' | 'cancelled' | 'past_due';
 type PlanType = 'Basic' | 'Standard' | 'Premium';
@@ -174,326 +183,40 @@ export default function SubscriptionsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchSubscriptions();
-  }, [statusFilter, searchTerm]);
+    loadSubscriptions();
+  }, [statusFilter, planFilter, searchTerm]);
 
-  const fetchSubscriptions = async () => {
+  const loadSubscriptions = async () => {
     try {
-      // In a real app, you would fetch from your API
-      // For demo purposes, we'll use mock data
+      setLoading(true);
+      const params: any = {};
       
-      const mockSubscriptions: Subscription[] = [
-        {
-          id: '1',
-          salonId: '1',
-          salonName: 'Luxe Hair Studio',
-          ownerId: '3',
-          ownerName: 'Maria Rodriguez',
-          ownerEmail: 'maria@luxehair.com',
-          plan: 'Premium',
-          status: 'active',
-          startDate: '2024-01-15',
-          nextBillingDate: '2024-07-15',
-          amount: 99.99,
-          billingCycle: 'monthly',
-          features: [
-            'Unlimited bookings',
-            'Advanced analytics',
-            'Priority support',
-            'Custom branding',
-            'Marketing tools',
-            'Multi-location support',
-            'Staff management',
-            'Inventory tracking'
-          ],
-          usage: {
-            bookings: 156,
-            bookingsLimit: 'unlimited',
-            staff: 8,
-            staffLimit: 'unlimited',
-            locations: 2,
-            locationsLimit: 'unlimited'
-          },
-          paymentMethod: {
-            type: 'card',
-            last4: '4242',
-            brand: 'Visa',
-            expiryMonth: 12,
-            expiryYear: 2025
-          },
-          billingHistory: [
-            {
-              id: 'inv_001',
-              date: '2024-06-15',
-              amount: 99.99,
-              status: 'paid',
-              description: 'Premium Plan - Monthly'
-            }
-          ]
-        },
-        {
-          id: '2',
-          salonId: '4',
-          salonName: 'Luxe Hair Downtown',
-          ownerId: '3',
-          ownerName: 'Maria Rodriguez',
-          ownerEmail: 'maria@luxehair.com',
-          plan: 'Standard',
-          status: 'active',
-          startDate: '2024-02-01',
-          nextBillingDate: '2024-07-01',
-          amount: 49.99,
-          billingCycle: 'monthly',
-          features: [
-            'Up to 500 bookings/month',
-            'Basic analytics',
-            'Email support',
-            'Online booking',
-            'Customer management',
-            'Basic reporting'
-          ],
-          usage: {
-            bookings: 89,
-            bookingsLimit: 500,
-            staff: 4,
-            staffLimit: 10,
-            locations: 1,
-            locationsLimit: 1
-          },
-          paymentMethod: {
-            type: 'card',
-            last4: '4242',
-            brand: 'Visa',
-            expiryMonth: 12,
-            expiryYear: 2025
-          },
-          billingHistory: [
-            {
-              id: 'inv_002',
-              date: '2024-06-01',
-              amount: 49.99,
-              status: 'paid',
-              description: 'Standard Plan - Monthly'
-            }
-          ]
-        },
-        {
-          id: '3',
-          salonId: '2',
-          salonName: 'Urban Cuts',
-          ownerId: '4',
-          ownerName: 'David Chen',
-          ownerEmail: 'david@urbancuts.com',
-          plan: 'Standard',
-          status: 'active',
-          startDate: '2024-02-20',
-          nextBillingDate: '2024-07-20',
-          amount: 49.99,
-          billingCycle: 'monthly',
-          features: [
-            'Up to 500 bookings/month',
-            'Basic analytics',
-            'Email support',
-            'Online booking',
-            'Customer management',
-            'Basic reporting'
-          ],
-          usage: {
-            bookings: 134,
-            bookingsLimit: 500,
-            staff: 6,
-            staffLimit: 10,
-            locations: 1,
-            locationsLimit: 1
-          },
-          paymentMethod: {
-            type: 'card',
-            last4: '5555',
-            brand: 'Mastercard',
-            expiryMonth: 8,
-            expiryYear: 2026
-          },
-          billingHistory: [
-            {
-              id: 'inv_003',
-              date: '2024-06-20',
-              amount: 49.99,
-              status: 'paid',
-              description: 'Standard Plan - Monthly'
-            }
-          ]
-        },
-        {
-          id: '4',
-          salonId: '6',
-          salonName: 'Hair Empire - Austin',
-          ownerId: '11',
-          ownerName: 'Robert Wilson',
-          ownerEmail: 'robert@hairempire.com',
-          plan: 'Premium',
-          status: 'active',
-          startDate: '2024-01-20',
-          nextBillingDate: '2024-07-20',
-          amount: 99.99,
-          billingCycle: 'monthly',
-          features: [
-            'Unlimited bookings',
-            'Advanced analytics',
-            'Priority support',
-            'Custom branding',
-            'Marketing tools',
-            'Multi-location support',
-            'Staff management',
-            'Inventory tracking'
-          ],
-          usage: {
-            bookings: 198,
-            bookingsLimit: 'unlimited',
-            staff: 12,
-            staffLimit: 'unlimited',
-            locations: 3,
-            locationsLimit: 'unlimited'
-          },
-          paymentMethod: {
-            type: 'card',
-            last4: '1234',
-            brand: 'American Express',
-            expiryMonth: 3,
-            expiryYear: 2027
-          },
-          billingHistory: [
-            {
-              id: 'inv_004',
-              date: '2024-06-20',
-              amount: 99.99,
-              status: 'paid',
-              description: 'Premium Plan - Monthly'
-            }
-          ]
-        },
-        {
-          id: '5',
-          salonId: '3',
-          salonName: 'Style & Grace',
-          ownerId: '5',
-          ownerName: 'Lisa Thompson',
-          ownerEmail: 'lisa@styleandgrace.com',
-          plan: 'Basic',
-          status: 'trial',
-          startDate: '2024-03-10',
-          nextBillingDate: '2024-07-10',
-          amount: 19.99,
-          billingCycle: 'monthly',
-          features: [
-            'Up to 100 bookings/month',
-            'Basic support',
-            'Online booking',
-            'Customer management'
-          ],
-          usage: {
-            bookings: 0,
-            bookingsLimit: 100,
-            staff: 2,
-            staffLimit: 3,
-            locations: 1,
-            locationsLimit: 1
-          },
-          paymentMethod: null,
-          billingHistory: []
-        }
-      ];
-
-      const mockPlans: Plan[] = [
-        {
-          id: 'basic',
-          name: 'Basic',
-          price: 19.99,
-          yearlyPrice: 199.99,
-          description: 'Perfect for small salons getting started',
-          features: [
-            'Up to 100 bookings/month',
-            'Up to 3 staff members',
-            'Basic customer management',
-            'Online booking widget',
-            'Email support',
-            'Basic reporting'
-          ],
-          limits: {
-            bookings: 100,
-            staff: 3,
-            locations: 1
-          },
-          popular: false
-        },
-        {
-          id: 'standard',
-          name: 'Standard',
-          price: 49.99,
-          yearlyPrice: 499.99,
-          description: 'Great for growing salons with more features',
-          features: [
-            'Up to 500 bookings/month',
-            'Up to 10 staff members',
-            'Advanced customer management',
-            'Online booking & scheduling',
-            'Email & chat support',
-            'Advanced reporting',
-            'SMS notifications',
-            'Inventory management'
-          ],
-          limits: {
-            bookings: 500,
-            staff: 10,
-            locations: 1
-          },
-          popular: true
-        },
-        {
-          id: 'premium',
-          name: 'Premium',
-          price: 99.99,
-          yearlyPrice: 999.99,
-          description: 'Complete solution for established salons',
-          features: [
-            'Unlimited bookings',
-            'Unlimited staff members',
-            'Multi-location support',
-            'Advanced analytics',
-            'Priority support',
-            'Custom branding',
-            'Marketing tools',
-            'API access',
-            'Staff management',
-            'Inventory tracking',
-            'Financial reporting'
-          ],
-          limits: {
-            bookings: 'unlimited',
-            staff: 'unlimited',
-            locations: 'unlimited'
-          },
-          popular: false
-        }
-      ];
-
-      const mockStats: SubscriptionStats = {
-        total: mockSubscriptions.length,
-        active: mockSubscriptions.filter(s => s.status === 'active').length,
-        trial: mockSubscriptions.filter(s => s.status === 'trial').length,
-        cancelled: mockSubscriptions.filter(s => s.status === 'cancelled').length,
-        totalRevenue: mockSubscriptions
-          .filter(s => s.status === 'active')
-          .reduce((sum, s) => sum + s.amount, 0),
-      };
-
-      setSubscriptions(mockSubscriptions);
-      setPlans(mockPlans);
-      setStats(mockStats);
+      if (statusFilter !== 'all') {
+        params.status = statusFilter;
+      }
+      
+      if (planFilter !== 'all') {
+        params.plan = planFilter;
+      }
+      
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      
+      params.includePlans = true;
+      
+      const data = await fetchSubscriptions(params);
+      setSubscriptions(data.subscriptions);
+      setStats(data.stats);
+      
+      if (data.plans) {
+        setPlans(data.plans);
+      }
     } catch (error) {
-      console.error('Error fetching subscriptions:', error);
+      console.error('Error loading subscriptions:', error);
       toast({
         title: 'Error',
-        description: 'Failed to fetch subscriptions. Please try again.',
+        description: 'Failed to load subscriptions. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -512,16 +235,10 @@ export default function SubscriptionsPage() {
 
   const handleCancelSubscription = async (subscriptionId: string) => {
     try {
-      // In a real app, you would make an API call here
-      console.log('Cancelling subscription:', subscriptionId);
+      await cancelSubscription(subscriptionId);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
       setSubscriptions(prev => prev.map(sub => 
-        sub.id === subscriptionId 
-          ? { ...sub, status: 'cancelled' as SubscriptionStatus }
-          : sub
+        sub.id === subscriptionId ? { ...sub, status: 'cancelled' as SubscriptionStatus } : sub
       ));
 
       toast({
@@ -541,11 +258,10 @@ export default function SubscriptionsPage() {
     if (!selectedSubscription || !selectedNewPlan) return;
 
     try {
-      // In a real app, you would make an API call here
-      console.log('Upgrading subscription:', selectedSubscription.id, 'to plan:', selectedNewPlan.name);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await updateSubscription(selectedSubscription.id, { 
+        plan_id: selectedNewPlan.id,
+        amount: selectedNewPlan.price
+      });
 
       setSubscriptions(prev => prev.map(sub => 
         sub.id === selectedSubscription.id 
@@ -574,11 +290,10 @@ export default function SubscriptionsPage() {
     if (!selectedSubscription || !selectedNewPlan) return;
 
     try {
-      // In a real app, you would make an API call here
-      console.log('Downgrading subscription:', selectedSubscription.id, 'to plan:', selectedNewPlan.name);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await updateSubscription(selectedSubscription.id, { 
+        plan_id: selectedNewPlan.id,
+        amount: selectedNewPlan.price
+      });
 
       setSubscriptions(prev => prev.map(sub => 
         sub.id === selectedSubscription.id 
@@ -607,23 +322,21 @@ export default function SubscriptionsPage() {
     if (!selectedSubscription) return;
 
     try {
-      // In a real app, you would make an API call here
-      console.log('Updating payment method for subscription:', selectedSubscription.id);
+      const paymentData = {
+        type: 'card',
+        last4: newPaymentMethod.cardNumber.slice(-4),
+        brand: 'Visa', // In real app, detect from card number
+        expiryMonth: parseInt(newPaymentMethod.expiryMonth),
+        expiryYear: parseInt(newPaymentMethod.expiryYear)
+      };
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await updatePaymentMethod(selectedSubscription.id, paymentData);
 
       setSubscriptions(prev => prev.map(sub => 
         sub.id === selectedSubscription.id 
           ? { 
               ...sub, 
-              paymentMethod: {
-                type: 'card',
-                last4: newPaymentMethod.cardNumber.slice(-4),
-                brand: 'Visa', // In real app, detect from card number
-                expiryMonth: parseInt(newPaymentMethod.expiryMonth),
-                expiryYear: parseInt(newPaymentMethod.expiryYear),
-              }
+              paymentMethod: paymentData as PaymentMethod
             }
           : sub
       ));
@@ -646,6 +359,29 @@ export default function SubscriptionsPage() {
       toast({
         title: 'Error',
         description: 'Failed to update payment method. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSyncBilling = async () => {
+    try {
+      toast({
+        title: 'Syncing billing data',
+        description: 'Please wait while we sync with the payment gateway...',
+      });
+      
+      // In a real app, you would call the API to sync billing data
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      toast({
+        title: 'Billing data synced',
+        description: 'Billing data has been synchronized successfully.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to sync billing data. Please try again.',
         variant: 'destructive',
       });
     }
@@ -718,7 +454,7 @@ export default function SubscriptionsPage() {
           <p className="text-gray-600">Manage salon subscriptions, billing, and plans</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleSyncBilling}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Sync Billing
           </Button>

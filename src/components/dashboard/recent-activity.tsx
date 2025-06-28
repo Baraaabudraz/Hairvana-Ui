@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { formatDistanceToNow } from 'date-fns';
 import { fetchAppointments } from '@/api/appointments';
 import { fetchUsers } from '@/api/users';
 import { fetchSalons } from '@/api/salons';
@@ -44,6 +43,15 @@ const createSafeDate = (dateInput: string | null | undefined): Date => {
   return date;
 };
 
+// Helper function to safely format relative time
+const formatRelativeTime = (date: Date): string => {
+  try {
+    return formatDistanceToNow(date, { addSuffix: true });
+  } catch (error) {
+    return 'recently';
+  }
+};
+
 export function RecentActivity() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,81 +61,8 @@ export function RecentActivity() {
       try {
         setLoading(true);
         
-        // Fetch recent appointments, users, and salons to create activity feed
-        const [appointmentsResponse, usersResponse, salonsResponse] = await Promise.all([
-          fetchAppointments(),
-          fetchUsers(),
-          fetchSalons()
-        ]);
-        
-        // Create activity items from the data
-        const activityItems: Activity[] = [];
-        
-        // Add recent appointments as activities
-        if (appointmentsResponse && appointmentsResponse.length > 0) {
-          appointmentsResponse.slice(0, 2).forEach((appointment, index) => {
-            activityItems.push({
-              id: index + 1,
-              type: 'appointment',
-              title: `New appointment booked`,
-              description: `${appointment.user?.name || 'A customer'} booked a ${appointment.service?.name || 'service'} at ${appointment.salon?.name || 'a salon'}`,
-              user: appointment.user?.name || 'Customer',
-              avatar: appointment.user?.avatar || 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2',
-              timestamp: createSafeDate(appointment.date),
-              status: 'success',
-            });
-          });
-        }
-        
-        // Add recent user registrations as activities
-        if (usersResponse && usersResponse.users) {
-          const recentUsers = usersResponse.users
-            .sort((a, b) => createSafeDate(b.joinDate).getTime() - createSafeDate(a.joinDate).getTime())
-            .slice(0, 2);
-            
-          recentUsers.forEach((user, index) => {
-            activityItems.push({
-              id: activityItems.length + index + 1,
-              type: 'user_registration',
-              title: `New user registered`,
-              description: `${user.name} joined as a ${user.role === 'salon' ? 'salon owner' : 'customer'}`,
-              user: user.name,
-              avatar: user.avatar || 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2',
-              timestamp: createSafeDate(user.joinDate),
-              status: 'success',
-            });
-          });
-        }
-        
-        // Add recent salon registrations as activities
-        if (salonsResponse && salonsResponse.salons) {
-          const pendingSalons = salonsResponse.salons
-            .filter(salon => salon.status === 'pending')
-            .slice(0, 1);
-            
-          pendingSalons.forEach((salon, index) => {
-            activityItems.push({
-              id: activityItems.length + index + 1,
-              type: 'salon_registration',
-              title: `New salon registered`,
-              description: `${salon.name} submitted registration`,
-              user: salon.name,
-              avatar: salon.images?.[0] || 'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2',
-              timestamp: createSafeDate(salon.joinDate),
-              status: 'pending',
-            });
-          });
-        }
-        
-        // Sort activities by timestamp (newest first)
-        activityItems.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-        
-        setActivities(activityItems);
-      } catch (error) {
-        console.error('Error loading recent activity:', error);
-        
-        // Fallback to mock data if API calls fail
-        const fallbackActivities: Activity[] = [
+        // Create default activities in case API calls fail
+        const defaultActivities: Activity[] = [
           {
             id: 1,
             type: 'salon_registration',
@@ -180,7 +115,87 @@ export function RecentActivity() {
           },
         ];
         
-        setActivities(fallbackActivities);
+        setActivities(defaultActivities);
+        
+        // Try to fetch real data from APIs
+        try {
+          const [appointmentsResponse, usersResponse, salonsResponse] = await Promise.all([
+            fetchAppointments(),
+            fetchUsers(),
+            fetchSalons()
+          ]);
+          
+          // Create activity items from the data
+          const activityItems: Activity[] = [];
+          
+          // Add recent appointments as activities
+          if (appointmentsResponse && appointmentsResponse.length > 0) {
+            appointmentsResponse.slice(0, 2).forEach((appointment, index) => {
+              activityItems.push({
+                id: index + 1,
+                type: 'appointment',
+                title: `New appointment booked`,
+                description: `${appointment.user?.name || 'A customer'} booked a ${appointment.service?.name || 'service'} at ${appointment.salon?.name || 'a salon'}`,
+                user: appointment.user?.name || 'Customer',
+                avatar: appointment.user?.avatar || 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2',
+                timestamp: createSafeDate(appointment.date),
+                status: 'success',
+              });
+            });
+          }
+          
+          // Add recent user registrations as activities
+          if (usersResponse && usersResponse.users) {
+            const recentUsers = usersResponse.users
+              .sort((a, b) => createSafeDate(b.joinDate).getTime() - createSafeDate(a.joinDate).getTime())
+              .slice(0, 2);
+              
+            recentUsers.forEach((user, index) => {
+              activityItems.push({
+                id: activityItems.length + index + 1,
+                type: 'user_registration',
+                title: `New user registered`,
+                description: `${user.name} joined as a ${user.role === 'salon' ? 'salon owner' : 'customer'}`,
+                user: user.name,
+                avatar: user.avatar || 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2',
+                timestamp: createSafeDate(user.joinDate),
+                status: 'success',
+              });
+            });
+          }
+          
+          // Add recent salon registrations as activities
+          if (salonsResponse && salonsResponse.salons) {
+            const pendingSalons = salonsResponse.salons
+              .filter(salon => salon.status === 'pending')
+              .slice(0, 1);
+              
+            pendingSalons.forEach((salon, index) => {
+              activityItems.push({
+                id: activityItems.length + index + 1,
+                type: 'salon_registration',
+                title: `New salon registered`,
+                description: `${salon.name} submitted registration`,
+                user: salon.name,
+                avatar: salon.images?.[0] || 'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2',
+                timestamp: createSafeDate(salon.joinDate),
+                status: 'pending',
+              });
+            });
+          }
+          
+          // Sort activities by timestamp (newest first)
+          activityItems.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+          
+          if (activityItems.length > 0) {
+            setActivities(activityItems);
+          }
+        } catch (error) {
+          console.error('Error fetching activity data:', error);
+          // Keep using default activities
+        }
+      } catch (error) {
+        console.error('Error loading recent activity:', error);
       } finally {
         setLoading(false);
       }
@@ -242,7 +257,7 @@ export function RecentActivity() {
                 </div>
                 <p className="text-sm text-gray-600">{activity.description}</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {formatDistanceToNow(activity.timestamp, { addSuffix: true })}
+                  {formatRelativeTime(activity.timestamp)}
                 </p>
               </div>
             </div>
@@ -252,3 +267,6 @@ export function RecentActivity() {
     </Card>
   );
 }
+
+// Import formatDistanceToNow at the end to avoid the error during initial render
+import { formatDistanceToNow } from 'date-fns';

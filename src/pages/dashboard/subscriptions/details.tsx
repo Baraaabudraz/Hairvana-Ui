@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,23 +19,22 @@ import {
   Crown,
   Star,
   Zap,
-  AlertTriangle,
-  TrendingUp,
-  Users,
-  BarChart3,
-  RefreshCw,
   ArrowUpCircle,
   ArrowDownCircle,
+  RefreshCw,
+  ArrowUpRight,
+  ArrowDownRight,
   Printer,
   FileText,
   Receipt,
   Eye,
   ExternalLink,
   Mail,
-  Phone
+  Phone,
+  Loader
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +43,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,9 +62,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { 
+  fetchSubscriptionById, 
+  updateSubscription, 
+  cancelSubscription, 
+  syncBilling, 
+  generateReport, 
+  exportInvoices, 
+  updatePaymentMethod,
+  fetchSubscriptionPlans
+} from '@/api/subscriptions';
 
 interface PaymentMethod {
   type: string;
@@ -146,530 +161,406 @@ const billingStatusColors = {
   refunded: 'bg-gray-100 text-gray-800',
 };
 
-const plans: Plan[] = [
-  {
-    id: 'basic',
-    name: 'Basic',
-    price: 19.99,
-    yearlyPrice: 199.99,
-    description: 'Perfect for small salons getting started',
-    features: [
-      'Up to 100 bookings/month',
-      'Up to 3 staff members',
-      'Basic customer management',
-      'Online booking widget',
-      'Email support',
-      'Basic reporting'
-    ],
-    limits: {
-      bookings: 100,
-      staff: 3,
-      locations: 1
-    },
-    popular: false
-  },
-  {
-    id: 'standard',
-    name: 'Standard',
-    price: 49.99,
-    yearlyPrice: 499.99,
-    description: 'Great for growing salons with more features',
-    features: [
-      'Up to 500 bookings/month',
-      'Up to 10 staff members',
-      'Advanced customer management',
-      'Online booking & scheduling',
-      'Email & chat support',
-      'Advanced reporting',
-      'SMS notifications',
-      'Inventory management'
-    ],
-    limits: {
-      bookings: 500,
-      staff: 10,
-      locations: 1
-    },
-    popular: true
-  },
-  {
-    id: 'premium',
-    name: 'Premium',
-    price: 99.99,
-    yearlyPrice: 999.99,
-    description: 'Complete solution for established salons',
-    features: [
-      'Unlimited bookings',
-      'Unlimited staff members',
-      'Multi-location support',
-      'Advanced analytics',
-      'Priority support',
-      'Custom branding',
-      'Marketing tools',
-      'API access',
-      'Staff management',
-      'Inventory tracking',
-      'Financial reporting'
-    ],
-    limits: {
-      bookings: 'unlimited',
-      staff: 'unlimited',
-      locations: 'unlimited'
-    },
-    popular: false
-  }
-];
-
 export default function SubscriptionDetailsPage() {
   const params = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
-  const [syncingBilling, setSyncingBilling] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Dialog states
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [paymentMethodDialogOpen, setPaymentMethodDialogOpen] = useState(false);
-  const [exportReportDialogOpen, setExportReportDialogOpen] = useState(false);
-  const [generateReportDialogOpen, setGenerateReportDialogOpen] = useState(false);
-  const [selectedNewPlan, setSelectedNewPlan] = useState<Plan | null>(null);
-  const [newPaymentMethod, setNewPaymentMethod] = useState({
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  
+  // Form states
+  const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [paymentMethod, setPaymentMethod] = useState({
+    cardholderName: '',
     cardNumber: '',
     expiryMonth: '',
     expiryYear: '',
-    cvv: '',
-    cardholderName: '',
+    cvv: ''
+  });
+  const [reportSettings, setReportSettings] = useState({
+    reportType: 'summary',
+    dateRange: '30d',
+    format: 'pdf'
   });
 
   useEffect(() => {
-    const fetchSubscription = async () => {
-      try {
-        // In a real app, you would fetch from your API
-        // For demo purposes, we'll use mock data based on the ID
-        const mockSubscriptions: Record<string, Subscription> = {
-          '1': {
-            id: '1',
-            salonId: '1',
-            salonName: 'Luxe Hair Studio',
-            ownerId: '3',
-            ownerName: 'Maria Rodriguez',
-            ownerEmail: 'maria@luxehair.com',
-            plan: 'Premium',
-            status: 'active',
-            startDate: '2024-01-15',
-            nextBillingDate: '2024-07-15',
-            amount: 99.99,
-            billingCycle: 'monthly',
-            features: [
-              'Unlimited bookings',
-              'Advanced analytics',
-              'Priority support',
-              'Custom branding',
-              'Marketing tools',
-              'Multi-location support',
-              'Staff management',
-              'Inventory tracking'
-            ],
-            usage: {
-              bookings: 156,
-              bookingsLimit: 'unlimited',
-              staff: 8,
-              staffLimit: 'unlimited',
-              locations: 2,
-              locationsLimit: 'unlimited'
-            },
-            paymentMethod: {
-              type: 'card',
-              last4: '4242',
-              brand: 'Visa',
-              expiryMonth: 12,
-              expiryYear: 2025
-            },
-            billingHistory: [
-              {
-                id: 'inv_001',
-                date: '2024-06-15',
-                amount: 99.99,
-                status: 'paid',
-                description: 'Premium Plan - Monthly',
-                invoiceNumber: 'INV-2024-001',
-                taxAmount: 8.00,
-                subtotal: 91.99
-              },
-              {
-                id: 'inv_002',
-                date: '2024-05-15',
-                amount: 99.99,
-                status: 'paid',
-                description: 'Premium Plan - Monthly',
-                invoiceNumber: 'INV-2024-002',
-                taxAmount: 8.00,
-                subtotal: 91.99
-              },
-              {
-                id: 'inv_003',
-                date: '2024-04-15',
-                amount: 99.99,
-                status: 'paid',
-                description: 'Premium Plan - Monthly',
-                invoiceNumber: 'INV-2024-003',
-                taxAmount: 8.00,
-                subtotal: 91.99
-              },
-              {
-                id: 'inv_004',
-                date: '2024-03-15',
-                amount: 99.99,
-                status: 'paid',
-                description: 'Premium Plan - Monthly',
-                invoiceNumber: 'INV-2024-004',
-                taxAmount: 8.00,
-                subtotal: 91.99
-              },
-              {
-                id: 'inv_005',
-                date: '2024-02-15',
-                amount: 99.99,
-                status: 'paid',
-                description: 'Premium Plan - Monthly',
-                invoiceNumber: 'INV-2024-005',
-                taxAmount: 8.00,
-                subtotal: 91.99
-              }
-            ]
-          },
-          '2': {
-            id: '2',
-            salonId: '4',
-            salonName: 'Luxe Hair Downtown',
-            ownerId: '3',
-            ownerName: 'Maria Rodriguez',
-            ownerEmail: 'maria@luxehair.com',
-            plan: 'Standard',
-            status: 'active',
-            startDate: '2024-02-01',
-            nextBillingDate: '2024-07-01',
-            amount: 49.99,
-            billingCycle: 'monthly',
-            features: [
-              'Up to 500 bookings/month',
-              'Basic analytics',
-              'Email support',
-              'Online booking',
-              'Customer management',
-              'Basic reporting'
-            ],
-            usage: {
-              bookings: 89,
-              bookingsLimit: 500,
-              staff: 4,
-              staffLimit: 10,
-              locations: 1,
-              locationsLimit: 1
-            },
-            paymentMethod: {
-              type: 'card',
-              last4: '4242',
-              brand: 'Visa',
-              expiryMonth: 12,
-              expiryYear: 2025
-            },
-            billingHistory: [
-              {
-                id: 'inv_006',
-                date: '2024-06-01',
-                amount: 49.99,
-                status: 'paid',
-                description: 'Standard Plan - Monthly',
-                invoiceNumber: 'INV-2024-006',
-                taxAmount: 4.00,
-                subtotal: 45.99
-              },
-              {
-                id: 'inv_007',
-                date: '2024-05-01',
-                amount: 49.99,
-                status: 'paid',
-                description: 'Standard Plan - Monthly',
-                invoiceNumber: 'INV-2024-007',
-                taxAmount: 4.00,
-                subtotal: 45.99
-              }
-            ]
-          }
-        };
-        
-        const subscriptionData = mockSubscriptions[params.id as string];
-        if (subscriptionData) {
-          setSubscription(subscriptionData);
-        }
-      } catch (error) {
-        console.error('Error fetching subscription:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSubscription();
+    loadSubscription();
+    loadPlans();
   }, [params.id]);
 
-  const handleSyncBilling = async () => {
-    setSyncingBilling(true);
+  const loadSubscription = async () => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast({
-        title: 'Billing synced successfully',
-        description: 'The billing information has been synchronized with the payment provider.',
-      });
+      setLoading(true);
+      const data = await fetchSubscriptionById(params.id as string);
+      setSubscription(data);
     } catch (error) {
+      console.error('Error loading subscription:', error);
       toast({
-        title: 'Error syncing billing',
-        description: 'Failed to sync billing information. Please try again.',
+        title: 'Error',
+        description: 'Failed to load subscription details',
         variant: 'destructive',
       });
     } finally {
-      setSyncingBilling(false);
+      setLoading(false);
     }
   };
 
-  const handleEditSubscription = () => {
-    setEditDialogOpen(true);
+  const loadPlans = async () => {
+    try {
+      const plans = await fetchSubscriptionPlans();
+      setAvailablePlans(plans);
+    } catch (error) {
+      console.error('Error loading plans:', error);
+    }
   };
 
-  const handleUpgradePlan = () => {
-    setUpgradeDialogOpen(true);
-  };
-
-  const handleDowngradePlan = () => {
-    setDowngradeDialogOpen(true);
-  };
-
-  const handleCancelSubscription = () => {
-    setCancelDialogOpen(true);
-  };
-
-  const handleUpdatePaymentMethod = () => {
-    setPaymentMethodDialogOpen(true);
-  };
-
-  const handleExportAll = () => {
-    toast({
-      title: 'Export started',
-      description: 'Your billing history is being exported. The download will start shortly.',
-    });
-    
-    // Simulate download delay
-    setTimeout(() => {
-      const element = document.createElement('a');
-      element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent('Billing history export'));
-      element.setAttribute('download', `billing-history-${subscription?.salonName.toLowerCase().replace(/\s+/g, '-')}.csv`);
-      element.style.display = 'none';
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-    }, 1000);
-  };
-
-  const handleGenerateReport = () => {
-    setGenerateReportDialogOpen(true);
-  };
-
-  const confirmUpgradePlan = async () => {
-    if (!selectedNewPlan) return;
+  const handleSyncBilling = async () => {
+    if (!subscription) return;
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (subscription) {
-        setSubscription({
-          ...subscription,
-          plan: selectedNewPlan.name,
-          amount: selectedNewPlan.price,
-          features: selectedNewPlan.features,
-          usage: {
-            ...subscription.usage,
-            bookingsLimit: selectedNewPlan.limits.bookings,
-            staffLimit: selectedNewPlan.limits.staff,
-            locationsLimit: selectedNewPlan.limits.locations
-          }
-        });
-      }
+      setIsSyncing(true);
+      const result = await syncBilling(subscription.id);
       
       toast({
-        title: 'Plan upgraded successfully',
-        description: `The subscription has been upgraded to the ${selectedNewPlan.name} plan.`,
+        title: 'Billing synced',
+        description: 'Billing data has been synchronized successfully',
+      });
+      
+      // Refresh subscription data
+      loadSubscription();
+    } catch (error) {
+      toast({
+        title: 'Sync failed',
+        description: 'Failed to synchronize billing data',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleEditSubscription = async (data: any) => {
+    if (!subscription) return;
+    
+    try {
+      await updateSubscription(subscription.id, data);
+      
+      toast({
+        title: 'Subscription updated',
+        description: 'Subscription details have been updated successfully',
+      });
+      
+      setEditDialogOpen(false);
+      loadSubscription();
+    } catch (error) {
+      toast({
+        title: 'Update failed',
+        description: 'Failed to update subscription',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUpgradePlan = async () => {
+    if (!subscription || !selectedPlan) return;
+    
+    try {
+      const planId = selectedPlan.id;
+      const amount = billingCycle === 'yearly' ? selectedPlan.yearlyPrice : selectedPlan.price;
+      
+      await updateSubscription(subscription.id, {
+        plan_id: planId,
+        amount,
+        billing_cycle: billingCycle
+      });
+      
+      toast({
+        title: 'Plan upgraded',
+        description: `Subscription has been upgraded to ${selectedPlan.name} plan`,
       });
       
       setUpgradeDialogOpen(false);
-      setSelectedNewPlan(null);
+      setSelectedPlan(null);
+      loadSubscription();
     } catch (error) {
       toast({
-        title: 'Error upgrading plan',
-        description: 'Failed to upgrade the subscription plan. Please try again.',
+        title: 'Upgrade failed',
+        description: 'Failed to upgrade subscription plan',
         variant: 'destructive',
       });
     }
   };
 
-  const confirmDowngradePlan = async () => {
-    if (!selectedNewPlan) return;
+  const handleDowngradePlan = async () => {
+    if (!subscription || !selectedPlan) return;
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const planId = selectedPlan.id;
+      const amount = billingCycle === 'yearly' ? selectedPlan.yearlyPrice : selectedPlan.price;
       
-      if (subscription) {
-        setSubscription({
-          ...subscription,
-          plan: selectedNewPlan.name,
-          amount: selectedNewPlan.price,
-          features: selectedNewPlan.features,
-          usage: {
-            ...subscription.usage,
-            bookingsLimit: selectedNewPlan.limits.bookings,
-            staffLimit: selectedNewPlan.limits.staff,
-            locationsLimit: selectedNewPlan.limits.locations
-          }
-        });
-      }
+      await updateSubscription(subscription.id, {
+        plan_id: planId,
+        amount,
+        billing_cycle: billingCycle
+      });
       
       toast({
-        title: 'Plan downgraded successfully',
-        description: `The subscription has been downgraded to the ${selectedNewPlan.name} plan.`,
+        title: 'Plan downgraded',
+        description: `Subscription has been downgraded to ${selectedPlan.name} plan`,
       });
       
       setDowngradeDialogOpen(false);
-      setSelectedNewPlan(null);
+      setSelectedPlan(null);
+      loadSubscription();
     } catch (error) {
       toast({
-        title: 'Error downgrading plan',
-        description: 'Failed to downgrade the subscription plan. Please try again.',
+        title: 'Downgrade failed',
+        description: 'Failed to downgrade subscription plan',
         variant: 'destructive',
       });
     }
   };
 
-  const confirmCancelSubscription = async () => {
+  const handleCancelSubscription = async () => {
+    if (!subscription) return;
+    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (subscription) {
-        setSubscription({
-          ...subscription,
-          status: 'cancelled'
-        });
-      }
+      await cancelSubscription(subscription.id);
       
       toast({
         title: 'Subscription cancelled',
-        description: 'The subscription has been cancelled successfully.',
+        description: 'The subscription has been cancelled successfully',
       });
       
       setCancelDialogOpen(false);
+      loadSubscription();
     } catch (error) {
       toast({
-        title: 'Error cancelling subscription',
-        description: 'Failed to cancel the subscription. Please try again.',
+        title: 'Cancellation failed',
+        description: 'Failed to cancel subscription',
         variant: 'destructive',
       });
     }
   };
 
-  const confirmUpdatePaymentMethod = async () => {
+  const handleUpdatePaymentMethod = async () => {
+    if (!subscription) return;
+    
     try {
-      // Validate payment information
-      if (!newPaymentMethod.cardNumber || !newPaymentMethod.expiryMonth || 
-          !newPaymentMethod.expiryYear || !newPaymentMethod.cvv || 
-          !newPaymentMethod.cardholderName) {
-        toast({
-          title: 'Missing information',
-          description: 'Please fill in all payment details.',
-          variant: 'destructive',
-        });
-        return;
-      }
+      const paymentData = {
+        type: 'card',
+        last4: paymentMethod.cardNumber.slice(-4),
+        brand: getCardBrand(paymentMethod.cardNumber),
+        expiryMonth: parseInt(paymentMethod.expiryMonth),
+        expiryYear: parseInt(paymentMethod.expiryYear)
+      };
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (subscription) {
-        setSubscription({
-          ...subscription,
-          paymentMethod: {
-            type: 'card',
-            last4: newPaymentMethod.cardNumber.slice(-4),
-            brand: 'Visa', // In a real app, detect from card number
-            expiryMonth: parseInt(newPaymentMethod.expiryMonth),
-            expiryYear: parseInt(newPaymentMethod.expiryYear)
-          }
-        });
-      }
+      await updatePaymentMethod(subscription.id, paymentData);
       
       toast({
         title: 'Payment method updated',
-        description: 'The payment method has been updated successfully.',
+        description: 'The payment method has been updated successfully',
       });
       
-      setPaymentMethodDialogOpen(false);
-      setNewPaymentMethod({
+      setPaymentDialogOpen(false);
+      setPaymentMethod({
+        cardholderName: '',
         cardNumber: '',
         expiryMonth: '',
         expiryYear: '',
-        cvv: '',
-        cardholderName: '',
+        cvv: ''
       });
+      loadSubscription();
     } catch (error) {
       toast({
-        title: 'Error updating payment method',
-        description: 'Failed to update the payment method. Please try again.',
+        title: 'Update failed',
+        description: 'Failed to update payment method',
         variant: 'destructive',
       });
     }
   };
 
-  const confirmGenerateReport = async () => {
+  const handleGenerateReport = async () => {
+    if (!subscription) return;
+    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await generateReport(subscription.id, reportSettings);
       
       toast({
         title: 'Report generated',
-        description: 'The subscription report has been generated and is ready for download.',
+        description: 'The report has been generated successfully',
       });
       
-      // Simulate download
-      setTimeout(() => {
-        const element = document.createElement('a');
-        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent('Subscription report'));
-        element.setAttribute('download', `subscription-report-${subscription?.salonName.toLowerCase().replace(/\s+/g, '-')}.pdf`);
-        element.style.display = 'none';
-        document.body.appendChild(element);
-        element.click();
-        document.body.removeChild(element);
-      }, 500);
+      // In a real app, you might download the report or open it in a new tab
+      console.log('Report data:', result);
       
-      setGenerateReportDialogOpen(false);
+      setReportDialogOpen(false);
     } catch (error) {
       toast({
-        title: 'Error generating report',
-        description: 'Failed to generate the report. Please try again.',
+        title: 'Report generation failed',
+        description: 'Failed to generate report',
         variant: 'destructive',
       });
     }
   };
 
-  const generateInvoiceHTML = (invoice: BillingHistory) => {
+  const handleExportInvoices = async (format: string = 'csv') => {
+    if (!subscription) return;
+    
+    try {
+      const result = await exportInvoices(subscription.id, format);
+      
+      toast({
+        title: 'Invoices exported',
+        description: `Invoices have been exported as ${format.toUpperCase()}`,
+      });
+      
+      // In a real app, you would download the file
+      console.log('Export data:', result);
+    } catch (error) {
+      toast({
+        title: 'Export failed',
+        description: 'Failed to export invoices',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handlePrintInvoice = (invoice: BillingHistory) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({
+        title: 'Print failed',
+        description: 'Please allow popups to print invoices',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    const invoiceHTML = generateInvoiceHTML(invoice);
+    printWindow.document.write(invoiceHTML);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const handleViewInvoice = (invoice: BillingHistory) => {
+    const viewWindow = window.open('', '_blank');
+    if (!viewWindow) {
+      toast({
+        title: 'View failed',
+        description: 'Please allow popups to view invoices',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    const invoiceHTML = generateInvoiceHTML(invoice);
+    viewWindow.document.write(invoiceHTML);
+    viewWindow.document.close();
+  };
+
+  const handleDownloadInvoice = (invoice: BillingHistory) => {
+    const invoiceHTML = generateInvoiceHTML(invoice);
+    const blob = new Blob([invoiceHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `invoice-${invoice.invoiceNumber || invoice.id}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: 'Invoice downloaded',
+      description: 'The invoice has been downloaded successfully',
+    });
+  };
+
+  const handleEmailInvoice = (invoice: BillingHistory) => {
+    if (!subscription) return;
+    
+    const subject = `Invoice ${invoice.invoiceNumber || invoice.id} - ${subscription.salonName}`;
+    const body = `Dear ${subscription.ownerName},
+
+Please find attached your invoice ${invoice.invoiceNumber || invoice.id} for ${subscription.salonName}.
+
+Invoice Details:
+- Amount: $${invoice.amount.toFixed(2)}
+- Date: ${format(new Date(invoice.date), 'MMMM dd, yyyy')}
+- Status: ${invoice.status.toUpperCase()}
+
+Thank you for your business!
+
+Best regards,
+Hairvana Team`;
+
+    const mailtoLink = `mailto:${subscription.ownerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoLink);
+    
+    toast({
+      title: 'Email prepared',
+      description: 'Email client opened with invoice details',
+    });
+  };
+
+  const getCardBrand = (cardNumber: string): string => {
+    // Simple card brand detection based on first digit
+    const firstDigit = cardNumber.charAt(0);
+    switch (firstDigit) {
+      case '3': return 'American Express';
+      case '4': return 'Visa';
+      case '5': return 'Mastercard';
+      case '6': return 'Discover';
+      default: return 'Unknown';
+    }
+  };
+
+  const getAvailableUpgrades = (currentPlan: string): Plan[] => {
+    const planOrder = ['Basic', 'Standard', 'Premium'];
+    const currentIndex = planOrder.indexOf(currentPlan);
+    return availablePlans.filter(plan => planOrder.indexOf(plan.name) > currentIndex);
+  };
+
+  const getAvailableDowngrades = (currentPlan: string): Plan[] => {
+    const planOrder = ['Basic', 'Standard', 'Premium'];
+    const currentIndex = planOrder.indexOf(currentPlan);
+    return availablePlans.filter(plan => planOrder.indexOf(plan.name) < currentIndex);
+  };
+
+  const getUsagePercentage = (current: number, limit: number | 'unlimited') => {
+    if (limit === 'unlimited') return 0;
+    return Math.min((current / limit) * 100, 100);
+  };
+
+  const getUsageColor = (percentage: number) => {
+    if (percentage >= 90) return 'bg-red-500';
+    if (percentage >= 75) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+
+  const generateInvoiceHTML = (invoice: BillingHistory): string => {
+    if (!subscription) return '';
+    
     return `
       <!DOCTYPE html>
       <html lang="en">
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Invoice ${invoice.invoiceNumber}</title>
+          <title>Invoice ${invoice.invoiceNumber || invoice.id}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { 
@@ -826,14 +717,14 @@ export default function SubscriptionDetailsPage() {
             <div class="invoice-details">
               <div class="bill-to">
                 <h3>Bill To</h3>
-                <p><strong>${subscription?.salonName}</strong></p>
-                <p>${subscription?.ownerName}</p>
-                <p>${subscription?.ownerEmail}</p>
-                <p>Salon ID: ${subscription?.salonId}</p>
+                <p><strong>${subscription.salonName}</strong></p>
+                <p>${subscription.ownerName}</p>
+                <p>${subscription.ownerEmail}</p>
+                <p>Salon ID: ${subscription.salonId}</p>
               </div>
               <div class="invoice-meta">
                 <h3>Invoice Details</h3>
-                <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
+                <p><strong>Invoice #:</strong> ${invoice.invoiceNumber || invoice.id}</p>
                 <p><strong>Date:</strong> ${format(new Date(invoice.date), 'MMMM dd, yyyy')}</p>
                 <p><strong>Due Date:</strong> ${format(new Date(invoice.date), 'MMMM dd, yyyy')}</p>
                 <p><strong>Billing Period:</strong> ${format(new Date(invoice.date), 'MMM dd')} - ${format(new Date(new Date(invoice.date).getTime() + 30 * 24 * 60 * 60 * 1000), 'MMM dd, yyyy')}</p>
@@ -856,8 +747,8 @@ export default function SubscriptionDetailsPage() {
                     <strong>${invoice.description}</strong><br>
                     <small>Subscription service for salon management platform</small>
                   </td>
-                  <td>${subscription?.plan} Plan</td>
-                  <td>${subscription?.billingCycle}</td>
+                  <td>${subscription.plan} Plan</td>
+                  <td>${subscription.billingCycle}</td>
                   <td>$${invoice.subtotal?.toFixed(2) || (invoice.amount - (invoice.taxAmount || 0)).toFixed(2)}</td>
                 </tr>
               </tbody>
@@ -866,7 +757,7 @@ export default function SubscriptionDetailsPage() {
             <!-- Payment Information -->
             <div class="payment-info">
               <h4>Payment Information</h4>
-              <p><strong>Payment Method:</strong> ${subscription?.paymentMethod?.brand} ending in ${subscription?.paymentMethod?.last4}</p>
+              <p><strong>Payment Method:</strong> ${subscription.paymentMethod?.brand || 'N/A'} ending in ${subscription.paymentMethod?.last4 || 'N/A'}</p>
               <p><strong>Transaction ID:</strong> txn_${invoice.id}</p>
               <p><strong>Payment Date:</strong> ${format(new Date(invoice.date), 'MMMM dd, yyyy')}</p>
             </div>
@@ -915,98 +806,6 @@ export default function SubscriptionDetailsPage() {
     `;
   };
 
-  const handlePrintInvoice = (invoice: BillingHistory) => {
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (!printWindow) {
-      alert('Please allow popups to print invoices');
-      return;
-    }
-
-    const invoiceHTML = generateInvoiceHTML(invoice);
-    printWindow.document.write(invoiceHTML);
-    printWindow.document.close();
-  };
-
-  const handleDownloadInvoice = (invoice: BillingHistory) => {
-    // Create a blob with the HTML content
-    const invoiceHTML = generateInvoiceHTML(invoice);
-    const blob = new Blob([invoiceHTML], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    
-    // Create a temporary link and trigger download
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `invoice-${invoice.invoiceNumber}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: 'Invoice downloaded',
-      description: `Invoice ${invoice.invoiceNumber} has been downloaded successfully.`,
-    });
-  };
-
-  const handleViewInvoice = (invoice: BillingHistory) => {
-    const viewWindow = window.open('', '_blank', 'width=900,height=700,scrollbars=yes');
-    if (!viewWindow) {
-      alert('Please allow popups to view invoices');
-      return;
-    }
-
-    const invoiceHTML = generateInvoiceHTML(invoice).replace(
-      '<script>',
-      '<!-- Auto-print disabled for view mode --><script style="display:none;">'
-    );
-    
-    viewWindow.document.write(invoiceHTML);
-    viewWindow.document.close();
-  };
-
-  const handleEmailInvoice = (invoice: BillingHistory) => {
-    const subject = `Invoice ${invoice.invoiceNumber} - ${subscription?.salonName}`;
-    const body = `Dear ${subscription?.ownerName},
-
-Please find attached your invoice ${invoice.invoiceNumber} for ${subscription?.salonName}.
-
-Invoice Details:
-- Amount: $${invoice.amount.toFixed(2)}
-- Date: ${format(new Date(invoice.date), 'MMMM dd, yyyy')}
-- Status: ${invoice.status.toUpperCase()}
-
-Thank you for your business!
-
-Best regards,
-Hairvana Team`;
-
-    const mailtoLink = `mailto:${subscription?.ownerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(mailtoLink);
-  };
-
-  const getAvailableUpgrades = (currentPlan: string) => {
-    const planOrder = ['Basic', 'Standard', 'Premium'];
-    const currentIndex = planOrder.indexOf(currentPlan);
-    return plans.filter(plan => planOrder.indexOf(plan.name) > currentIndex);
-  };
-
-  const getAvailableDowngrades = (currentPlan: string) => {
-    const planOrder = ['Basic', 'Standard', 'Premium'];
-    const currentIndex = planOrder.indexOf(currentPlan);
-    return plans.filter(plan => planOrder.indexOf(plan.name) < currentIndex);
-  };
-
-  const getUsagePercentage = (current: number, limit: number | 'unlimited') => {
-    if (limit === 'unlimited') return 0;
-    return Math.min((current / limit) * 100, 100);
-  };
-
-  const getUsageColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-red-500';
-    if (percentage >= 75) return 'bg-yellow-500';
-    return 'bg-green-500';
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1050,15 +849,22 @@ Hairvana Team`;
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleSyncBilling} disabled={syncingBilling}>
-            {syncingBilling ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+          <Button 
+            variant="outline" 
+            onClick={handleSyncBilling}
+            disabled={isSyncing}
+          >
+            {isSyncing ? (
+              <Loader className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4 mr-2" />
             )}
             Sync Billing
           </Button>
-          <Button variant="outline" onClick={handleEditSubscription}>
+          <Button 
+            variant="outline"
+            onClick={() => setEditDialogOpen(true)}
+          >
             <Edit className="h-4 w-4 mr-2" />
             Edit Subscription
           </Button>
@@ -1107,15 +913,27 @@ Hairvana Team`;
             <div className="flex gap-2">
               {subscription.status === 'active' && (
                 <>
-                  <Button variant="outline" className="text-blue-600 hover:text-blue-700" onClick={handleUpgradePlan}>
+                  <Button 
+                    variant="outline" 
+                    className="text-blue-600 hover:text-blue-700"
+                    onClick={() => setUpgradeDialogOpen(true)}
+                  >
                     <ArrowUpCircle className="h-4 w-4 mr-2" />
                     Upgrade Plan
                   </Button>
-                  <Button variant="outline" className="text-orange-600 hover:text-orange-700" onClick={handleDowngradePlan}>
+                  <Button 
+                    variant="outline" 
+                    className="text-orange-600 hover:text-orange-700"
+                    onClick={() => setDowngradeDialogOpen(true)}
+                  >
                     <ArrowDownCircle className="h-4 w-4 mr-2" />
                     Downgrade Plan
                   </Button>
-                  <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={handleCancelSubscription}>
+                  <Button 
+                    variant="outline" 
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => setCancelDialogOpen(true)}
+                  >
                     <XCircle className="h-4 w-4 mr-2" />
                     Cancel Subscription
                   </Button>
@@ -1244,7 +1062,11 @@ Hairvana Team`;
               </div>
             )}
             <div className="pt-4">
-              <Button variant="outline" className="w-full" onClick={handleUpdatePaymentMethod}>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setPaymentDialogOpen(true)}
+              >
                 <Edit className="h-4 w-4 mr-2" />
                 Update Payment Method
               </Button>
@@ -1287,11 +1109,19 @@ Hairvana Team`;
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleExportAll}>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => handleExportInvoices('csv')}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Export All
               </Button>
-              <Button variant="outline" size="sm" onClick={handleGenerateReport}>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setReportDialogOpen(true)}
+              >
                 <FileText className="h-4 w-4 mr-2" />
                 Generate Report
               </Button>
@@ -1314,7 +1144,7 @@ Hairvana Team`;
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-600">
-                      {format(new Date(invoice.date), 'MMM dd, yyyy')} • Invoice #{invoice.invoiceNumber}
+                      {format(new Date(invoice.date), 'MMM dd, yyyy')} • Invoice #{invoice.invoiceNumber || invoice.id}
                     </p>
                     {invoice.taxAmount && (
                       <p className="text-xs text-gray-500">
@@ -1369,35 +1199,45 @@ Hairvana Team`;
                 </div>
               </div>
             ))}
+
+            {subscription.billingHistory.length === 0 && (
+              <div className="text-center py-8">
+                <Receipt className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No billing history</h3>
+                <p className="text-gray-600">This subscription doesn't have any billing records yet.</p>
+              </div>
+            )}
           </div>
 
           {/* Billing Summary */}
-          <div className="mt-6 pt-6 border-t">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-bold text-gray-900">{subscription.billingHistory.length}</p>
-                <p className="text-sm text-gray-600">Total Invoices</p>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <p className="text-2xl font-bold text-green-600">
-                  {subscription.billingHistory.filter(inv => inv.status === 'paid').length}
-                </p>
-                <p className="text-sm text-gray-600">Paid Invoices</p>
-              </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <p className="text-2xl font-bold text-blue-600">
-                  ${subscription.billingHistory.reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}
-                </p>
-                <p className="text-sm text-gray-600">Total Billed</p>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <p className="text-2xl font-bold text-purple-600">
-                  ${(subscription.billingHistory.reduce((sum, inv) => sum + (inv.taxAmount || 0), 0)).toFixed(2)}
-                </p>
-                <p className="text-sm text-gray-600">Total Tax</p>
+          {subscription.billingHistory.length > 0 && (
+            <div className="mt-6 pt-6 border-t">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <p className="text-2xl font-bold text-gray-900">{subscription.billingHistory.length}</p>
+                  <p className="text-sm text-gray-600">Total Invoices</p>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <p className="text-2xl font-bold text-green-600">
+                    {subscription.billingHistory.filter(inv => inv.status === 'paid').length}
+                  </p>
+                  <p className="text-sm text-gray-600">Paid Invoices</p>
+                </div>
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <p className="text-2xl font-bold text-blue-600">
+                    ${subscription.billingHistory.reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}
+                  </p>
+                  <p className="text-sm text-gray-600">Total Billed</p>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <p className="text-2xl font-bold text-purple-600">
+                    ${(subscription.billingHistory.reduce((sum, inv) => sum + (inv.taxAmount || 0), 0)).toFixed(2)}
+                  </p>
+                  <p className="text-sm text-gray-600">Total Tax</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -1415,7 +1255,10 @@ Hairvana Team`;
               This subscription is currently in trial period. The trial will end on {format(new Date(subscription.nextBillingDate), 'MMMM dd, yyyy')}.
             </p>
             <div className="mt-4">
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleUpdatePaymentMethod}>
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => setPaymentDialogOpen(true)}
+              >
                 <CreditCard className="h-4 w-4 mr-2" />
                 Add Payment Method
               </Button>
@@ -1437,7 +1280,12 @@ Hairvana Team`;
               This subscription has been cancelled. Access will continue until {format(new Date(subscription.nextBillingDate), 'MMMM dd, yyyy')}.
             </p>
             <div className="mt-4">
-              <Button className="bg-green-600 hover:bg-green-700">
+              <Button 
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => {
+                  handleEditSubscription({ status: 'active' });
+                }}
+              >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Reactivate Subscription
               </Button>
@@ -1457,35 +1305,38 @@ Hairvana Team`;
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Current Plan</Label>
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <PlanIcon className="h-5 w-5 text-gray-600" />
-                  <span className="font-medium">{subscription.plan} Plan</span>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">${subscription.amount}/{subscription.billingCycle}</p>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="billingCycle">Billing Cycle</Label>
-              <select 
-                id="billingCycle"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                defaultValue={subscription.billingCycle}
-              >
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select>
-            </div>
-            
-            <div className="space-y-2">
               <Label htmlFor="nextBillingDate">Next Billing Date</Label>
               <Input
                 id="nextBillingDate"
                 type="date"
-                defaultValue={new Date(subscription.nextBillingDate).toISOString().split('T')[0]}
+                defaultValue={subscription.nextBillingDate.split('T')[0]}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select defaultValue={subscription.status}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="trial">Trial</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="past_due">Past Due</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="billingCycle">Billing Cycle</Label>
+              <Select defaultValue={subscription.billingCycle}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
@@ -1494,13 +1345,13 @@ Hairvana Team`;
             </Button>
             <Button 
               onClick={() => {
-                toast({
-                  title: 'Subscription updated',
-                  description: 'The subscription details have been updated successfully.',
+                // In a real app, you would get values from form fields
+                handleEditSubscription({
+                  next_billing_date: document.getElementById('nextBillingDate')?.value,
+                  status: (document.querySelector('[data-radix-select-value]') as HTMLElement)?.innerText.toLowerCase(),
+                  billing_cycle: (document.querySelectorAll('[data-radix-select-value]')[1] as HTMLElement)?.innerText.toLowerCase()
                 });
-                setEditDialogOpen(false);
               }}
-              className="bg-purple-600 hover:bg-purple-700"
             >
               Save Changes
             </Button>
@@ -1523,14 +1374,46 @@ Hairvana Team`;
                 <strong>Current Plan:</strong> {subscription.plan} - ${subscription.amount}/{subscription.billingCycle}
               </p>
             </div>
+            
+            {/* Billing Cycle Toggle */}
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-gray-100 p-1 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle('monthly')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    billingCycle === 'monthly'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle('yearly')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    billingCycle === 'yearly'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Yearly
+                  <Badge className="ml-2 bg-green-100 text-green-800">Save up to 17%</Badge>
+                </button>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {getAvailableUpgrades(subscription.plan).map((plan) => {
                 const PlanIcon = planIcons[plan.name];
-                const isSelected = selectedNewPlan?.id === plan.id;
+                const isSelected = selectedPlan?.id === plan.id;
+                const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.price;
+                
                 return (
                   <div
                     key={plan.id}
-                    onClick={() => setSelectedNewPlan(plan)}
+                    onClick={() => setSelectedPlan(plan)}
                     className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                       isSelected ? 'border-purple-200 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
                     }`}
@@ -1543,7 +1426,7 @@ Hairvana Team`;
                       </div>
                       <div>
                         <h3 className="font-bold text-gray-900">{plan.name}</h3>
-                        <p className="text-lg font-semibold text-gray-900">${plan.price}/month</p>
+                        <p className="text-lg font-semibold text-gray-900">${price}/{billingCycle}</p>
                       </div>
                     </div>
                     <p className="text-sm text-gray-600 mb-3">{plan.description}</p>
@@ -1559,6 +1442,7 @@ Hairvana Team`;
                 );
               })}
             </div>
+            
             {getAvailableUpgrades(subscription.plan).length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <Crown className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -1568,15 +1452,12 @@ Hairvana Team`;
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setUpgradeDialogOpen(false);
-              setSelectedNewPlan(null);
-            }}>
+            <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)}>
               Cancel
             </Button>
             <Button 
-              onClick={confirmUpgradePlan}
-              disabled={!selectedNewPlan}
+              onClick={handleUpgradePlan}
+              disabled={!selectedPlan}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
               <ArrowUpCircle className="h-4 w-4 mr-2" />
@@ -1604,14 +1485,46 @@ Hairvana Team`;
                 Downgrading will reduce available features and limits.
               </p>
             </div>
+            
+            {/* Billing Cycle Toggle */}
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-gray-100 p-1 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle('monthly')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    billingCycle === 'monthly'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle('yearly')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    billingCycle === 'yearly'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Yearly
+                  <Badge className="ml-2 bg-green-100 text-green-800">Save up to 17%</Badge>
+                </button>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {getAvailableDowngrades(subscription.plan).map((plan) => {
                 const PlanIcon = planIcons[plan.name];
-                const isSelected = selectedNewPlan?.id === plan.id;
+                const isSelected = selectedPlan?.id === plan.id;
+                const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.price;
+                
                 return (
                   <div
                     key={plan.id}
-                    onClick={() => setSelectedNewPlan(plan)}
+                    onClick={() => setSelectedPlan(plan)}
                     className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                       isSelected ? 'border-orange-200 bg-orange-50' : 'border-gray-200 hover:border-gray-300'
                     }`}
@@ -1624,7 +1537,7 @@ Hairvana Team`;
                       </div>
                       <div>
                         <h3 className="font-bold text-gray-900">{plan.name}</h3>
-                        <p className="text-lg font-semibold text-gray-900">${plan.price}/month</p>
+                        <p className="text-lg font-semibold text-gray-900">${price}/{billingCycle}</p>
                       </div>
                     </div>
                     <p className="text-sm text-gray-600 mb-3">{plan.description}</p>
@@ -1640,6 +1553,7 @@ Hairvana Team`;
                 );
               })}
             </div>
+            
             {getAvailableDowngrades(subscription.plan).length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <Zap className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -1649,16 +1563,13 @@ Hairvana Team`;
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setDowngradeDialogOpen(false);
-              setSelectedNewPlan(null);
-            }}>
+            <Button variant="outline" onClick={() => setDowngradeDialogOpen(false)}>
               Cancel
             </Button>
             <Button 
-              onClick={confirmDowngradePlan}
-              disabled={!selectedNewPlan}
-              className="bg-orange-600 hover:bg-orange-700 text-black font-semibold"
+              onClick={handleDowngradePlan}
+              disabled={!selectedPlan}
+              className="bg-orange-600 hover:bg-orange-700"
             >
               <ArrowDownCircle className="h-4 w-4 mr-2" />
               Downgrade Plan
@@ -1673,7 +1584,7 @@ Hairvana Team`;
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Subscription</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel the subscription for "{subscription.salonName}"? 
+              Are you sure you want to cancel the subscription for {subscription.salonName}? 
               This action will immediately revoke access to premium features and cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1689,8 +1600,8 @@ Hairvana Team`;
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={confirmCancelSubscription}
-              className="bg-red-600 hover:bg-red-700"
+              onClick={handleCancelSubscription}
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               Cancel Subscription
             </AlertDialogAction>
@@ -1699,7 +1610,7 @@ Hairvana Team`;
       </AlertDialog>
 
       {/* Update Payment Method Dialog */}
-      <Dialog open={paymentMethodDialogOpen} onOpenChange={setPaymentMethodDialogOpen}>
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Update Payment Method</DialogTitle>
@@ -1719,73 +1630,63 @@ Hairvana Team`;
               </div>
             )}
             
-            <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="cardholderName">Cardholder Name</Label>
+              <Input
+                id="cardholderName"
+                placeholder="John Doe"
+                value={paymentMethod.cardholderName}
+                onChange={(e) => setPaymentMethod(prev => ({ ...prev, cardholderName: e.target.value }))}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="cardNumber">Card Number</Label>
+              <Input
+                id="cardNumber"
+                placeholder="1234 5678 9012 3456"
+                value={paymentMethod.cardNumber}
+                onChange={(e) => setPaymentMethod(prev => ({ ...prev, cardNumber: e.target.value }))}
+              />
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="cardholderName">Cardholder Name</Label>
+                <Label htmlFor="expiryMonth">Month</Label>
                 <Input
-                  id="cardholderName"
-                  placeholder="John Doe"
-                  value={newPaymentMethod.cardholderName}
-                  onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cardholderName: e.target.value }))}
+                  id="expiryMonth"
+                  placeholder="MM"
+                  value={paymentMethod.expiryMonth}
+                  onChange={(e) => setPaymentMethod(prev => ({ ...prev, expiryMonth: e.target.value }))}
                 />
               </div>
-              
               <div className="space-y-2">
-                <Label htmlFor="cardNumber">Card Number</Label>
+                <Label htmlFor="expiryYear">Year</Label>
                 <Input
-                  id="cardNumber"
-                  placeholder="1234 5678 9012 3456"
-                  value={newPaymentMethod.cardNumber}
-                  onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cardNumber: e.target.value }))}
+                  id="expiryYear"
+                  placeholder="YYYY"
+                  value={paymentMethod.expiryYear}
+                  onChange={(e) => setPaymentMethod(prev => ({ ...prev, expiryYear: e.target.value }))}
                 />
               </div>
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="expiryMonth">Month</Label>
-                  <Input
-                    id="expiryMonth"
-                    placeholder="MM"
-                    value={newPaymentMethod.expiryMonth}
-                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, expiryMonth: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expiryYear">Year</Label>
-                  <Input
-                    id="expiryYear"
-                    placeholder="YYYY"
-                    value={newPaymentMethod.expiryYear}
-                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, expiryYear: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cvv">CVV</Label>
-                  <Input
-                    id="cvv"
-                    placeholder="123"
-                    value={newPaymentMethod.cvv}
-                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cvv: e.target.value }))}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="cvv">CVV</Label>
+                <Input
+                  id="cvv"
+                  placeholder="123"
+                  value={paymentMethod.cvv}
+                  onChange={(e) => setPaymentMethod(prev => ({ ...prev, cvv: e.target.value }))}
+                />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setPaymentMethodDialogOpen(false);
-              setNewPaymentMethod({
-                cardNumber: '',
-                expiryMonth: '',
-                expiryYear: '',
-                cvv: '',
-                cardholderName: '',
-              });
-            }}>
+            <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
               Cancel
             </Button>
             <Button 
-              onClick={confirmUpdatePaymentMethod}
+              onClick={handleUpdatePaymentMethod}
+              disabled={!paymentMethod.cardNumber || !paymentMethod.cardholderName}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <CreditCard className="h-4 w-4 mr-2" />
@@ -1796,64 +1697,75 @@ Hairvana Team`;
       </Dialog>
 
       {/* Generate Report Dialog */}
-      <Dialog open={generateReportDialogOpen} onOpenChange={setGenerateReportDialogOpen}>
+      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Generate Subscription Report</DialogTitle>
             <DialogDescription>
-              Create a detailed report for this subscription
+              Create a detailed report for {subscription.salonName}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="reportType">Report Type</Label>
-              <select 
-                id="reportType"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                defaultValue="billing"
+              <Select 
+                value={reportSettings.reportType}
+                onValueChange={(value) => setReportSettings(prev => ({ ...prev, reportType: value }))}
               >
-                <option value="billing">Billing History</option>
-                <option value="usage">Usage Report</option>
-                <option value="summary">Subscription Summary</option>
-                <option value="comprehensive">Comprehensive Report</option>
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="summary">Subscription Summary</SelectItem>
+                  <SelectItem value="billing">Billing History</SelectItem>
+                  <SelectItem value="usage">Usage Report</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="dateRange">Date Range</Label>
-              <select 
-                id="dateRange"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                defaultValue="all"
+              <Select 
+                value={reportSettings.dateRange}
+                onValueChange={(value) => setReportSettings(prev => ({ ...prev, dateRange: value }))}
               >
-                <option value="all">All Time</option>
-                <option value="30days">Last 30 Days</option>
-                <option value="90days">Last 90 Days</option>
-                <option value="year">Last Year</option>
-                <option value="custom">Custom Range</option>
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30d">Last 30 days</SelectItem>
+                  <SelectItem value="90d">Last 90 days</SelectItem>
+                  <SelectItem value="6m">Last 6 months</SelectItem>
+                  <SelectItem value="1y">Last year</SelectItem>
+                  <SelectItem value="all">All time</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="format">Report Format</Label>
-              <select 
-                id="format"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                defaultValue="pdf"
+              <Select 
+                value={reportSettings.format}
+                onValueChange={(value) => setReportSettings(prev => ({ ...prev, format: value }))}
               >
-                <option value="pdf">PDF</option>
-                <option value="excel">Excel</option>
-                <option value="csv">CSV</option>
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pdf">PDF Document</SelectItem>
+                  <SelectItem value="excel">Excel Spreadsheet</SelectItem>
+                  <SelectItem value="csv">CSV File</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setGenerateReportDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setReportDialogOpen(false)}>
               Cancel
             </Button>
             <Button 
-              onClick={confirmGenerateReport}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={handleGenerateReport}
+              className="bg-purple-600 hover:bg-purple-700"
             >
               <FileText className="h-4 w-4 mr-2" />
               Generate Report

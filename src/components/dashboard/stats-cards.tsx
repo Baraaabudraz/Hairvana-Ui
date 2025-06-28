@@ -30,6 +30,7 @@ export function StatsCards() {
         setStats(data.overview);
       } catch (error) {
         console.error('Error loading dashboard stats:', error);
+        setStats(null);
       } finally {
         setLoading(false);
       }
@@ -71,56 +72,55 @@ export function StatsCards() {
     );
   }
 
-  const statCards = [
-    {
-      name: 'Total Salons',
-      value: stats.totalSalons.toLocaleString(),
-      change: '+12%',
-      changeType: 'positive' as const,
-      icon: Building2,
-    },
-    {
-      name: 'Active Users',
-      value: stats.activeUsers.toLocaleString(),
-      change: '+8%',
-      changeType: 'positive' as const,
-      icon: Users,
-    },
-    {
-      name: 'Monthly Revenue',
-      value: `$${stats.totalRevenue.toLocaleString()}`,
-      change: `+${stats.monthlyGrowth}%`,
-      changeType: 'positive' as const,
-      icon: CreditCard,
-    },
-    {
-      name: 'Total Bookings',
-      value: stats.totalBookings.toLocaleString(),
-      change: '+15%',
-      changeType: 'positive' as const,
-      icon: TrendingUp,
-    },
-  ];
-
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {statCards.map((stat) => (
-        <Card key={stat.name} className="border-0 shadow-sm bg-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              {stat.name}
-            </CardTitle>
-            <stat.icon className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-            <p className="text-xs text-green-600 flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" />
-              {stat.change} from last month
-            </p>
-          </CardContent>
-        </Card>
-      ))}
+      <Card className="border-0 shadow-sm bg-white">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-gray-600">
+            Total Salons
+          </CardTitle>
+          <Building2 className="h-4 w-4 text-gray-400" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-gray-900">{stats.totalSalons.toLocaleString()}</div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-sm bg-white">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-gray-600">
+            Active Users
+          </CardTitle>
+          <Users className="h-4 w-4 text-gray-400" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-gray-900">{stats.activeUsers.toLocaleString()}</div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-sm bg-white">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-gray-600">
+            Monthly Revenue
+          </CardTitle>
+          <CreditCard className="h-4 w-4 text-gray-400" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-gray-900">${stats.totalRevenue.toLocaleString()}</div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-sm bg-white">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-gray-600">
+            Total Bookings
+          </CardTitle>
+          <TrendingUp className="h-4 w-4 text-gray-400" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-gray-900">{stats.totalBookings.toLocaleString()}</div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

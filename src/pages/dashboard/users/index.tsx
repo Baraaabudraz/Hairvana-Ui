@@ -110,6 +110,16 @@ const roleIcons = {
   user: Users,
 };
 
+// Helper function to safely format dates
+const formatDateSafely = (dateString: string | null, fallback: string = 'N/A'): string => {
+  if (!dateString) return fallback;
+  
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return fallback;
+  
+  return formatDistanceToNow(date, { addSuffix: true });
+};
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<UserStats>({
@@ -528,13 +538,13 @@ export default function UsersPage() {
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-3 w-3 text-gray-400" />
                         <span className="text-xs text-gray-500">
-                          Joined {formatDistanceToNow(new Date(user.joinDate), { addSuffix: true })}
+                          Joined {formatDateSafely(user.joinDate)}
                         </span>
                         {user.lastLogin && (
                           <>
                             <span className="text-gray-300">•</span>
                             <span className="text-xs text-gray-500">
-                              Last seen {formatDistanceToNow(new Date(user.lastLogin), { addSuffix: true })}
+                              Last seen {formatDateSafely(user.lastLogin, 'Never')}
                             </span>
                           </>
                         )}

@@ -1,11 +1,9 @@
-const { supabase } = require('../lib/supabase');
-
 // Get all subscriptions
 exports.getAllSubscriptions = async (req, res) => {
   try {
     const { status, salonId, ownerId, search, includePlans } = req.query;
     
-    let query = supabase
+    let query = req.supabase
       .from('subscriptions')
       .select(`
         *,
@@ -39,7 +37,7 @@ exports.getAllSubscriptions = async (req, res) => {
     if (data && data.length > 0) {
       const subscriptionIds = data.map(sub => sub.id);
       
-      const { data: billingData, error: billingError } = await supabase
+      const { data: billingData, error: billingError } = await req.supabase
         .from('billing_history')
         .select('*')
         .in('subscription_id', subscriptionIds)
@@ -103,7 +101,7 @@ exports.getAllSubscriptions = async (req, res) => {
     
     // Include plans if requested
     if (includePlans === 'true') {
-      const { data: plansData, error: plansError } = await supabase
+      const { data: plansData, error: plansError } = await req.supabase
         .from('subscription_plans')
         .select('*');
       
@@ -123,7 +121,7 @@ exports.getSubscriptionById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('subscriptions')
       .select(`
         *,
@@ -138,7 +136,7 @@ exports.getSubscriptionById = async (req, res) => {
     }
     
     // Fetch billing history
-    const { data: billingData, error: billingError } = await supabase
+    const { data: billingData, error: billingError } = await req.supabase
       .from('billing_history')
       .select('*')
       .eq('subscription_id', id)
@@ -176,7 +174,7 @@ exports.createSubscription = async (req, res) => {
     const subscriptionData = req.body;
     
     // First, get the plan details
-    const { data: planData, error: planError } = await supabase
+    const { data: planData, error: planError } = await req.supabase
       .from('subscription_plans')
       .select('*')
       .eq('id', subscriptionData.plan_id)
@@ -187,7 +185,7 @@ exports.createSubscription = async (req, res) => {
     }
     
     // Create the subscription
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('subscriptions')
       .insert(subscriptionData)
       .select()
@@ -210,7 +208,7 @@ exports.createSubscription = async (req, res) => {
         subtotal: subscriptionData.amount * 0.92
       };
       
-      const { error: billingError } = await supabase
+      const { error: billingError } = await req.supabase
         .from('billing_history')
         .insert(billingRecord);
       
@@ -233,7 +231,7 @@ exports.updateSubscription = async (req, res) => {
     
     // If changing plan, get the new plan details
     if (subscriptionData.plan_id) {
-      const { data: planData, error: planError } = await supabase
+      const { data: planData, error: planError } = await req.supabase
         .from('subscription_plans')
         .select('*')
         .eq('id', subscriptionData.plan_id)
@@ -254,7 +252,7 @@ exports.updateSubscription = async (req, res) => {
       }
     }
     
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('subscriptions')
       .update(subscriptionData)
       .eq('id', id)
@@ -276,7 +274,7 @@ exports.cancelSubscription = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('subscriptions')
       .update({ status: 'cancelled' })
       .eq('id', id)
@@ -296,7 +294,7 @@ exports.cancelSubscription = async (req, res) => {
 // Get subscription plans
 exports.getSubscriptionPlans = async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('subscription_plans')
       .select('*');
     
@@ -315,7 +313,7 @@ exports.createBillingRecord = async (req, res) => {
   try {
     const billingData = req.body;
     
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('billing_history')
       .insert(billingData)
       .select()
@@ -337,7 +335,7 @@ exports.syncBilling = async (req, res) => {
     const { id } = req.params;
     
     // Get subscription details
-    const { data: subscription, error: subError } = await supabase
+    const { data: subscription, error: subError } = await req.supabase
       .from('subscriptions')
       .select(`
         *,
@@ -374,7 +372,7 @@ exports.generateReport = async (req, res) => {
     const { reportType, dateRange, format } = req.body;
     
     // Get subscription details
-    const { data: subscription, error: subError } = await supabase
+    const { data: subscription, error: subError } = await req.supabase
       .from('subscriptions')
       .select(`
         *,
@@ -389,7 +387,7 @@ exports.generateReport = async (req, res) => {
     }
     
     // Get billing history
-    const { data: billingHistory, error: billingError } = await supabase
+    const { data: billingHistory, error: billingError } = await req.supabase
       .from('billing_history')
       .select('*')
       .eq('subscription_id', id)
@@ -453,7 +451,7 @@ exports.exportInvoices = async (req, res) => {
     const { format } = req.query;
     
     // Get billing history
-    const { data: billingHistory, error: billingError } = await supabase
+    const { data: billingHistory, error: billingError } = await req.supabase
       .from('billing_history')
       .select('*')
       .eq('subscription_id', id)
@@ -489,7 +487,7 @@ exports.updatePaymentMethod = async (req, res) => {
     }
     
     // Update subscription with new payment method
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('subscriptions')
       .update({ payment_method: paymentData })
       .eq('id', id)

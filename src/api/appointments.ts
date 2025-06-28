@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { apiFetch } from '@/lib/api';
 
 export async function fetchAppointments(params: { 
   userId?: string; 
@@ -8,44 +8,15 @@ export async function fetchAppointments(params: {
   to?: string;
 } = {}) {
   try {
-    let query = supabase
-      .from('appointments')
-      .select(`
-        *,
-        salon:salons(id, name, location, address, phone, email, images),
-        service:services(id, name, price, duration, description),
-        staff:staff(id, name, avatar, bio),
-        user:users(id, name, email, phone, avatar)
-      `);
+    const queryParams = new URLSearchParams();
     
-    if (params.userId) {
-      query = query.eq('user_id', params.userId);
-    }
+    if (params.userId) queryParams.append('userId', params.userId);
+    if (params.salonId) queryParams.append('salonId', params.salonId);
+    if (params.status && params.status !== 'all') queryParams.append('status', params.status);
+    if (params.from) queryParams.append('from', params.from);
+    if (params.to) queryParams.append('to', params.to);
     
-    if (params.salonId) {
-      query = query.eq('salon_id', params.salonId);
-    }
-    
-    if (params.status && params.status !== 'all') {
-      query = query.eq('status', params.status);
-    }
-    
-    if (params.from) {
-      query = query.gte('date', params.from);
-    }
-    
-    if (params.to) {
-      query = query.lte('date', params.to);
-    }
-    
-    // Order by date
-    query = query.order('date', { ascending: false });
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    return data || [];
+    return await apiFetch(`/api/appointments?${queryParams.toString()}`);
   } catch (error) {
     console.error('Error fetching appointments:', error);
     throw error;
@@ -54,21 +25,7 @@ export async function fetchAppointments(params: {
 
 export async function fetchAppointmentById(id: string) {
   try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .select(`
-        *,
-        salon:salons(id, name, location, address, phone, email, images),
-        service:services(id, name, price, duration, description),
-        staff:staff(id, name, avatar, bio),
-        user:users(id, name, email, phone, avatar)
-      `)
-      .eq('id', id)
-      .single();
-    
-    if (error) throw error;
-    
-    return data;
+    return await apiFetch(`/api/appointments/${id}`);
   } catch (error) {
     console.error(`Error fetching appointment with ID ${id}:`, error);
     throw error;
@@ -77,46 +34,10 @@ export async function fetchAppointmentById(id: string) {
 
 export async function createAppointment(appointmentData: any) {
   try {
-    // Get service details for duration
-    const { data: service, error: serviceError } = await supabase
-      .from('services')
-      .select('duration, price')
-      .eq('id', appointmentData.service_id)
-      .single();
-    
-    if (serviceError) throw serviceError;
-    
-    // Check if the time slot is available
-    const appointmentDate = new Date(appointmentData.date);
-    const endTime = new Date(appointmentDate.getTime() + service.duration * 60000);
-    
-    const { data: existingAppointments, error: appointmentError } = await supabase
-      .from('appointments')
-      .select('*')
-      .eq('staff_id', appointmentData.staff_id)
-      .eq('status', 'confirmed')
-      .lt('date', endTime.toISOString())
-      .gt('date', appointmentDate.toISOString());
-    
-    if (appointmentError) throw appointmentError;
-    
-    if (existingAppointments && existingAppointments.length > 0) {
-      throw new Error('This time slot is not available');
-    }
-    
-    // Create appointment
-    const { data, error } = await supabase
-      .from('appointments')
-      .insert({
-        ...appointmentData,
-        duration: service.duration
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return data;
+    return await apiFetch('/api/appointments', {
+      method: 'POST',
+      body: JSON.stringify(appointmentData),
+    });
   } catch (error) {
     console.error('Error creating appointment:', error);
     throw error;
@@ -125,16 +46,10 @@ export async function createAppointment(appointmentData: any) {
 
 export async function updateAppointment(id: string, appointmentData: any) {
   try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .update(appointmentData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return data;
+    return await apiFetch(`/api/appointments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(appointmentData),
+    });
   } catch (error) {
     console.error(`Error updating appointment with ID ${id}:`, error);
     throw error;
@@ -143,16 +58,9 @@ export async function updateAppointment(id: string, appointmentData: any) {
 
 export async function cancelAppointment(id: string) {
   try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .update({ status: 'cancelled' })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return data;
+    return await apiFetch(`/api/appointments/${id}/cancel`, {
+      method: 'PATCH',
+    });
   } catch (error) {
     console.error(`Error cancelling appointment with ID ${id}:`, error);
     throw error;
@@ -166,124 +74,13 @@ export async function checkAvailability(params: {
   date: string;
 }) {
   try {
-    // Get salon hours for the day of the week
-    const { data: salon, error: salonError } = await supabase
-      .from('salons')
-      .select('hours')
-      .eq('id', params.salonId)
-      .single();
+    const queryParams = new URLSearchParams();
+    queryParams.append('salonId', params.salonId);
+    queryParams.append('staffId', params.staffId);
+    queryParams.append('serviceId', params.serviceId);
+    queryParams.append('date', params.date);
     
-    if (salonError) throw salonError;
-    
-    // Get service duration
-    const { data: service, error: serviceError } = await supabase
-      .from('services')
-      .select('duration')
-      .eq('id', params.serviceId)
-      .single();
-    
-    if (serviceError) throw serviceError;
-    
-    // Get existing appointments for the staff on the given date
-    const selectedDate = new Date(params.date);
-    const nextDay = new Date(selectedDate);
-    nextDay.setDate(nextDay.getDate() + 1);
-    
-    const { data: appointments, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select('date, duration')
-      .eq('staff_id', params.staffId)
-      .gte('date', selectedDate.toISOString())
-      .lt('date', nextDay.toISOString())
-      .in('status', ['pending', 'confirmed']);
-    
-    if (appointmentsError) throw appointmentsError;
-    
-    // Get day of week
-    const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][selectedDate.getDay()];
-    
-    // Get salon hours for the day
-    const dayHours = salon.hours[dayOfWeek];
-    
-    if (!dayHours || dayHours.closed) {
-      return {
-        available: false,
-        message: 'Salon is closed on this day',
-        timeSlots: []
-      };
-    }
-    
-    // Parse opening and closing hours
-    const [openHour, openMinute] = dayHours.open.split(':').map(Number);
-    const [closeHour, closeMinute] = dayHours.close.split(':').map(Number);
-    
-    const openTime = new Date(selectedDate);
-    openTime.setHours(openHour, openMinute, 0, 0);
-    
-    const closeTime = new Date(selectedDate);
-    closeTime.setHours(closeHour, closeMinute, 0, 0);
-    
-    // Generate time slots (30-minute intervals)
-    const timeSlots = [];
-    const slotDuration = 30; // minutes
-    const serviceDuration = service.duration;
-    
-    // Ensure we don't schedule appointments that would end after closing time
-    const lastSlotTime = new Date(closeTime);
-    lastSlotTime.setMinutes(lastSlotTime.getMinutes() - serviceDuration);
-    
-    // Create a map of busy times
-    const busyTimes = new Map();
-    appointments?.forEach(appointment => {
-      const startTime = new Date(appointment.date);
-      const endTime = new Date(startTime.getTime() + appointment.duration * 60000);
-      
-      // Mark all 30-minute slots that overlap with this appointment as busy
-      let currentSlot = new Date(startTime);
-      currentSlot.setMinutes(Math.floor(currentSlot.getMinutes() / slotDuration) * slotDuration, 0, 0);
-      
-      while (currentSlot < endTime) {
-        busyTimes.set(currentSlot.getTime(), true);
-        currentSlot = new Date(currentSlot.getTime() + slotDuration * 60000);
-      }
-    });
-    
-    // Generate available time slots
-    let currentTime = new Date(openTime);
-    while (currentTime <= lastSlotTime) {
-      const slotEndTime = new Date(currentTime.getTime() + serviceDuration * 60000);
-      
-      // Check if any 30-minute slot within the service duration is busy
-      let isAvailable = true;
-      let checkTime = new Date(currentTime);
-      while (checkTime < slotEndTime) {
-        if (busyTimes.has(checkTime.getTime())) {
-          isAvailable = false;
-          break;
-        }
-        checkTime = new Date(checkTime.getTime() + slotDuration * 60000);
-      }
-      
-      if (isAvailable) {
-        timeSlots.push({
-          time: currentTime.toISOString(),
-          formattedTime: currentTime.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            minute: '2-digit',
-            hour12: true 
-          })
-        });
-      }
-      
-      // Move to next slot
-      currentTime = new Date(currentTime.getTime() + slotDuration * 60000);
-    }
-    
-    return {
-      available: timeSlots.length > 0,
-      timeSlots,
-      serviceDuration
-    };
+    return await apiFetch(`/api/appointments/availability?${queryParams.toString()}`);
   } catch (error) {
     console.error('Error checking availability:', error);
     throw error;

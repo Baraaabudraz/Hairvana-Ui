@@ -1,12 +1,10 @@
-const { supabase } = require('../lib/supabase');
-
 // Get user settings
-exports.getUserSettings = async (req, res) => {
+exports.getUserSettings = async (req, res, next) => {
   try {
     const userId = req.user.userId;
     
     // Get user profile settings
-    const { data: userProfile, error: profileError } = await supabase
+    const { data: userProfile, error: profileError } = await req.supabase
       .from('user_settings')
       .select('*')
       .eq('user_id', userId)
@@ -17,7 +15,7 @@ exports.getUserSettings = async (req, res) => {
     }
     
     // Get security settings
-    const { data: securitySettings, error: securityError } = await supabase
+    const { data: securitySettings, error: securityError } = await req.supabase
       .from('security_settings')
       .select('*')
       .eq('user_id', userId)
@@ -28,7 +26,7 @@ exports.getUserSettings = async (req, res) => {
     }
     
     // Get notification preferences
-    const { data: notificationPrefs, error: notifError } = await supabase
+    const { data: notificationPrefs, error: notifError } = await req.supabase
       .from('notification_preferences')
       .select('*')
       .eq('user_id', userId)
@@ -39,7 +37,7 @@ exports.getUserSettings = async (req, res) => {
     }
     
     // Get billing settings
-    const { data: billingSettings, error: billingError } = await supabase
+    const { data: billingSettings, error: billingError } = await req.supabase
       .from('billing_settings')
       .select('*')
       .eq('user_id', userId)
@@ -50,7 +48,7 @@ exports.getUserSettings = async (req, res) => {
     }
     
     // Get backup settings
-    const { data: backupSettings, error: backupError } = await supabase
+    const { data: backupSettings, error: backupError } = await req.supabase
       .from('backup_settings')
       .select('*')
       .eq('user_id', userId)
@@ -68,18 +66,18 @@ exports.getUserSettings = async (req, res) => {
       backup: backupSettings || {}
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 // Update profile settings
-exports.updateProfileSettings = async (req, res) => {
+exports.updateProfileSettings = async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const profileData = req.body;
     
     // Check if settings exist
-    const { data: existingSettings } = await supabase
+    const { data: existingSettings } = await req.supabase
       .from('user_settings')
       .select('id')
       .eq('user_id', userId)
@@ -88,7 +86,7 @@ exports.updateProfileSettings = async (req, res) => {
     let result;
     if (existingSettings) {
       // Update existing settings
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('user_settings')
         .update(profileData)
         .eq('user_id', userId)
@@ -99,7 +97,7 @@ exports.updateProfileSettings = async (req, res) => {
       result = data;
     } else {
       // Create new settings
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('user_settings')
         .insert({ ...profileData, user_id: userId })
         .select()
@@ -114,18 +112,18 @@ exports.updateProfileSettings = async (req, res) => {
       settings: result
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 // Update security settings
-exports.updateSecuritySettings = async (req, res) => {
+exports.updateSecuritySettings = async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const securityData = req.body;
     
     // Check if settings exist
-    const { data: existingSettings } = await supabase
+    const { data: existingSettings } = await req.supabase
       .from('security_settings')
       .select('id')
       .eq('user_id', userId)
@@ -134,7 +132,7 @@ exports.updateSecuritySettings = async (req, res) => {
     let result;
     if (existingSettings) {
       // Update existing settings
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('security_settings')
         .update(securityData)
         .eq('user_id', userId)
@@ -145,7 +143,7 @@ exports.updateSecuritySettings = async (req, res) => {
       result = data;
     } else {
       // Create new settings
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('security_settings')
         .insert({ ...securityData, user_id: userId })
         .select()
@@ -160,18 +158,18 @@ exports.updateSecuritySettings = async (req, res) => {
       settings: result
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 // Update notification preferences
-exports.updateNotificationPreferences = async (req, res) => {
+exports.updateNotificationPreferences = async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const notificationData = req.body;
     
     // Check if preferences exist
-    const { data: existingPrefs } = await supabase
+    const { data: existingPrefs } = await req.supabase
       .from('notification_preferences')
       .select('id')
       .eq('user_id', userId)
@@ -180,7 +178,7 @@ exports.updateNotificationPreferences = async (req, res) => {
     let result;
     if (existingPrefs) {
       // Update existing preferences
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('notification_preferences')
         .update(notificationData)
         .eq('user_id', userId)
@@ -191,7 +189,7 @@ exports.updateNotificationPreferences = async (req, res) => {
       result = data;
     } else {
       // Create new preferences
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('notification_preferences')
         .insert({ ...notificationData, user_id: userId })
         .select()
@@ -206,18 +204,18 @@ exports.updateNotificationPreferences = async (req, res) => {
       settings: result
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 // Update billing settings
-exports.updateBillingSettings = async (req, res) => {
+exports.updateBillingSettings = async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const billingData = req.body;
     
     // Check if settings exist
-    const { data: existingSettings } = await supabase
+    const { data: existingSettings } = await req.supabase
       .from('billing_settings')
       .select('id')
       .eq('user_id', userId)
@@ -226,7 +224,7 @@ exports.updateBillingSettings = async (req, res) => {
     let result;
     if (existingSettings) {
       // Update existing settings
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('billing_settings')
         .update(billingData)
         .eq('user_id', userId)
@@ -237,7 +235,7 @@ exports.updateBillingSettings = async (req, res) => {
       result = data;
     } else {
       // Create new settings
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('billing_settings')
         .insert({ ...billingData, user_id: userId })
         .select()
@@ -252,18 +250,18 @@ exports.updateBillingSettings = async (req, res) => {
       settings: result
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 // Update backup settings
-exports.updateBackupSettings = async (req, res) => {
+exports.updateBackupSettings = async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const backupData = req.body;
     
     // Check if settings exist
-    const { data: existingSettings } = await supabase
+    const { data: existingSettings } = await req.supabase
       .from('backup_settings')
       .select('id')
       .eq('user_id', userId)
@@ -272,7 +270,7 @@ exports.updateBackupSettings = async (req, res) => {
     let result;
     if (existingSettings) {
       // Update existing settings
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('backup_settings')
         .update(backupData)
         .eq('user_id', userId)
@@ -283,7 +281,7 @@ exports.updateBackupSettings = async (req, res) => {
       result = data;
     } else {
       // Create new settings
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('backup_settings')
         .insert({ ...backupData, user_id: userId })
         .select()
@@ -298,12 +296,12 @@ exports.updateBackupSettings = async (req, res) => {
       settings: result
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 // Get platform settings (admin only)
-exports.getPlatformSettings = async (req, res) => {
+exports.getPlatformSettings = async (req, res, next) => {
   try {
     // Check if user is admin
     if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
@@ -311,7 +309,7 @@ exports.getPlatformSettings = async (req, res) => {
     }
     
     // Get platform settings
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('platform_settings')
       .select('*')
       .single();
@@ -322,12 +320,12 @@ exports.getPlatformSettings = async (req, res) => {
     
     res.json(data || {});
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 // Update platform settings (admin only)
-exports.updatePlatformSettings = async (req, res) => {
+exports.updatePlatformSettings = async (req, res, next) => {
   try {
     // Check if user is admin
     if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
@@ -337,7 +335,7 @@ exports.updatePlatformSettings = async (req, res) => {
     const platformData = req.body;
     
     // Check if settings exist
-    const { data: existingSettings } = await supabase
+    const { data: existingSettings } = await req.supabase
       .from('platform_settings')
       .select('id')
       .single();
@@ -345,7 +343,7 @@ exports.updatePlatformSettings = async (req, res) => {
     let result;
     if (existingSettings) {
       // Update existing settings
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('platform_settings')
         .update(platformData)
         .eq('id', existingSettings.id)
@@ -356,7 +354,7 @@ exports.updatePlatformSettings = async (req, res) => {
       result = data;
     } else {
       // Create new settings
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('platform_settings')
         .insert(platformData)
         .select()
@@ -371,12 +369,12 @@ exports.updatePlatformSettings = async (req, res) => {
       settings: result
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 // Get integration settings (admin only)
-exports.getIntegrationSettings = async (req, res) => {
+exports.getIntegrationSettings = async (req, res, next) => {
   try {
     // Check if user is admin
     if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
@@ -384,7 +382,7 @@ exports.getIntegrationSettings = async (req, res) => {
     }
     
     // Get integration settings
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('integration_settings')
       .select('*')
       .single();
@@ -395,12 +393,12 @@ exports.getIntegrationSettings = async (req, res) => {
     
     res.json(data || {});
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 // Update integration settings (admin only)
-exports.updateIntegrationSettings = async (req, res) => {
+exports.updateIntegrationSettings = async (req, res, next) => {
   try {
     // Check if user is admin
     if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
@@ -410,7 +408,7 @@ exports.updateIntegrationSettings = async (req, res) => {
     const integrationData = req.body;
     
     // Check if settings exist
-    const { data: existingSettings } = await supabase
+    const { data: existingSettings } = await req.supabase
       .from('integration_settings')
       .select('id')
       .single();
@@ -418,7 +416,7 @@ exports.updateIntegrationSettings = async (req, res) => {
     let result;
     if (existingSettings) {
       // Update existing settings
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('integration_settings')
         .update(integrationData)
         .eq('id', existingSettings.id)
@@ -429,7 +427,7 @@ exports.updateIntegrationSettings = async (req, res) => {
       result = data;
     } else {
       // Create new settings
-      const { data, error } = await supabase
+      const { data, error } = await req.supabase
         .from('integration_settings')
         .insert(integrationData)
         .select()
@@ -444,6 +442,6 @@ exports.updateIntegrationSettings = async (req, res) => {
       settings: result
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase } from '@/lib/supabase';
-import { loginUser, logoutUser } from '@/api/auth';
+import { loginUser, logoutUser, getCurrentUser } from '@/api/auth';
 
 interface User {
   id: string;
@@ -66,34 +65,23 @@ export const useAuthStore = create<AuthState>()(
       checkSession: async () => {
         set({ isLoading: true });
         try {
-          const { data, error } = await supabase.auth.getSession();
+          const token = localStorage.getItem('token');
           
-          if (error || !data.session) {
+          if (!token) {
             set({ user: null, token: null, isLoading: false });
             return;
           }
           
-          // Fetch user details from your users table
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', data.session.user.id)
-            .single();
+          const userData = await getCurrentUser();
           
-          if (userError || !userData) {
+          if (!userData) {
             set({ user: null, token: null, isLoading: false });
             return;
           }
           
           set({ 
-            user: {
-              id: userData.id,
-              email: userData.email,
-              name: userData.name,
-              role: userData.role,
-              avatar: userData.avatar
-            }, 
-            token: data.session.access_token,
+            user: userData,
+            token,
             isLoading: false 
           });
         } catch (error) {

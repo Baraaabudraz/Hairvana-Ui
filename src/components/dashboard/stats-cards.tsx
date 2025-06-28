@@ -21,15 +21,18 @@ interface AnalyticsData {
 export function StatsCards() {
   const [stats, setStats] = useState<AnalyticsData['overview'] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const loadStats = async () => {
       try {
         setLoading(true);
+        setError(false);
         const data = await fetchAnalytics('30d');
         setStats(data.overview);
       } catch (error) {
         console.error('Error loading dashboard stats:', error);
+        setError(true);
         setStats(null);
       } finally {
         setLoading(false);
@@ -60,12 +63,12 @@ export function StatsCards() {
     );
   }
 
-  if (!stats) {
+  if (error || !stats) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-sm bg-white">
+        <Card className="border-0 shadow-sm bg-white col-span-full">
           <CardContent className="p-6 text-center">
-            <p className="text-gray-500">Could not load statistics</p>
+            <p className="text-gray-500">Could not load statistics from the server</p>
           </CardContent>
         </Card>
       </div>

@@ -35,25 +35,8 @@ import {
   Phone
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { fetchSubscriptionById } from '@/api/subscriptions';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  fetchSubscriptionById, 
-  cancelSubscription, 
-  syncBilling, 
-  generateReport, 
-  exportInvoices, 
-  updatePaymentMethod 
-} from '@/api/subscriptions';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 
 interface PaymentMethod {
   type: string;
@@ -134,198 +117,29 @@ export default function SubscriptionDetailsPage() {
   const { toast } = useToast();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
-  const [syncingBilling, setSyncingBilling] = useState(false);
-  const [generatingReport, setGeneratingReport] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
-  const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [newPaymentMethod, setNewPaymentMethod] = useState({
-    cardNumber: '',
-    expiryMonth: '',
-    expiryYear: '',
-    cvv: '',
-    cardholderName: '',
-  });
 
   useEffect(() => {
-    loadSubscription();
-  }, [params.id]);
+    const fetchSubscription = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchSubscriptionById(params.id as string);
+        setSubscription(data);
+      } catch (error) {
+        console.error('Error fetching subscription:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load subscription details. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const loadSubscription = async () => {
-    try {
-      setLoading(true);
-      const data = await fetchSubscriptionById(params.id as string);
-      setSubscription(data);
-    } catch (error) {
-      console.error('Error loading subscription:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load subscription details. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
+    if (params.id) {
+      fetchSubscription();
     }
-  };
-
-  const handleSyncBilling = async () => {
-    if (!subscription) return;
-    
-    try {
-      setSyncingBilling(true);
-      const result = await syncBilling(subscription.id);
-      
-      toast({
-        title: 'Billing synced',
-        description: 'Billing data has been synchronized successfully.',
-      });
-      
-      // Refresh subscription data
-      loadSubscription();
-    } catch (error) {
-      toast({
-        title: 'Sync failed',
-        description: 'Failed to sync billing data. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setSyncingBilling(false);
-    }
-  };
-
-  const handleEditSubscription = () => {
-    setEditDialogOpen(true);
-  };
-
-  const handleUpgradePlan = () => {
-    setUpgradeDialogOpen(true);
-  };
-
-  const handleDowngradePlan = () => {
-    setDowngradeDialogOpen(true);
-  };
-
-  const handleUpdatePaymentMethod = async () => {
-    if (!subscription) return;
-    
-    try {
-      const paymentData = {
-        type: 'card',
-        last4: newPaymentMethod.cardNumber.slice(-4),
-        brand: 'Visa', // In a real app, detect from card number
-        expiryMonth: parseInt(newPaymentMethod.expiryMonth),
-        expiryYear: parseInt(newPaymentMethod.expiryYear),
-      };
-      
-      await updatePaymentMethod(subscription.id, paymentData);
-      
-      toast({
-        title: 'Payment method updated',
-        description: 'Your payment method has been updated successfully.',
-      });
-      
-      setPaymentDialogOpen(false);
-      setNewPaymentMethod({
-        cardNumber: '',
-        expiryMonth: '',
-        expiryYear: '',
-        cvv: '',
-        cardholderName: '',
-      });
-      
-      // Refresh subscription data
-      loadSubscription();
-    } catch (error) {
-      toast({
-        title: 'Update failed',
-        description: 'Failed to update payment method. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleCancelSubscription = async () => {
-    if (!subscription) return;
-    
-    try {
-      await cancelSubscription(subscription.id);
-      
-      toast({
-        title: 'Subscription cancelled',
-        description: 'The subscription has been cancelled successfully.',
-      });
-      
-      setCancelDialogOpen(false);
-      
-      // Refresh subscription data
-      loadSubscription();
-    } catch (error) {
-      toast({
-        title: 'Cancellation failed',
-        description: 'Failed to cancel subscription. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleGenerateReport = async () => {
-    if (!subscription) return;
-    
-    try {
-      setGeneratingReport(true);
-      
-      const reportData = {
-        reportType: 'billing',
-        dateRange: '30d',
-        format: 'pdf'
-      };
-      
-      const result = await generateReport(subscription.id, reportData);
-      
-      toast({
-        title: 'Report generated',
-        description: 'Your report has been generated successfully.',
-      });
-      
-      // In a real app, you would provide a download link or open the report
-    } catch (error) {
-      toast({
-        title: 'Report generation failed',
-        description: 'Failed to generate report. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setGeneratingReport(false);
-    }
-  };
-
-  const handleExportInvoices = async () => {
-    if (!subscription) return;
-    
-    try {
-      setExporting(true);
-      
-      const result = await exportInvoices(subscription.id, 'csv');
-      
-      toast({
-        title: 'Invoices exported',
-        description: 'Your invoices have been exported successfully.',
-      });
-      
-      // In a real app, you would provide a download link
-    } catch (error) {
-      toast({
-        title: 'Export failed',
-        description: 'Failed to export invoices. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setExporting(false);
-    }
-  };
+  }, [params.id, toast]);
 
   const generateInvoiceHTML = (invoice: BillingHistory) => {
     return `
@@ -608,10 +422,7 @@ export default function SubscriptionDetailsPage() {
     URL.revokeObjectURL(url);
 
     // Show success message
-    toast({
-      title: 'Invoice downloaded',
-      description: `Invoice ${invoice.invoiceNumber} downloaded successfully!`,
-    });
+    alert(`Invoice ${invoice.invoiceNumber} downloaded successfully!`);
   };
 
   const handleViewInvoice = (invoice: BillingHistory) => {
@@ -704,20 +515,11 @@ Hairvana Team`;
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleSyncBilling} disabled={syncingBilling}>
-            {syncingBilling ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Syncing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Sync Billing
-              </>
-            )}
+          <Button variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Sync Billing
           </Button>
-          <Button variant="outline" onClick={handleEditSubscription}>
+          <Button variant="outline">
             <Edit className="h-4 w-4 mr-2" />
             Edit Subscription
           </Button>
@@ -766,15 +568,15 @@ Hairvana Team`;
             <div className="flex gap-2">
               {subscription.status === 'active' && (
                 <>
-                  <Button variant="outline" className="text-blue-600 hover:text-blue-700" onClick={handleUpgradePlan}>
+                  <Button variant="outline" className="text-blue-600 hover:text-blue-700">
                     <ArrowUpCircle className="h-4 w-4 mr-2" />
                     Upgrade Plan
                   </Button>
-                  <Button variant="outline" className="text-orange-600 hover:text-orange-700" onClick={handleDowngradePlan}>
+                  <Button variant="outline" className="text-orange-600 hover:text-orange-700">
                     <ArrowDownCircle className="h-4 w-4 mr-2" />
                     Downgrade Plan
                   </Button>
-                  <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={() => setCancelDialogOpen(true)}>
+                  <Button variant="outline" className="text-red-600 hover:text-red-700">
                     <XCircle className="h-4 w-4 mr-2" />
                     Cancel Subscription
                   </Button>
@@ -903,7 +705,7 @@ Hairvana Team`;
               </div>
             )}
             <div className="pt-4">
-              <Button variant="outline" className="w-full" onClick={() => setPaymentDialogOpen(true)}>
+              <Button variant="outline" className="w-full">
                 <Edit className="h-4 w-4 mr-2" />
                 Update Payment Method
               </Button>
@@ -946,31 +748,13 @@ Hairvana Team`;
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleExportInvoices} disabled={exporting}>
-                {exporting ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Exporting...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export All
-                  </>
-                )}
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export All
               </Button>
-              <Button variant="outline" size="sm" onClick={handleGenerateReport} disabled={generatingReport}>
-                {generatingReport ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Generate Report
-                  </>
-                )}
+              <Button variant="outline" size="sm">
+                <FileText className="h-4 w-4 mr-2" />
+                Generate Report
               </Button>
             </div>
           </div>
@@ -1092,7 +876,7 @@ Hairvana Team`;
               This subscription is currently in trial period. The trial will end on {format(new Date(subscription.nextBillingDate), 'MMMM dd, yyyy')}.
             </p>
             <div className="mt-4">
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setPaymentDialogOpen(true)}>
+              <Button className="bg-blue-600 hover:bg-blue-700">
                 <CreditCard className="h-4 w-4 mr-2" />
                 Add Payment Method
               </Button>
@@ -1122,375 +906,6 @@ Hairvana Team`;
           </CardContent>
         </Card>
       )}
-
-      {/* Edit Subscription Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Subscription</DialogTitle>
-            <DialogDescription>
-              Update subscription details for {subscription.salonName}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Current Plan</Label>
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="font-medium">{subscription.plan} Plan</p>
-                <p className="text-sm text-gray-600">${subscription.amount}/{subscription.billingCycle}</p>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="nextBillingDate">Next Billing Date</Label>
-              <Input
-                id="nextBillingDate"
-                type="date"
-                defaultValue={subscription.nextBillingDate.split('T')[0]}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="billingCycle">Billing Cycle</Label>
-              <select
-                id="billingCycle"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                defaultValue={subscription.billingCycle}
-              >
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button className="bg-purple-600 hover:bg-purple-700">
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Cancel Subscription Dialog */}
-      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Cancel Subscription</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel this subscription?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-gray-700">
-              Cancelling the subscription for <span className="font-semibold">{subscription.salonName}</span> will:
-            </p>
-            <ul className="list-disc list-inside mt-2 space-y-1 text-gray-600">
-              <li>Immediately revoke access to premium features</li>
-              <li>Stop future billing cycles</li>
-              <li>Allow access until the end of the current billing period</li>
-            </ul>
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-yellow-800 text-sm">
-                This action cannot be undone. The user will need to create a new subscription to regain access.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
-              Keep Subscription
-            </Button>
-            <Button className="bg-red-600 hover:bg-red-700" onClick={handleCancelSubscription}>
-              Cancel Subscription
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Upgrade Plan Dialog */}
-      <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Upgrade Subscription Plan</DialogTitle>
-            <DialogDescription>
-              Select a higher tier plan for {subscription.salonName}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="p-3 bg-blue-50 rounded-lg mb-4">
-              <p className="text-blue-800">
-                <span className="font-semibold">Current Plan:</span> {subscription.plan} (${subscription.amount}/{subscription.billingCycle})
-              </p>
-            </div>
-            
-            {subscription.plan !== 'Premium' && (
-              <div className="space-y-4">
-                {subscription.plan === 'Basic' && (
-                  <div className="p-4 border-2 border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700">
-                        <Star className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900">Standard Plan</h3>
-                        <p className="text-lg font-semibold text-gray-900">$49.99/month</p>
-                      </div>
-                    </div>
-                    <ul className="space-y-1 mt-3">
-                      <li className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Up to 500 bookings/month
-                      </li>
-                      <li className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Up to 10 staff members
-                      </li>
-                      <li className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Advanced reporting
-                      </li>
-                    </ul>
-                  </div>
-                )}
-                
-                <div className="p-4 border-2 border-purple-200 rounded-lg hover:bg-purple-50 cursor-pointer">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 rounded-lg bg-gradient-to-r from-purple-600 to-purple-700">
-                      <Crown className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-900">Premium Plan</h3>
-                      <p className="text-lg font-semibold text-gray-900">$99.99/month</p>
-                    </div>
-                  </div>
-                  <ul className="space-y-1 mt-3">
-                    <li className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Unlimited bookings
-                    </li>
-                    <li className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Unlimited staff members
-                    </li>
-                    <li className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Multi-location support
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            )}
-            
-            {subscription.plan === 'Premium' && (
-              <div className="text-center py-6">
-                <Crown className="h-12 w-12 mx-auto text-purple-300 mb-2" />
-                <p className="text-gray-700 font-medium">Already on the highest plan</p>
-                <p className="text-gray-500 text-sm">This subscription is already on the Premium plan.</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              className="bg-purple-600 hover:bg-purple-700"
-              disabled={subscription.plan === 'Premium'}
-            >
-              Upgrade Plan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Downgrade Plan Dialog */}
-      <Dialog open={downgradeDialogOpen} onOpenChange={setDowngradeDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Downgrade Subscription Plan</DialogTitle>
-            <DialogDescription>
-              Select a lower tier plan for {subscription.salonName}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="p-3 bg-yellow-50 rounded-lg mb-4">
-              <p className="text-yellow-800">
-                <span className="font-semibold">Current Plan:</span> {subscription.plan} (${subscription.amount}/{subscription.billingCycle})
-              </p>
-              <p className="text-yellow-700 text-sm mt-1">
-                Downgrading will reduce available features and limits.
-              </p>
-            </div>
-            
-            {subscription.plan !== 'Basic' && (
-              <div className="space-y-4">
-                {subscription.plan === 'Premium' && (
-                  <div className="p-4 border-2 border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700">
-                        <Star className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900">Standard Plan</h3>
-                        <p className="text-lg font-semibold text-gray-900">$49.99/month</p>
-                      </div>
-                    </div>
-                    <ul className="space-y-1 mt-3">
-                      <li className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Up to 500 bookings/month
-                      </li>
-                      <li className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Up to 10 staff members
-                      </li>
-                      <li className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Advanced reporting
-                      </li>
-                    </ul>
-                  </div>
-                )}
-                
-                <div className="p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 rounded-lg bg-gradient-to-r from-gray-600 to-gray-700">
-                      <Zap className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-900">Basic Plan</h3>
-                      <p className="text-lg font-semibold text-gray-900">$19.99/month</p>
-                    </div>
-                  </div>
-                  <ul className="space-y-1 mt-3">
-                    <li className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Up to 100 bookings/month
-                    </li>
-                    <li className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Up to 3 staff members
-                    </li>
-                    <li className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Basic reporting
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            )}
-            
-            {subscription.plan === 'Basic' && (
-              <div className="text-center py-6">
-                <Zap className="h-12 w-12 mx-auto text-gray-300 mb-2" />
-                <p className="text-gray-700 font-medium">Already on the lowest plan</p>
-                <p className="text-gray-500 text-sm">This subscription is already on the Basic plan.</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDowngradeDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              className="bg-orange-600 hover:bg-orange-700"
-              disabled={subscription.plan === 'Basic'}
-            >
-              Downgrade Plan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Update Payment Method Dialog */}
-      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Update Payment Method</DialogTitle>
-            <DialogDescription>
-              Enter new payment details for {subscription.salonName}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {subscription.paymentMethod && (
-              <div className="p-3 bg-gray-50 rounded-lg mb-2">
-                <p className="text-sm font-medium">Current Payment Method</p>
-                <p className="text-gray-700">
-                  {subscription.paymentMethod.brand} ending in {subscription.paymentMethod.last4}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Expires {subscription.paymentMethod.expiryMonth}/{subscription.paymentMethod.expiryYear}
-                </p>
-              </div>
-            )}
-            
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="cardholderName">Cardholder Name</Label>
-                <Input
-                  id="cardholderName"
-                  placeholder="John Doe"
-                  value={newPaymentMethod.cardholderName}
-                  onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cardholderName: e.target.value }))}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="cardNumber">Card Number</Label>
-                <Input
-                  id="cardNumber"
-                  placeholder="1234 5678 9012 3456"
-                  value={newPaymentMethod.cardNumber}
-                  onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cardNumber: e.target.value }))}
-                />
-              </div>
-              
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="expiryMonth">Month</Label>
-                  <Input
-                    id="expiryMonth"
-                    placeholder="MM"
-                    value={newPaymentMethod.expiryMonth}
-                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, expiryMonth: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expiryYear">Year</Label>
-                  <Input
-                    id="expiryYear"
-                    placeholder="YYYY"
-                    value={newPaymentMethod.expiryYear}
-                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, expiryYear: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cvv">CVV</Label>
-                  <Input
-                    id="cvv"
-                    placeholder="123"
-                    value={newPaymentMethod.cvv}
-                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cvv: e.target.value }))}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={handleUpdatePaymentMethod}
-              disabled={!newPaymentMethod.cardNumber || !newPaymentMethod.cardholderName}
-            >
-              Update Payment Method
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -38,6 +38,7 @@ import {
 import { format } from 'date-fns';
 import { updateProfileSettings } from '@/api/settings';
 import { updatePassword } from '@/api/auth';
+import { fetchUserSettings, UserSettings } from '@/api/settings';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -67,15 +68,8 @@ export default function ProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [uploadedAvatar, setUploadedAvatar] = useState<string>('');
-  const [userSettings, setUserSettings] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: '+1 (555) 123-4567',
-    department: 'Administration',
-    timezone: 'America/New_York',
-    language: 'en',
-    bio: 'Platform administrator with expertise in salon management systems.',
-  });
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const {
     register: registerProfile,
@@ -84,7 +78,15 @@ export default function ProfilePage() {
     reset: resetProfile,
   } = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
-    defaultValues: userSettings,
+    defaultValues: {
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: '+1 (555) 123-4567',
+      department: 'Administration',
+      timezone: 'America/New_York',
+      language: 'en',
+      bio: 'Platform administrator with expertise in salon management systems.',
+    },
   });
 
   const {
@@ -97,20 +99,51 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    // In a real app, you would fetch user settings from the API
-    // For now, we'll use the user data from the auth store
-    if (user) {
-      resetProfile({
-        name: user.name,
-        email: user.email,
-        phone: '+1 (555) 123-4567',
-        department: 'Administration',
-        timezone: 'America/New_York',
-        language: 'en',
-        bio: 'Platform administrator with expertise in salon management systems.',
-      });
-    }
-  }, [user, resetProfile]);
+    const loadUserSettings = async () => {
+      try {
+        setLoading(true);
+        const settings = await fetchUserSettings();
+        setUserSettings(settings);
+        
+        // Update form with user settings
+        if (settings.profile) {
+          resetProfile({
+            name: settings.profile.name || user?.name || '',
+            email: settings.profile.email || user?.email || '',
+            phone: settings.profile.phone || '+1 (555) 123-4567',
+            department: settings.profile.department || 'Administration',
+            timezone: settings.profile.timezone || 'America/New_York',
+            language: settings.profile.language || 'en',
+            bio: settings.profile.bio || 'Platform administrator with expertise in salon management systems.',
+          });
+        }
+      } catch (error) {
+        console.error('Error loading user settings:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load user settings. Using default values.',
+          variant: 'destructive',
+        });
+        
+        // Use default values from user store
+        if (user) {
+          resetProfile({
+            name: user.name,
+            email: user.email,
+            phone: '+1 (555) 123-4567',
+            department: 'Administration',
+            timezone: 'America/New_York',
+            language: 'en',
+            bio: 'Platform administrator with expertise in salon management systems.',
+          });
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadUserSettings();
+  }, [user, resetProfile, toast]);
 
   const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -123,7 +156,6 @@ export default function ProfilePage() {
   const onSubmitProfile = async (data: ProfileForm) => {
     setIsSubmitting(true);
     try {
-      // In a real app, you would make an API call here
       await updateProfileSettings(data);
       
       // Update user in store
@@ -202,6 +234,14 @@ export default function ProfilePage() {
   };
 
   const RoleIcon = getRoleIcon();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

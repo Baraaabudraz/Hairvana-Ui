@@ -34,6 +34,8 @@ import {
   Eye
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
+import { fetchUserById, updateUserStatus, deleteUser } from '@/api/users';
+import { useToast } from '@/hooks/use-toast';
 
 interface Salon {
   id: string;
@@ -101,145 +103,81 @@ const permissionLabels: Record<string, string> = {
 
 export default function UserDetailsPage() {
   const params = useParams();
+  const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        // In a real app, you would fetch from your API
-        // For demo purposes, we'll use mock data based on the ID
-        const mockUsers: Record<string, User> = {
-          '1': {
-            id: '1',
-            name: 'John Smith',
-            email: 'admin@hairvana.com',
-            phone: '+1 (555) 123-4567',
-            role: 'admin',
-            status: 'active',
-            joinDate: '2024-01-01',
-            lastLogin: '2024-06-15T10:30:00Z',
-            avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-            permissions: ['manage_salons', 'manage_users', 'view_analytics', 'manage_subscriptions'],
-          },
-          '2': {
-            id: '2',
-            name: 'Sarah Johnson',
-            email: 'superadmin@hairvana.com',
-            phone: '+1 (555) 234-5678',
-            role: 'super_admin',
-            status: 'active',
-            joinDate: '2024-01-01',
-            lastLogin: '2024-06-15T09:15:00Z',
-            avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-            permissions: ['full_access'],
-          },
-          '3': {
-            id: '3',
-            name: 'Maria Rodriguez',
-            email: 'maria@luxehair.com',
-            phone: '+1 (555) 345-6789',
-            role: 'salon',
-            status: 'active',
-            joinDate: '2024-01-15',
-            lastLogin: '2024-06-15T14:20:00Z',
-            avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-            salons: [
-              {
-                id: '1',
-                name: 'Luxe Hair Studio',
-                location: 'Beverly Hills, CA',
-                subscription: 'Premium',
-                bookingsCount: 156,
-                revenue: 12450,
-                status: 'active'
-              },
-              {
-                id: '4',
-                name: 'Luxe Hair Downtown',
-                location: 'Downtown LA, CA',
-                subscription: 'Standard',
-                bookingsCount: 89,
-                revenue: 7800,
-                status: 'active'
-              }
-            ],
-            totalSalons: 2,
-            totalRevenue: 20250,
-            totalBookings: 245,
-          },
-          '11': {
-            id: '11',
-            name: 'Robert Wilson',
-            email: 'robert@hairempire.com',
-            phone: '+1 (555) 111-2222',
-            role: 'salon',
-            status: 'active',
-            joinDate: '2024-01-10',
-            lastLogin: '2024-06-15T16:45:00Z',
-            avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-            salons: [
-              {
-                id: '6',
-                name: 'Hair Empire - Austin',
-                location: 'Austin, TX',
-                subscription: 'Premium',
-                bookingsCount: 198,
-                revenue: 15600,
-                status: 'active'
-              },
-              {
-                id: '7',
-                name: 'Hair Empire - Dallas',
-                location: 'Dallas, TX',
-                subscription: 'Premium',
-                bookingsCount: 167,
-                revenue: 13200,
-                status: 'active'
-              },
-              {
-                id: '8',
-                name: 'Hair Empire - Houston',
-                location: 'Houston, TX',
-                subscription: 'Standard',
-                bookingsCount: 145,
-                revenue: 11800,
-                status: 'active'
-              }
-            ],
-            totalSalons: 3,
-            totalRevenue: 40600,
-            totalBookings: 510,
-          },
-          '6': {
-            id: '6',
-            name: 'Emily Davis',
-            email: 'emily.davis@email.com',
-            phone: '+1 (555) 678-9012',
-            role: 'user',
-            status: 'active',
-            joinDate: '2024-02-01',
-            lastLogin: '2024-06-15T13:20:00Z',
-            avatar: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-            totalBookings: 12,
-            totalSpent: 850,
-            favoriteServices: ['Haircut', 'Hair Color', 'Hair Styling'],
-          },
-        };
-        
-        const userData = mockUsers[params.id as string];
-        if (userData) {
-          setUser(userData);
-        }
+        setLoading(true);
+        const data = await fetchUserById(params.id as string);
+        setUser(data);
       } catch (error) {
         console.error('Error fetching user:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load user details. Please try again.',
+          variant: 'destructive',
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUser();
-  }, [params.id]);
+    if (params.id) {
+      fetchUser();
+    }
+  }, [params.id, toast]);
+
+  const handleStatusChange = async (newStatus: 'active' | 'pending' | 'suspended') => {
+    if (!user) return;
+    
+    try {
+      await updateUserStatus(user.id, newStatus);
+      
+      setUser(prev => prev ? { ...prev, status: newStatus } : null);
+      
+      const statusMessages = {
+        active: 'User has been reactivated',
+        pending: 'User has been set to pending',
+        suspended: 'User has been suspended',
+      };
+      
+      toast({
+        title: 'Status updated',
+        description: statusMessages[newStatus],
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update user status. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!user) return;
+    
+    try {
+      await deleteUser(user.id);
+      
+      toast({
+        title: 'User deleted',
+        description: 'The user has been permanently removed from the platform.',
+      });
+      
+      // Navigate to users list
+      window.location.href = '/dashboard/users';
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete user. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -307,7 +245,7 @@ export default function UserDetailsPage() {
               Edit
             </Button>
           </Link>
-          <Button variant="outline" className="text-red-600 hover:text-red-700">
+          <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={handleDelete}>
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
           </Button>
@@ -356,13 +294,13 @@ export default function UserDetailsPage() {
             </div>
             <div className="flex gap-2">
               {user.status === 'active' && (
-                <Button variant="outline" className="text-red-600 hover:text-red-700">
+                <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={() => handleStatusChange('suspended')}>
                   <XCircle className="h-4 w-4 mr-2" />
                   Suspend
                 </Button>
               )}
               {user.status === 'suspended' && (
-                <Button className="bg-green-600 hover:bg-green-700">
+                <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusChange('active')}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Reactivate
                 </Button>
@@ -658,7 +596,7 @@ export default function UserDetailsPage() {
               {user.suspensionReason && ` Reason: ${user.suspensionReason}`}
             </p>
             <div className="mt-4">
-              <Button className="bg-green-600 hover:bg-green-700">
+              <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusChange('active')}>
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Reactivate Account
               </Button>
@@ -680,11 +618,11 @@ export default function UserDetailsPage() {
               This user account is pending approval and has limited access to the platform.
             </p>
             <div className="mt-4 flex gap-2">
-              <Button className="bg-green-600 hover:bg-green-700">
+              <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusChange('active')}>
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Approve Account
               </Button>
-              <Button variant="outline" className="text-red-600 hover:text-red-700">
+              <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={() => handleStatusChange('suspended')}>
                 <XCircle className="h-4 w-4 mr-2" />
                 Reject Account
               </Button>

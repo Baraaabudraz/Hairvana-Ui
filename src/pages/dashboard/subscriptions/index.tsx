@@ -61,7 +61,8 @@ import {
   cancelSubscription, 
   updateSubscription, 
   updatePaymentMethod, 
-  syncBilling 
+  syncBilling,
+  SubscriptionParams
 } from '@/api/subscriptions';
 
 type SubscriptionStatus = 'active' | 'trial' | 'cancelled' | 'past_due';
@@ -189,7 +190,7 @@ export default function SubscriptionsPage() {
   const loadSubscriptions = async () => {
     try {
       setLoading(true);
-      const params: any = {};
+      const params: SubscriptionParams = {};
       
       if (statusFilter !== 'all') {
         params.status = statusFilter;
@@ -372,7 +373,7 @@ export default function SubscriptionsPage() {
       });
       
       // In a real app, you would call the API to sync billing data
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await syncBilling();
       
       toast({
         title: 'Billing data synced',

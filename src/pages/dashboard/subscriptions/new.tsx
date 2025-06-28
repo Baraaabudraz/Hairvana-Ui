@@ -28,6 +28,8 @@ import {
   Mail,
   Phone
 } from 'lucide-react';
+import { fetchSalons } from '@/api/salons';
+import { createSubscription } from '@/api/subscriptions';
 
 const subscriptionSchema = z.object({
   salonId: z.string().min(1, 'Please select a salon'),
@@ -171,6 +173,7 @@ export default function CreateSubscriptionPage() {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [showSalonSearch, setShowSalonSearch] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const {
     register,
@@ -189,7 +192,7 @@ export default function CreateSubscriptionPage() {
   });
 
   useEffect(() => {
-    fetchSalons();
+    loadSalons();
   }, []);
 
   useEffect(() => {
@@ -201,42 +204,17 @@ export default function CreateSubscriptionPage() {
     setFilteredSalons(filtered);
   }, [salonSearch, salons]);
 
-  const fetchSalons = async () => {
+  const loadSalons = async () => {
     try {
-      // In a real app, you would fetch from your API
-      // For demo purposes, we'll use mock data
-      const mockSalons: Salon[] = [
-        {
-          id: '1',
-          name: 'Luxe Hair Studio',
-          location: 'Beverly Hills, CA',
-          ownerName: 'Maria Rodriguez',
-          ownerEmail: 'maria@luxehair.com',
-          status: 'active',
-          avatar: 'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
-        },
-        {
-          id: '2',
-          name: 'Urban Cuts',
-          location: 'Manhattan, NY',
-          ownerName: 'David Chen',
-          ownerEmail: 'david@urbancuts.com',
-          status: 'active',
-          avatar: 'https://images.pexels.com/photos/3992656/pexels-photo-3992656.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
-        },
-        {
-          id: '3',
-          name: 'Style & Grace',
-          location: 'Miami, FL',
-          ownerName: 'Lisa Thompson',
-          ownerEmail: 'lisa@styleandgrace.com',
-          status: 'active',
-          avatar: 'https://images.pexels.com/photos/3993456/pexels-photo-3993456.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
-        },
-      ];
+      setLoading(true);
+      // Fetch salons that don't have active subscriptions
+      const params = { status: 'active' };
+      const data = await fetchSalons(params);
       
-      setSalons(mockSalons);
-      setFilteredSalons(mockSalons);
+      // In a real app, you would filter out salons that already have active subscriptions
+      // For now, we'll use all active salons
+      setSalons(data.salons);
+      setFilteredSalons(data.salons);
     } catch (error) {
       console.error('Error fetching salons:', error);
       toast({
@@ -244,6 +222,8 @@ export default function CreateSubscriptionPage() {
         description: 'Failed to fetch salons. Please try again.',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -284,11 +264,7 @@ export default function CreateSubscriptionPage() {
         salonDetails: selectedSalon,
       };
 
-      // In a real app, you would make an API call here
-      console.log('Creating subscription:', subscriptionData);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await createSubscription(subscriptionData);
 
       toast({
         title: 'Subscription created successfully',
@@ -306,6 +282,14 @@ export default function CreateSubscriptionPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

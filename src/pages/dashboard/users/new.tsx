@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Upload, X, Plus, Save, Users, Building2, Shield, Crown } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { createUser } from '@/api/users';
 
 const baseUserSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -136,11 +137,7 @@ export default function NewUserPage() {
       // Remove confirmPassword before sending
       const { confirmPassword, ...submitData } = userData;
 
-      // In a real app, you would make an API call here
-      console.log('Creating user:', submitData);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await createUser(submitData);
 
       toast({
         title: 'User created successfully',

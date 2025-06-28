@@ -23,6 +23,11 @@ async function seed() {
 async function seedUsers() {
   console.log('Seeding users...');
   
+  // Clean slate - delete existing data in proper order
+  await supabase.from('customers').delete().neq('user_id', '00000000-0000-0000-0000-000000000000');
+  await supabase.from('salon_owners').delete().neq('user_id', '00000000-0000-0000-0000-000000000000');
+  await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  
   // Hash password for all users
   const salt = await bcrypt.genSalt(10);
   const passwordHash = await bcrypt.hash('admin123', salt);
@@ -117,16 +122,6 @@ async function seedUsers() {
     }
   ];
   
-  // Check if users already exist
-  const { data: existingUsers } = await supabase
-    .from('users')
-    .select('id');
-  
-  if (existingUsers && existingUsers.length > 0) {
-    console.log(`Found ${existingUsers.length} existing users, skipping user seeding.`);
-    return;
-  }
-  
   // Insert users
   const { error } = await supabase
     .from('users')
@@ -176,6 +171,9 @@ async function seedUsers() {
 // Seed salons
 async function seedSalons() {
   console.log('Seeding salons...');
+  
+  // Clean slate - delete existing salons
+  await supabase.from('salons').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   
   // Define salons to seed
   const salons = [
@@ -283,16 +281,6 @@ async function seedSalons() {
       owner_email: 'lisa@styleandgrace.com'
     }
   ];
-  
-  // Check if salons already exist
-  const { data: existingSalons } = await supabase
-    .from('salons')
-    .select('id');
-  
-  if (existingSalons && existingSalons.length > 0) {
-    console.log(`Found ${existingSalons.length} existing salons, skipping salon seeding.`);
-    return;
-  }
   
   // Insert salons
   const { error } = await supabase

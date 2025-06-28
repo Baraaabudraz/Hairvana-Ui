@@ -28,6 +28,22 @@ const statusColors: Record<ActivityStatus, string> = {
   success: 'bg-green-100 text-green-800',
 };
 
+// Helper function to safely create a Date object
+const createSafeDate = (dateInput: string | null | undefined): Date => {
+  if (!dateInput) {
+    return new Date(); // Return current date as fallback
+  }
+  
+  const date = new Date(dateInput);
+  
+  // Check if the date is valid
+  if (isNaN(date.getTime())) {
+    return new Date(); // Return current date as fallback
+  }
+  
+  return date;
+};
+
 export function RecentActivity() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +73,7 @@ export function RecentActivity() {
               description: `${appointment.user?.name || 'A customer'} booked a ${appointment.service?.name || 'service'} at ${appointment.salon?.name || 'a salon'}`,
               user: appointment.user?.name || 'Customer',
               avatar: appointment.user?.avatar || 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2',
-              timestamp: new Date(appointment.date),
+              timestamp: createSafeDate(appointment.date),
               status: 'success',
             });
           });
@@ -66,7 +82,7 @@ export function RecentActivity() {
         // Add recent user registrations as activities
         if (usersResponse && usersResponse.users) {
           const recentUsers = usersResponse.users
-            .sort((a, b) => new Date(b.joinDate).getTime() - new Date(a.joinDate).getTime())
+            .sort((a, b) => createSafeDate(b.joinDate).getTime() - createSafeDate(a.joinDate).getTime())
             .slice(0, 2);
             
           recentUsers.forEach((user, index) => {
@@ -77,7 +93,7 @@ export function RecentActivity() {
               description: `${user.name} joined as a ${user.role === 'salon' ? 'salon owner' : 'customer'}`,
               user: user.name,
               avatar: user.avatar || 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2',
-              timestamp: new Date(user.joinDate),
+              timestamp: createSafeDate(user.joinDate),
               status: 'success',
             });
           });
@@ -97,7 +113,7 @@ export function RecentActivity() {
               description: `${salon.name} submitted registration`,
               user: salon.name,
               avatar: salon.images?.[0] || 'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2',
-              timestamp: new Date(salon.joinDate),
+              timestamp: createSafeDate(salon.joinDate),
               status: 'pending',
             });
           });

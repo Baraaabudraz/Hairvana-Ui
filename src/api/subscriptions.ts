@@ -83,13 +83,13 @@ export async function cancelSubscription(id: string) {
   }
 }
 
-export async function syncBilling(id: string) {
+export async function syncBilling() {
   try {
-    return await apiFetch(`/api/subscriptions/${id}/sync`, {
+    return await apiFetch('/api/subscriptions/sync', {
       method: 'POST',
     });
   } catch (error) {
-    console.error(`Error syncing billing for subscription with ID ${id}:`, error);
+    console.error('Error syncing billing data:', error);
     throw error;
   }
 }

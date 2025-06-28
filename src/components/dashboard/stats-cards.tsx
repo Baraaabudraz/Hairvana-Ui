@@ -1,43 +1,110 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Building2, Users, CreditCard, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { fetchAnalytics } from '@/api/analytics';
 
-const stats = [
-  {
-    name: 'Total Salons',
-    value: '1,247',
-    change: '+12%',
-    changeType: 'positive' as const,
-    icon: Building2,
-  },
-  {
-    name: 'Active Users',
-    value: '45,231',
-    change: '+8%',
-    changeType: 'positive' as const,
-    icon: Users,
-  },
-  {
-    name: 'Monthly Revenue',
-    value: '$127,450',
-    change: '+23%',
-    changeType: 'positive' as const,
-    icon: CreditCard,
-  },
-  {
-    name: 'Total Bookings',
-    value: '8,942',
-    change: '+15%',
-    changeType: 'positive' as const,
-    icon: TrendingUp,
-  },
-];
+interface AnalyticsData {
+  overview: {
+    totalSalons: number;
+    activeSalons: number;
+    totalUsers: number;
+    activeUsers: number;
+    totalBookings: number;
+    completedBookings: number;
+    totalRevenue: number;
+    monthlyGrowth: number;
+  };
+}
 
 export function StatsCards() {
+  const [stats, setStats] = useState<AnalyticsData['overview'] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchAnalytics('30d');
+        setStats(data.overview);
+      } catch (error) {
+        console.error('Error loading dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="border-0 shadow-sm bg-white">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Loading...
+              </CardTitle>
+              <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-6 w-24 bg-gray-200 rounded animate-pulse mb-1"></div>
+              <div className="h-4 w-32 bg-gray-100 rounded animate-pulse"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-0 shadow-sm bg-white">
+          <CardContent className="p-6 text-center">
+            <p className="text-gray-500">Could not load statistics</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const statCards = [
+    {
+      name: 'Total Salons',
+      value: stats.totalSalons.toLocaleString(),
+      change: '+12%',
+      changeType: 'positive' as const,
+      icon: Building2,
+    },
+    {
+      name: 'Active Users',
+      value: stats.activeUsers.toLocaleString(),
+      change: '+8%',
+      changeType: 'positive' as const,
+      icon: Users,
+    },
+    {
+      name: 'Monthly Revenue',
+      value: `$${stats.totalRevenue.toLocaleString()}`,
+      change: `+${stats.monthlyGrowth}%`,
+      changeType: 'positive' as const,
+      icon: CreditCard,
+    },
+    {
+      name: 'Total Bookings',
+      value: stats.totalBookings.toLocaleString(),
+      change: '+15%',
+      changeType: 'positive' as const,
+      icon: TrendingUp,
+    },
+  ];
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {stats.map((stat) => (
+      {statCards.map((stat) => (
         <Card key={stat.name} className="border-0 shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">

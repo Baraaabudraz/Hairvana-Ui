@@ -14,15 +14,68 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Settings, User, Shield, Bell, Globe, CreditCard, Database, Mail, Smartphone, Lock, Key, Eye, EyeOff, Save, RefreshCw, Upload, Download, Trash2, Plus, Edit, Check, X, AlertTriangle, Info, Zap, Monitor, Palette, Languages, Clock, MapPin, DollarSign, Percent, FileText, BarChart3, Activity, Server, Cloud, HardDrive, Cpu, Wifi, Camera, Mic, Volume2, Printer, Calendar, Users, Building2, CreditCard as CreditCardIcon, Receipt, Wallet, DollarSign as DollarSignIcon, FileText as FileTextIcon, Landmark, Check as BankCheck, Banknote, Coins, Archive, HardDrive as HardDriveIcon, Cloud as CloudIcon, Clock as ClockIcon, Calendar as CalendarIcon, RotateCcw, History, ArchiveRestore } from 'lucide-react';
+import {
+  Settings,
+  User,
+  Shield,
+  Bell,
+  Globe,
+  CreditCard,
+  Database,
+  Mail,
+  Smartphone,
+  Lock,
+  Key,
+  Eye,
+  EyeOff,
+  Save,
+  RefreshCw,
+  Upload,
+  Download,
+  Trash2,
+  Plus,
+  Edit,
+  Check,
+  X,
+  AlertTriangle,
+  Info,
+  Zap,
+  Monitor,
+  Palette,
+  Languages,
+  Clock,
+  MapPin,
+  DollarSign,
+  Percent,
+  FileText,
+  BarChart3,
+  Activity,
+  Server,
+  Cloud,
+  HardDrive,
+  Cpu,
+  Wifi,
+  Camera,
+  Mic,
+  Volume2,
+  Printer,
+  Calendar,
+  Users,
+  Building2
+} from 'lucide-react';
 import { 
   fetchUserSettings, 
   updateProfileSettings, 
   updateSecuritySettings, 
-  updateNotificationPreferences,
-  updateBillingSettings,
-  updateBackupSettings
+  updateNotificationPreferences, 
+  updateBillingSettings, 
+  updateBackupSettings, 
+  fetchPlatformSettings, 
+  updatePlatformSettings, 
+  fetchIntegrationSettings, 
+  updateIntegrationSettings 
 } from '@/api/settings';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface SettingsSection {
   id: string;
@@ -115,68 +168,24 @@ interface IntegrationSettings {
 }
 
 interface BillingSettings {
-  defaultPaymentMethod: {
-    type: string;
-    cardBrand: string;
-    last4: string;
-    expiryMonth: number;
-    expiryYear: number;
-    isDefault: boolean;
-  };
-  paymentMethods: Array<{
-    id: string;
-    type: string;
-    cardBrand: string;
-    last4: string;
-    expiryMonth: number;
-    expiryYear: number;
-    isDefault: boolean;
-  }>;
-  billingAddress: {
-    name: string;
-    line1: string;
-    line2: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-  };
+  defaultPaymentMethod: any;
+  billingAddress: any;
   taxId: string;
   invoiceEmail: string;
-  invoiceSettings: {
-    autoPayEnabled: boolean;
-    invoicePrefix: string;
-    dueDays: number;
-    notes: string;
-    logo: string;
-  };
+  autoPay: boolean;
+  paymentMethods: any[];
 }
 
 interface BackupSettings {
   autoBackup: boolean;
-  backupFrequency: 'daily' | 'weekly' | 'monthly';
+  backupFrequency: string;
   backupTime: string;
   retentionDays: number;
-  storageProvider: 'local' | 'cloud' | 's3' | 'google';
+  storageProvider: string;
   storagePath: string;
-  cloudCredentials: {
-    accessKey: string;
-    secretKey: string;
-    region: string;
-    bucket: string;
-  };
+  cloudCredentials: any;
   lastBackup: string | null;
-  backupHistory: Array<{
-    id: string;
-    date: string;
-    size: string;
-    status: 'success' | 'failed';
-    location: string;
-  }>;
-  compressionEnabled: boolean;
-  encryptionEnabled: boolean;
-  notifyOnCompletion: boolean;
-  notifyOnFailure: boolean;
+  backupHistory: any[];
 }
 
 const settingsSections: SettingsSection[] = [
@@ -242,209 +251,162 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('profile');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    id: '1',
-    name: 'John Smith',
-    email: 'admin@hairvana.com',
-    phone: '+1 (555) 123-4567',
-    avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-    role: 'Super Admin',
-    department: 'Administration',
-    timezone: 'America/New_York',
-    language: 'en',
-    notifications: {
-      email: true,
-      push: true,
-      sms: false,
-      desktop: true,
-    },
-    twoFactorEnabled: true,
-    lastLogin: '2024-06-15T10:30:00Z'
+  const [userSettings, setUserSettings] = useState<UserProfile | null>(null);
+  const [platformSettings, setPlatformSettings] = useState<PlatformSettings | null>(null);
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettings | null>(null);
+  const [integrationSettings, setIntegrationSettings] = useState<IntegrationSettings | null>(null);
+  const [billingSettings, setBillingSettings] = useState<BillingSettings | null>(null);
+  const [backupSettings, setBackupSettings] = useState<BackupSettings | null>(null);
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    email: true,
+    push: true,
+    sms: false,
+    desktop: true,
+    marketing_emails: true,
+    system_notifications: true
   });
-  const [platformSettings, setPlatformSettings] = useState<PlatformSettings>({
-    siteName: 'Hairvana',
-    siteDescription: 'Professional Salon Management Platform',
-    logo: '/logo.png',
-    favicon: '/favicon.ico',
-    primaryColor: '#8b5cf6',
-    secondaryColor: '#ec4899',
-    timezone: 'America/New_York',
-    currency: 'USD',
-    language: 'en',
-    maintenanceMode: false,
-    registrationEnabled: true,
-    emailVerificationRequired: true,
-    maxFileUploadSize: 10,
-    allowedFileTypes: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'],
-    sessionTimeout: 30,
-    passwordPolicy: {
-      minLength: 8,
-      requireUppercase: true,
-      requireLowercase: true,
-      requireNumbers: true,
-      requireSpecialChars: true,
-    }
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
   });
-  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
-    twoFactorRequired: false,
-    passwordExpiry: 90,
-    maxLoginAttempts: 5,
-    lockoutDuration: 15,
-    ipWhitelist: [],
-    sslEnabled: true,
-    encryptionLevel: 'AES-256',
-    auditLogging: true,
-    dataRetentionPeriod: 365,
-    backupFrequency: 'daily',
-    backupRetention: 30,
-  });
-  const [integrationSettings, setIntegrationSettings] = useState<IntegrationSettings>({
-    emailProvider: 'sendgrid',
-    emailApiKey: '',
-    smsProvider: 'twilio',
-    smsApiKey: '',
-    paymentGateway: 'stripe',
-    paymentApiKey: '',
-    analyticsProvider: 'google',
-    analyticsTrackingId: '',
-    socialLogins: {
-      google: true,
-      facebook: false,
-      apple: false,
-    },
-    webhooks: [
-      {
-        id: '1',
-        name: 'Payment Webhook',
-        url: 'https://api.hairvana.com/webhooks/payments',
-        events: ['payment.succeeded', 'payment.failed'],
-        active: true
-      }
-    ]
-  });
-  const [billingSettings, setBillingSettings] = useState<BillingSettings>({
-    defaultPaymentMethod: {
-      type: 'card',
-      cardBrand: 'Visa',
-      last4: '4242',
-      expiryMonth: 12,
-      expiryYear: 2025,
-      isDefault: true
-    },
-    paymentMethods: [
-      {
-        id: 'pm_1',
-        type: 'card',
-        cardBrand: 'Visa',
-        last4: '4242',
-        expiryMonth: 12,
-        expiryYear: 2025,
-        isDefault: true
-      },
-      {
-        id: 'pm_2',
-        type: 'card',
-        cardBrand: 'Mastercard',
-        last4: '5555',
-        expiryMonth: 10,
-        expiryYear: 2024,
-        isDefault: false
-      }
-    ],
-    billingAddress: {
-      name: 'John Smith',
-      line1: '123 Main St',
-      line2: 'Suite 100',
-      city: 'New York',
-      state: 'NY',
-      postalCode: '10001',
-      country: 'US'
-    },
-    taxId: 'US123456789',
-    invoiceEmail: 'billing@hairvana.com',
-    invoiceSettings: {
-      autoPayEnabled: true,
-      invoicePrefix: 'INV',
-      dueDays: 15,
-      notes: 'Thank you for your business!',
-      logo: '/logo.png'
-    }
-  });
-  const [backupSettings, setBackupSettings] = useState<BackupSettings>({
-    autoBackup: true,
-    backupFrequency: 'daily',
-    backupTime: '02:00',
-    retentionDays: 30,
-    storageProvider: 'cloud',
-    storagePath: '/backups',
-    cloudCredentials: {
-      accessKey: 'AKIAIOSFODNN7EXAMPLE',
-      secretKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-      region: 'us-east-1',
-      bucket: 'hairvana-backups'
-    },
-    lastBackup: '2024-06-15T02:00:00Z',
-    backupHistory: [
-      {
-        id: 'bk_1',
-        date: '2024-06-15T02:00:00Z',
-        size: '256 MB',
-        status: 'success',
-        location: 's3://hairvana-backups/2024-06-15/'
-      },
-      {
-        id: 'bk_2',
-        date: '2024-06-14T02:00:00Z',
-        size: '255 MB',
-        status: 'success',
-        location: 's3://hairvana-backups/2024-06-14/'
-      },
-      {
-        id: 'bk_3',
-        date: '2024-06-13T02:00:00Z',
-        size: '254 MB',
-        status: 'success',
-        location: 's3://hairvana-backups/2024-06-13/'
-      }
-    ],
-    compressionEnabled: true,
-    encryptionEnabled: true,
-    notifyOnCompletion: true,
-    notifyOnFailure: true
-  });
+  const [uploadedAvatar, setUploadedAvatar] = useState<string>('');
+  const { user } = useAuthStore();
   const { toast } = useToast();
 
   useEffect(() => {
     loadSettings();
-  }, []);
+  }, [activeSection]);
 
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const settings = await fetchUserSettings();
       
-      // Update state with fetched settings
-      if (settings.profile) {
-        setUserProfile(prev => ({ ...prev, ...settings.profile }));
+      // Load user settings
+      if (['profile', 'security', 'notifications', 'backup', 'billing'].includes(activeSection)) {
+        try {
+          const data = await fetchUserSettings();
+          
+          // Set user profile
+          if (data.profile) {
+            setUserSettings({
+              id: user?.id || '',
+              name: data.profile.name || user?.name || '',
+              email: data.profile.email || user?.email || '',
+              phone: data.profile.phone || '',
+              avatar: data.profile.avatar || user?.avatar || '',
+              role: user?.role || '',
+              department: data.profile.department || 'Administration',
+              timezone: data.profile.timezone || 'America/New_York',
+              language: data.profile.language || 'en',
+              notifications: {
+                email: true,
+                push: true,
+                sms: false,
+                desktop: true
+              },
+              twoFactorEnabled: data.security?.two_factor_enabled || false,
+              lastLogin: new Date().toISOString()
+            });
+          } else {
+            // Use user data from auth store if profile not found
+            setUserSettings({
+              id: user?.id || '',
+              name: user?.name || '',
+              email: user?.email || '',
+              phone: '',
+              avatar: user?.avatar || '',
+              role: user?.role || '',
+              department: 'Administration',
+              timezone: 'America/New_York',
+              language: 'en',
+              notifications: {
+                email: true,
+                push: true,
+                sms: false,
+                desktop: true
+              },
+              twoFactorEnabled: false,
+              lastLogin: new Date().toISOString()
+            });
+          }
+          
+          // Set notification preferences
+          if (data.notifications) {
+            setNotificationPreferences({
+              email: data.notifications.email || true,
+              push: data.notifications.push || true,
+              sms: data.notifications.sms || false,
+              desktop: data.notifications.desktop || true,
+              marketing_emails: data.notifications.marketing_emails || true,
+              system_notifications: data.notifications.system_notifications || true
+            });
+          }
+          
+          // Set security settings
+          if (data.security) {
+            setSecuritySettings({
+              twoFactorRequired: false,
+              passwordExpiry: 90,
+              maxLoginAttempts: 5,
+              lockoutDuration: 15,
+              ipWhitelist: [],
+              sslEnabled: true,
+              encryptionLevel: 'AES-256',
+              auditLogging: true,
+              dataRetentionPeriod: 365,
+              backupFrequency: 'daily',
+              backupRetention: 30
+            });
+          }
+          
+          // Set billing settings
+          if (data.billing) {
+            setBillingSettings(data.billing);
+          }
+          
+          // Set backup settings
+          if (data.backup) {
+            setBackupSettings(data.backup);
+          }
+        } catch (error) {
+          console.error('Error loading user settings:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load user settings. Please try again.',
+            variant: 'destructive',
+          });
+        }
       }
       
-      if (settings.security) {
-        setSecuritySettings(prev => ({ ...prev, ...settings.security }));
+      // Load platform settings
+      if (activeSection === 'platform' && (user?.role === 'admin' || user?.role === 'super_admin')) {
+        try {
+          const data = await fetchPlatformSettings();
+          setPlatformSettings(data);
+        } catch (error) {
+          console.error('Error loading platform settings:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load platform settings. Please try again.',
+            variant: 'destructive',
+          });
+        }
       }
       
-      if (settings.notifications) {
-        setUserProfile(prev => ({ 
-          ...prev, 
-          notifications: settings.notifications 
-        }));
-      }
-      
-      if (settings.billing) {
-        setBillingSettings(prev => ({ ...prev, ...settings.billing }));
-      }
-      
-      if (settings.backup) {
-        setBackupSettings(prev => ({ ...prev, ...settings.backup }));
+      // Load integration settings
+      if (activeSection === 'integrations' && (user?.role === 'admin' || user?.role === 'super_admin')) {
+        try {
+          const data = await fetchIntegrationSettings();
+          setIntegrationSettings(data);
+        } catch (error) {
+          console.error('Error loading integration settings:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load integration settings. Please try again.',
+            variant: 'destructive',
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -461,38 +423,52 @@ export default function SettingsPage() {
   const handleSaveSettings = async (section: string) => {
     setLoading(true);
     try {
-      let result;
-      
       switch (section) {
         case 'Profile':
-          result = await updateProfileSettings({
-            name: userProfile.name,
-            email: userProfile.email,
-            phone: userProfile.phone,
-            department: userProfile.department,
-            timezone: userProfile.timezone,
-            language: userProfile.language
-          });
+          if (userSettings) {
+            await updateProfileSettings({
+              name: userSettings.name,
+              email: userSettings.email,
+              phone: userSettings.phone,
+              department: userSettings.department,
+              timezone: userSettings.timezone,
+              language: userSettings.language,
+              avatar: uploadedAvatar || userSettings.avatar
+            });
+          }
           break;
         case 'Security':
-          result = await updateSecuritySettings({
-            twoFactorEnabled: userProfile.twoFactorEnabled,
-            passwordExpiry: securitySettings.passwordExpiry,
-            maxLoginAttempts: securitySettings.maxLoginAttempts,
-            lockoutDuration: securitySettings.lockoutDuration
-          });
+          if (securitySettings) {
+            await updateSecuritySettings({
+              two_factor_enabled: userSettings?.twoFactorEnabled,
+              password_last_changed: new Date().toISOString(),
+              login_attempts: 0,
+              session_timeout: securitySettings.lockoutDuration
+            });
+          }
           break;
         case 'Notifications':
-          result = await updateNotificationPreferences(userProfile.notifications);
+          await updateNotificationPreferences(notificationPreferences);
           break;
         case 'Billing':
-          result = await updateBillingSettings(billingSettings);
+          if (billingSettings) {
+            await updateBillingSettings(billingSettings);
+          }
           break;
         case 'Backup':
-          result = await updateBackupSettings(backupSettings);
+          if (backupSettings) {
+            await updateBackupSettings(backupSettings);
+          }
           break;
-        default:
-          // No action for other sections
+        case 'Platform':
+          if (platformSettings) {
+            await updatePlatformSettings(platformSettings);
+          }
+          break;
+        case 'Integrations':
+          if (integrationSettings) {
+            await updateIntegrationSettings(integrationSettings);
+          }
           break;
       }
       
@@ -511,19 +487,71 @@ export default function SettingsPage() {
     }
   };
 
+  const handlePasswordChange = async () => {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({
+        title: 'Passwords do not match',
+        description: 'New password and confirmation must match.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // In a real app, you would make an API call here
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast({
+        title: 'Password updated',
+        description: 'Your password has been changed successfully.',
+      });
+      
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error) {
+      toast({
+        title: 'Error updating password',
+        description: 'Please try again later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // In a real app, you would upload this to a storage service
+      setUploadedAvatar('https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2');
+    }
+  };
+
   const getRoleIcon = () => {
-    switch (userProfile.role) {
-      case 'Super Admin': return Crown;
-      case 'Admin': return Shield;
+    switch (userSettings?.role) {
+      case 'super_admin': return Crown;
+      case 'admin': return Shield;
       default: return User;
     }
   };
 
   const getRoleColor = () => {
-    switch (userProfile.role) {
-      case 'Super Admin': return 'bg-purple-100 text-purple-800';
-      case 'Admin': return 'bg-blue-100 text-blue-800';
+    switch (userSettings?.role) {
+      case 'super_admin': return 'bg-purple-100 text-purple-800';
+      case 'admin': return 'bg-blue-100 text-blue-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getRoleDisplayName = () => {
+    switch (userSettings?.role) {
+      case 'super_admin': return 'Super Admin';
+      case 'admin': return 'Admin';
+      default: return 'User';
     }
   };
 
@@ -538,115 +566,113 @@ export default function SettingsPage() {
             Update your personal details and contact information
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form className="space-y-4">
-            <div className="flex items-center gap-4 mb-6">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={userProfile.avatar} alt={userProfile.name} />
-                <AvatarFallback className="text-lg">
-                  {userProfile.name.split(' ').map(n => n[0]).join('') || 'A'}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <Label htmlFor="avatar" className="cursor-pointer">
-                  <div className="flex items-center gap-2 text-purple-600 hover:text-purple-700">
-                    <Upload className="h-4 w-4" />
-                    Change Photo
-                  </div>
-                </Label>
-                <Input
-                  id="avatar"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                />
-                <p className="text-xs text-gray-500 mt-1">JPG, PNG up to 2MB</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  value={userProfile.name}
-                  onChange={(e) => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={userProfile.email}
-                  onChange={(e) => setUserProfile(prev => ({ ...prev, email: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  value={userProfile.phone}
-                  onChange={(e) => setUserProfile(prev => ({ ...prev, phone: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
-                <Input
-                  id="department"
-                  value={userProfile.department}
-                  onChange={(e) => setUserProfile(prev => ({ ...prev, department: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="timezone">Timezone</Label>
-                <select
-                  id="timezone"
-                  value={userProfile.timezone}
-                  onChange={(e) => setUserProfile(prev => ({ ...prev, timezone: e.target.value }))}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="America/New_York">Eastern Time (ET)</option>
-                  <option value="America/Chicago">Central Time (CT)</option>
-                  <option value="America/Denver">Mountain Time (MT)</option>
-                  <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                  <option value="UTC">UTC</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="language">Language</Label>
-                <select
-                  id="language"
-                  value={userProfile.language}
-                  onChange={(e) => setUserProfile(prev => ({ ...prev, language: e.target.value }))}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="en">English</option>
-                  <option value="es">Spanish</option>
-                  <option value="fr">French</option>
-                  <option value="de">German</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex justify-end">
-              <Button 
-                type="button"
-                onClick={() => handleSaveSettings('Profile')}
-                disabled={loading}
-                className="bg-purple-600 hover:bg-purple-700"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Saving...' : 'Save Changes'}
+        <CardContent className="space-y-6">
+          <div className="flex items-center gap-6">
+            <Avatar className="h-24 w-24">
+              <AvatarImage src={uploadedAvatar || userSettings?.avatar} alt={userSettings?.name} />
+              <AvatarFallback className="text-lg">
+                {userSettings?.name?.split(' ').map(n => n[0]).join('') || 'A'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-2">
+              <Button variant="outline">
+                <label htmlFor="avatar" className="cursor-pointer flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Upload Photo
+                </label>
               </Button>
+              <Input
+                id="avatar"
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
+              <p className="text-xs text-gray-500">JPG, PNG up to 2MB</p>
             </div>
-          </form>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                value={userSettings?.name || ''}
+                onChange={(e) => setUserSettings(prev => prev ? { ...prev, name: e.target.value } : null)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                value={userSettings?.email || ''}
+                onChange={(e) => setUserSettings(prev => prev ? { ...prev, email: e.target.value } : null)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                value={userSettings?.phone || ''}
+                onChange={(e) => setUserSettings(prev => prev ? { ...prev, phone: e.target.value } : null)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="department">Department</Label>
+              <Input
+                id="department"
+                value={userSettings?.department || ''}
+                onChange={(e) => setUserSettings(prev => prev ? { ...prev, department: e.target.value } : null)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Timezone</Label>
+              <Select 
+                value={userSettings?.timezone || 'America/New_York'} 
+                onValueChange={(value) => setUserSettings(prev => prev ? { ...prev, timezone: value } : null)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
+                  <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
+                  <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
+                  <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
+                  <SelectItem value="UTC">UTC</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="language">Language</Label>
+              <Select 
+                value={userSettings?.language || 'en'} 
+                onValueChange={(value) => setUserSettings(prev => prev ? { ...prev, language: value } : null)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="es">Spanish</SelectItem>
+                  <SelectItem value="fr">French</SelectItem>
+                  <SelectItem value="de">German</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => handleSaveSettings('Profile')}
+              disabled={loading}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -658,50 +684,55 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current Password</Label>
-              <div className="relative">
-                <Input
-                  id="currentPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter current password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">New Password</Label>
+          <div className="space-y-2">
+            <Label htmlFor="currentPassword">Current Password</Label>
+            <div className="relative">
               <Input
-                id="newPassword"
+                id="currentPassword"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Enter new password"
+                placeholder="Enter current password"
+                value={passwordForm.currentPassword}
+                onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <Input
-                id="confirmPassword"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Confirm new password"
-              />
-            </div>
-            <div className="flex justify-end">
-              <Button 
+              <button
                 type="button"
-                variant="outline"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
               >
-                <Key className="h-4 w-4 mr-2" />
-                Update Password
-              </Button>
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
-          </form>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="newPassword">New Password</Label>
+            <Input
+              id="newPassword"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Enter new password"
+              value={passwordForm.newPassword}
+              onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm New Password</Label>
+            <Input
+              id="confirmPassword"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Confirm new password"
+              value={passwordForm.confirmPassword}
+              onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+            />
+          </div>
+          <div className="flex justify-end">
+            <Button 
+              variant="outline"
+              onClick={handlePasswordChange}
+              disabled={loading || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
+            >
+              <Key className="h-4 w-4 mr-2" />
+              {loading ? 'Updating...' : 'Update Password'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -725,15 +756,15 @@ export default function SettingsPage() {
               <div>
                 <p className="font-medium">Two-Factor Authentication</p>
                 <p className="text-sm text-gray-600">
-                  {userProfile.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                  {userSettings?.twoFactorEnabled ? 'Enabled' : 'Disabled'}
                 </p>
               </div>
             </div>
             <Button 
-              variant={userProfile.twoFactorEnabled ? "outline" : "default"}
-              onClick={() => setUserProfile(prev => ({ ...prev, twoFactorEnabled: !prev.twoFactorEnabled }))}
+              variant={userSettings?.twoFactorEnabled ? "outline" : "default"}
+              onClick={() => setUserSettings(prev => prev ? { ...prev, twoFactorEnabled: !prev.twoFactorEnabled } : null)}
             >
-              {userProfile.twoFactorEnabled ? 'Disable' : 'Enable'}
+              {userSettings?.twoFactorEnabled ? 'Disable' : 'Enable'}
             </Button>
           </div>
         </CardContent>
@@ -753,8 +784,8 @@ export default function SettingsPage() {
               <Input
                 id="passwordExpiry"
                 type="number"
-                value={securitySettings.passwordExpiry}
-                onChange={(e) => setSecuritySettings(prev => ({ ...prev, passwordExpiry: parseInt(e.target.value) }))}
+                value={securitySettings?.passwordExpiry || 90}
+                onChange={(e) => setSecuritySettings(prev => prev ? { ...prev, passwordExpiry: parseInt(e.target.value) } : null)}
               />
             </div>
             <div className="space-y-2">
@@ -762,8 +793,8 @@ export default function SettingsPage() {
               <Input
                 id="maxLoginAttempts"
                 type="number"
-                value={securitySettings.maxLoginAttempts}
-                onChange={(e) => setSecuritySettings(prev => ({ ...prev, maxLoginAttempts: parseInt(e.target.value) }))}
+                value={securitySettings?.maxLoginAttempts || 5}
+                onChange={(e) => setSecuritySettings(prev => prev ? { ...prev, maxLoginAttempts: parseInt(e.target.value) } : null)}
               />
             </div>
             <div className="space-y-2">
@@ -771,8 +802,8 @@ export default function SettingsPage() {
               <Input
                 id="lockoutDuration"
                 type="number"
-                value={securitySettings.lockoutDuration}
-                onChange={(e) => setSecuritySettings(prev => ({ ...prev, lockoutDuration: parseInt(e.target.value) }))}
+                value={securitySettings?.lockoutDuration || 15}
+                onChange={(e) => setSecuritySettings(prev => prev ? { ...prev, lockoutDuration: parseInt(e.target.value) } : null)}
               />
             </div>
             <div className="space-y-2">
@@ -780,8 +811,8 @@ export default function SettingsPage() {
               <Input
                 id="dataRetention"
                 type="number"
-                value={securitySettings.dataRetentionPeriod}
-                onChange={(e) => setSecuritySettings(prev => ({ ...prev, dataRetentionPeriod: parseInt(e.target.value) }))}
+                value={securitySettings?.dataRetentionPeriod || 365}
+                onChange={(e) => setSecuritySettings(prev => prev ? { ...prev, dataRetentionPeriod: parseInt(e.target.value) } : null)}
               />
             </div>
           </div>
@@ -794,8 +825,8 @@ export default function SettingsPage() {
               </div>
               <input
                 type="checkbox"
-                checked={securitySettings.twoFactorRequired}
-                onChange={(e) => setSecuritySettings(prev => ({ ...prev, twoFactorRequired: e.target.checked }))}
+                checked={securitySettings?.twoFactorRequired || false}
+                onChange={(e) => setSecuritySettings(prev => prev ? { ...prev, twoFactorRequired: e.target.checked } : null)}
                 className="rounded"
               />
             </div>
@@ -806,8 +837,8 @@ export default function SettingsPage() {
               </div>
               <input
                 type="checkbox"
-                checked={securitySettings.sslEnabled}
-                onChange={(e) => setSecuritySettings(prev => ({ ...prev, sslEnabled: e.target.checked }))}
+                checked={securitySettings?.sslEnabled || true}
+                onChange={(e) => setSecuritySettings(prev => prev ? { ...prev, sslEnabled: e.target.checked } : null)}
                 className="rounded"
               />
             </div>
@@ -818,8 +849,8 @@ export default function SettingsPage() {
               </div>
               <input
                 type="checkbox"
-                checked={securitySettings.auditLogging}
-                onChange={(e) => setSecuritySettings(prev => ({ ...prev, auditLogging: e.target.checked }))}
+                checked={securitySettings?.auditLogging || true}
+                onChange={(e) => setSecuritySettings(prev => prev ? { ...prev, auditLogging: e.target.checked } : null)}
                 className="rounded"
               />
             </div>
@@ -860,11 +891,8 @@ export default function SettingsPage() {
             </div>
             <input
               type="checkbox"
-              checked={userProfile.notifications.email}
-              onChange={(e) => setUserProfile(prev => ({ 
-                ...prev, 
-                notifications: { ...prev.notifications, email: e.target.checked }
-              }))}
+              checked={notificationPreferences.email}
+              onChange={(e) => setNotificationPreferences(prev => ({ ...prev, email: e.target.checked }))}
               className="rounded"
             />
           </div>
@@ -879,11 +907,8 @@ export default function SettingsPage() {
             </div>
             <input
               type="checkbox"
-              checked={userProfile.notifications.push}
-              onChange={(e) => setUserProfile(prev => ({ 
-                ...prev, 
-                notifications: { ...prev.notifications, push: e.target.checked }
-              }))}
+              checked={notificationPreferences.push}
+              onChange={(e) => setNotificationPreferences(prev => ({ ...prev, push: e.target.checked }))}
               className="rounded"
             />
           </div>
@@ -898,11 +923,8 @@ export default function SettingsPage() {
             </div>
             <input
               type="checkbox"
-              checked={userProfile.notifications.sms}
-              onChange={(e) => setUserProfile(prev => ({ 
-                ...prev, 
-                notifications: { ...prev.notifications, sms: e.target.checked }
-              }))}
+              checked={notificationPreferences.sms}
+              onChange={(e) => setNotificationPreferences(prev => ({ ...prev, sms: e.target.checked }))}
               className="rounded"
             />
           </div>
@@ -917,11 +939,40 @@ export default function SettingsPage() {
             </div>
             <input
               type="checkbox"
-              checked={userProfile.notifications.desktop}
-              onChange={(e) => setUserProfile(prev => ({ 
-                ...prev, 
-                notifications: { ...prev.notifications, desktop: e.target.checked }
-              }))}
+              checked={notificationPreferences.desktop}
+              onChange={(e) => setNotificationPreferences(prev => ({ ...prev, desktop: e.target.checked }))}
+              className="rounded"
+            />
+          </div>
+          
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <Mail className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="font-medium">Marketing Emails</p>
+                <p className="text-sm text-gray-600">Receive marketing and promotional emails</p>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={notificationPreferences.marketing_emails}
+              onChange={(e) => setNotificationPreferences(prev => ({ ...prev, marketing_emails: e.target.checked }))}
+              className="rounded"
+            />
+          </div>
+          
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <Bell className="h-5 w-5 text-purple-600" />
+              <div>
+                <p className="font-medium">System Notifications</p>
+                <p className="text-sm text-gray-600">Receive system updates and alerts</p>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={notificationPreferences.system_notifications}
+              onChange={(e) => setNotificationPreferences(prev => ({ ...prev, system_notifications: e.target.checked }))}
               className="rounded"
             />
           </div>
@@ -941,447 +992,88 @@ export default function SettingsPage() {
     </Card>
   );
 
-  const renderPlatformSettings = () => (
-    <div className="space-y-6">
-      <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <CardTitle>General Settings</CardTitle>
-          <CardDescription>
-            Configure basic platform settings and branding
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="siteName">Site Name</Label>
-              <Input
-                id="siteName"
-                value={platformSettings.siteName}
-                onChange={(e) => setPlatformSettings(prev => ({ ...prev, siteName: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="currency">Currency</Label>
-              <Select value={platformSettings.currency} onValueChange={(value) => setPlatformSettings(prev => ({ ...prev, currency: value }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD - US Dollar</SelectItem>
-                  <SelectItem value="EUR">EUR - Euro</SelectItem>
-                  <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                  <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="siteDescription">Site Description</Label>
-            <textarea
-              id="siteDescription"
-              rows={3}
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              value={platformSettings.siteDescription}
-              onChange={(e) => setPlatformSettings(prev => ({ ...prev, siteDescription: e.target.value }))}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="primaryColor">Primary Color</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="primaryColor"
-                  value={platformSettings.primaryColor}
-                  onChange={(e) => setPlatformSettings(prev => ({ ...prev, primaryColor: e.target.value }))}
-                />
-                <input
-                  type="color"
-                  value={platformSettings.primaryColor}
-                  onChange={(e) => setPlatformSettings(prev => ({ ...prev, primaryColor: e.target.value }))}
-                  className="w-12 h-10 rounded border"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="secondaryColor">Secondary Color</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="secondaryColor"
-                  value={platformSettings.secondaryColor}
-                  onChange={(e) => setPlatformSettings(prev => ({ ...prev, secondaryColor: e.target.value }))}
-                />
-                <input
-                  type="color"
-                  value={platformSettings.secondaryColor}
-                  onChange={(e) => setPlatformSettings(prev => ({ ...prev, secondaryColor: e.target.value }))}
-                  className="w-12 h-10 rounded border"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Maintenance Mode</p>
-                <p className="text-sm text-gray-600">Temporarily disable public access</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={platformSettings.maintenanceMode}
-                onChange={(e) => setPlatformSettings(prev => ({ ...prev, maintenanceMode: e.target.checked }))}
-                className="rounded"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">User Registration</p>
-                <p className="text-sm text-gray-600">Allow new users to register</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={platformSettings.registrationEnabled}
-                onChange={(e) => setPlatformSettings(prev => ({ ...prev, registrationEnabled: e.target.checked }))}
-                className="rounded"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Email Verification</p>
-                <p className="text-sm text-gray-600">Require email verification for new accounts</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={platformSettings.emailVerificationRequired}
-                onChange={(e) => setPlatformSettings(prev => ({ ...prev, emailVerificationRequired: e.target.checked }))}
-                className="rounded"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button 
-              onClick={() => handleSaveSettings('Platform')}
-              disabled={loading}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {loading ? 'Saving...' : 'Save Platform Settings'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
   const renderBillingSettings = () => (
     <div className="space-y-6">
       <Card className="border-0 shadow-sm">
         <CardHeader>
           <CardTitle>Payment Methods</CardTitle>
           <CardDescription>
-            Manage your payment methods and default payment option
+            Manage your payment methods and billing preferences
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            {billingSettings.paymentMethods.map((method) => (
-              <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <CreditCardIcon className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">{method.cardBrand} •••• {method.last4}</p>
-                    <p className="text-sm text-gray-600">
-                      Expires {method.expiryMonth}/{method.expiryYear}
-                      {method.isDefault && <span className="ml-2 text-green-600 font-medium">Default</span>}
-                    </p>
-                  </div>
+        <CardContent className="space-y-4">
+          <div className="p-4 border rounded-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <CreditCard className="h-5 w-5 text-blue-600" />
                 </div>
-                <div className="flex gap-2">
-                  {!method.isDefault && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        setBillingSettings(prev => ({
-                          ...prev,
-                          paymentMethods: prev.paymentMethods.map(m => ({
-                            ...m,
-                            isDefault: m.id === method.id
-                          })),
-                          defaultPaymentMethod: method
-                        }));
-                      }}
-                    >
-                      Set Default
-                    </Button>
-                  )}
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="text-red-600"
-                    onClick={() => {
-                      setBillingSettings(prev => ({
-                        ...prev,
-                        paymentMethods: prev.paymentMethods.filter(m => m.id !== method.id)
-                      }));
-                    }}
-                  >
-                    Remove
-                  </Button>
+                <div>
+                  <p className="font-medium">Visa ending in 4242</p>
+                  <p className="text-sm text-gray-600">Expires 12/2025</p>
                 </div>
               </div>
-            ))}
+              <Badge>Default</Badge>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Button variant="outline" size="sm" className="text-red-600">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Remove
+              </Button>
+            </div>
+          </div>
+          
+          <Button variant="outline" className="w-full">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Payment Method
+          </Button>
+          
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-4">Billing Preferences</h3>
             
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => {
-                // In a real app, you would open a dialog to add a new payment method
-                toast({
-                  title: 'Add Payment Method',
-                  description: 'This would open a dialog to add a new payment method.',
-                });
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Payment Method
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <CardTitle>Billing Address</CardTitle>
-          <CardDescription>
-            Update your billing address for invoices and receipts
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="billingName">Full Name</Label>
-            <Input
-              id="billingName"
-              value={billingSettings.billingAddress.name}
-              onChange={(e) => setBillingSettings(prev => ({
-                ...prev,
-                billingAddress: {
-                  ...prev.billingAddress,
-                  name: e.target.value
-                }
-              }))}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="addressLine1">Address Line 1</Label>
-            <Input
-              id="addressLine1"
-              value={billingSettings.billingAddress.line1}
-              onChange={(e) => setBillingSettings(prev => ({
-                ...prev,
-                billingAddress: {
-                  ...prev.billingAddress,
-                  line1: e.target.value
-                }
-              }))}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="addressLine2">Address Line 2 (Optional)</Label>
-            <Input
-              id="addressLine2"
-              value={billingSettings.billingAddress.line2}
-              onChange={(e) => setBillingSettings(prev => ({
-                ...prev,
-                billingAddress: {
-                  ...prev.billingAddress,
-                  line2: e.target.value
-                }
-              }))}
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                value={billingSettings.billingAddress.city}
-                onChange={(e) => setBillingSettings(prev => ({
-                  ...prev,
-                  billingAddress: {
-                    ...prev.billingAddress,
-                    city: e.target.value
-                  }
-                }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="state">State/Province</Label>
-              <Input
-                id="state"
-                value={billingSettings.billingAddress.state}
-                onChange={(e) => setBillingSettings(prev => ({
-                  ...prev,
-                  billingAddress: {
-                    ...prev.billingAddress,
-                    state: e.target.value
-                  }
-                }))}
-              />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Auto-pay Invoices</p>
+                  <p className="text-sm text-gray-600">Automatically pay invoices when due</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={billingSettings?.autoPay || true}
+                  onChange={(e) => setBillingSettings(prev => prev ? { ...prev, autoPay: e.target.checked } : null)}
+                  className="rounded"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="invoiceEmail">Invoice Email</Label>
+                <Input
+                  id="invoiceEmail"
+                  type="email"
+                  placeholder="finance@company.com"
+                  value={billingSettings?.invoiceEmail || ''}
+                  onChange={(e) => setBillingSettings(prev => prev ? { ...prev, invoiceEmail: e.target.value } : null)}
+                />
+                <p className="text-xs text-gray-500">Where to send invoice receipts and payment notifications</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="taxId">Tax ID / VAT Number</Label>
+                <Input
+                  id="taxId"
+                  placeholder="Enter tax ID"
+                  value={billingSettings?.taxId || ''}
+                  onChange={(e) => setBillingSettings(prev => prev ? { ...prev, taxId: e.target.value } : null)}
+                />
+              </div>
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="postalCode">Postal Code</Label>
-              <Input
-                id="postalCode"
-                value={billingSettings.billingAddress.postalCode}
-                onChange={(e) => setBillingSettings(prev => ({
-                  ...prev,
-                  billingAddress: {
-                    ...prev.billingAddress,
-                    postalCode: e.target.value
-                  }
-                }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="country">Country</Label>
-              <Select 
-                value={billingSettings.billingAddress.country}
-                onValueChange={(value) => setBillingSettings(prev => ({
-                  ...prev,
-                  billingAddress: {
-                    ...prev.billingAddress,
-                    country: value
-                  }
-                }))}
-              >
-                <SelectTrigger id="country">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="US">United States</SelectItem>
-                  <SelectItem value="CA">Canada</SelectItem>
-                  <SelectItem value="UK">United Kingdom</SelectItem>
-                  <SelectItem value="AU">Australia</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="taxId">Tax ID (Optional)</Label>
-            <Input
-              id="taxId"
-              value={billingSettings.taxId}
-              onChange={(e) => setBillingSettings(prev => ({
-                ...prev,
-                taxId: e.target.value
-              }))}
-            />
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <CardTitle>Invoice Settings</CardTitle>
-          <CardDescription>
-            Configure how invoices are generated and delivered
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="invoiceEmail">Invoice Email</Label>
-            <Input
-              id="invoiceEmail"
-              type="email"
-              value={billingSettings.invoiceEmail}
-              onChange={(e) => setBillingSettings(prev => ({
-                ...prev,
-                invoiceEmail: e.target.value
-              }))}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="invoicePrefix">Invoice Number Prefix</Label>
-            <Input
-              id="invoicePrefix"
-              value={billingSettings.invoiceSettings.invoicePrefix}
-              onChange={(e) => setBillingSettings(prev => ({
-                ...prev,
-                invoiceSettings: {
-                  ...prev.invoiceSettings,
-                  invoicePrefix: e.target.value
-                }
-              }))}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="dueDays">Payment Due Days</Label>
-            <Input
-              id="dueDays"
-              type="number"
-              value={billingSettings.invoiceSettings.dueDays}
-              onChange={(e) => setBillingSettings(prev => ({
-                ...prev,
-                invoiceSettings: {
-                  ...prev.invoiceSettings,
-                  dueDays: parseInt(e.target.value)
-                }
-              }))}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="invoiceNotes">Default Invoice Notes</Label>
-            <textarea
-              id="invoiceNotes"
-              rows={3}
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              value={billingSettings.invoiceSettings.notes}
-              onChange={(e) => setBillingSettings(prev => ({
-                ...prev,
-                invoiceSettings: {
-                  ...prev.invoiceSettings,
-                  notes: e.target.value
-                }
-              }))}
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Auto-Pay Enabled</p>
-              <p className="text-sm text-gray-600">Automatically charge default payment method</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={billingSettings.invoiceSettings.autoPayEnabled}
-              onChange={(e) => setBillingSettings(prev => ({
-                ...prev,
-                invoiceSettings: {
-                  ...prev.invoiceSettings,
-                  autoPayEnabled: e.target.checked
-                }
-              }))}
-              className="rounded"
-            />
-          </div>
-          
-          <div className="flex justify-end">
+          <div className="flex justify-end mt-4">
             <Button 
               onClick={() => handleSaveSettings('Billing')}
               disabled={loading}
@@ -1402,14 +1094,14 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Backup Configuration</CardTitle>
           <CardDescription>
-            Configure automatic backup settings for your data
+            Configure automatic backups and data recovery options
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <RotateCcw className="h-5 w-5 text-blue-600" />
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Database className="h-5 w-5 text-green-600" />
               </div>
               <div>
                 <p className="font-medium">Automatic Backups</p>
@@ -1418,8 +1110,8 @@ export default function SettingsPage() {
             </div>
             <input
               type="checkbox"
-              checked={backupSettings.autoBackup}
-              onChange={(e) => setBackupSettings(prev => ({ ...prev, autoBackup: e.target.checked }))}
+              checked={backupSettings?.autoBackup || true}
+              onChange={(e) => setBackupSettings(prev => prev ? { ...prev, autoBackup: e.target.checked } : null)}
               className="rounded"
             />
           </div>
@@ -1428,14 +1120,15 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <Label htmlFor="backupFrequency">Backup Frequency</Label>
               <Select 
-                value={backupSettings.backupFrequency}
-                onValueChange={(value: 'daily' | 'weekly' | 'monthly') => setBackupSettings(prev => ({ ...prev, backupFrequency: value }))}
-                disabled={!backupSettings.autoBackup}
+                value={backupSettings?.backupFrequency || 'daily'} 
+                onValueChange={(value) => setBackupSettings(prev => prev ? { ...prev, backupFrequency: value } : null)}
+                disabled={!backupSettings?.autoBackup}
               >
-                <SelectTrigger id="backupFrequency">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="hourly">Hourly</SelectItem>
                   <SelectItem value="daily">Daily</SelectItem>
                   <SelectItem value="weekly">Weekly</SelectItem>
                   <SelectItem value="monthly">Monthly</SelectItem>
@@ -1448,9 +1141,9 @@ export default function SettingsPage() {
               <Input
                 id="backupTime"
                 type="time"
-                value={backupSettings.backupTime}
-                onChange={(e) => setBackupSettings(prev => ({ ...prev, backupTime: e.target.value }))}
-                disabled={!backupSettings.autoBackup}
+                value={backupSettings?.backupTime || '00:00'}
+                onChange={(e) => setBackupSettings(prev => prev ? { ...prev, backupTime: e.target.value } : null)}
+                disabled={!backupSettings?.autoBackup}
               />
             </div>
             
@@ -1459,164 +1152,66 @@ export default function SettingsPage() {
               <Input
                 id="retentionDays"
                 type="number"
-                value={backupSettings.retentionDays}
-                onChange={(e) => setBackupSettings(prev => ({ ...prev, retentionDays: parseInt(e.target.value) }))}
-                disabled={!backupSettings.autoBackup}
+                value={backupSettings?.retentionDays || 30}
+                onChange={(e) => setBackupSettings(prev => prev ? { ...prev, retentionDays: parseInt(e.target.value) } : null)}
+                disabled={!backupSettings?.autoBackup}
               />
+              <p className="text-xs text-gray-500">How long to keep backup files</p>
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="storageProvider">Storage Provider</Label>
               <Select 
-                value={backupSettings.storageProvider}
-                onValueChange={(value: 'local' | 'cloud' | 's3' | 'google') => setBackupSettings(prev => ({ ...prev, storageProvider: value }))}
+                value={backupSettings?.storageProvider || 'local'} 
+                onValueChange={(value) => setBackupSettings(prev => prev ? { ...prev, storageProvider: value } : null)}
+                disabled={!backupSettings?.autoBackup}
               >
-                <SelectTrigger id="storageProvider">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="local">Local Storage</SelectItem>
-                  <SelectItem value="cloud">Cloud Storage</SelectItem>
                   <SelectItem value="s3">Amazon S3</SelectItem>
-                  <SelectItem value="google">Google Cloud</SelectItem>
+                  <SelectItem value="gcs">Google Cloud Storage</SelectItem>
+                  <SelectItem value="azure">Azure Blob Storage</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           
-          {backupSettings.storageProvider !== 'local' && (
-            <div className="space-y-4 p-4 border rounded-lg">
-              <h3 className="font-semibold">Cloud Storage Configuration</h3>
-              
-              <div className="space-y-2">
-                <Label htmlFor="storagePath">Storage Path</Label>
-                <Input
-                  id="storagePath"
-                  value={backupSettings.storagePath}
-                  onChange={(e) => setBackupSettings(prev => ({ ...prev, storagePath: e.target.value }))}
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {backupSettings?.storageProvider !== 'local' && (
+            <div className="p-4 border rounded-lg bg-blue-50">
+              <h3 className="font-medium text-blue-800 mb-2">Cloud Storage Configuration</h3>
+              <div className="space-y-3">
                 <div className="space-y-2">
-                  <Label htmlFor="accessKey">Access Key</Label>
+                  <Label htmlFor="storagePath">Storage Path</Label>
                   <Input
-                    id="accessKey"
-                    value={backupSettings.cloudCredentials.accessKey}
-                    onChange={(e) => setBackupSettings(prev => ({
-                      ...prev,
-                      cloudCredentials: {
-                        ...prev.cloudCredentials,
-                        accessKey: e.target.value
-                      }
-                    }))}
+                    id="storagePath"
+                    placeholder="backups/hairvana"
+                    value={backupSettings?.storagePath || ''}
+                    onChange={(e) => setBackupSettings(prev => prev ? { ...prev, storagePath: e.target.value } : null)}
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="secretKey">Secret Key</Label>
+                  <Label htmlFor="cloudCredentials">API Key / Credentials</Label>
                   <Input
-                    id="secretKey"
+                    id="cloudCredentials"
                     type="password"
-                    value={backupSettings.cloudCredentials.secretKey}
-                    onChange={(e) => setBackupSettings(prev => ({
-                      ...prev,
-                      cloudCredentials: {
-                        ...prev.cloudCredentials,
-                        secretKey: e.target.value
-                      }
-                    }))}
+                    placeholder="Enter API key or credentials"
                   />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="region">Region</Label>
-                  <Input
-                    id="region"
-                    value={backupSettings.cloudCredentials.region}
-                    onChange={(e) => setBackupSettings(prev => ({
-                      ...prev,
-                      cloudCredentials: {
-                        ...prev.cloudCredentials,
-                        region: e.target.value
-                      }
-                    }))}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="bucket">Bucket Name</Label>
-                  <Input
-                    id="bucket"
-                    value={backupSettings.cloudCredentials.bucket}
-                    onChange={(e) => setBackupSettings(prev => ({
-                      ...prev,
-                      cloudCredentials: {
-                        ...prev.cloudCredentials,
-                        bucket: e.target.value
-                      }
-                    }))}
-                  />
+                  <p className="text-xs text-gray-500">Credentials are encrypted before storage</p>
                 </div>
               </div>
             </div>
           )}
           
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Enable Compression</p>
-                <p className="text-sm text-gray-600">Compress backup files to save space</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={backupSettings.compressionEnabled}
-                onChange={(e) => setBackupSettings(prev => ({ ...prev, compressionEnabled: e.target.checked }))}
-                className="rounded"
-              />
-            </div>
+          <div className="flex justify-between">
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Manual Backup
+            </Button>
             
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Enable Encryption</p>
-                <p className="text-sm text-gray-600">Encrypt backup files for security</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={backupSettings.encryptionEnabled}
-                onChange={(e) => setBackupSettings(prev => ({ ...prev, encryptionEnabled: e.target.checked }))}
-                className="rounded"
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Notify on Completion</p>
-                <p className="text-sm text-gray-600">Send notification when backup completes</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={backupSettings.notifyOnCompletion}
-                onChange={(e) => setBackupSettings(prev => ({ ...prev, notifyOnCompletion: e.target.checked }))}
-                className="rounded"
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Notify on Failure</p>
-                <p className="text-sm text-gray-600">Send notification if backup fails</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={backupSettings.notifyOnFailure}
-                onChange={(e) => setBackupSettings(prev => ({ ...prev, notifyOnFailure: e.target.checked }))}
-                className="rounded"
-              />
-            </div>
-          </div>
-          
-          <div className="flex justify-end">
             <Button 
               onClick={() => handleSaveSettings('Backup')}
               disabled={loading}
@@ -1633,111 +1228,195 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Backup History</CardTitle>
           <CardDescription>
-            View and manage previous backup records
+            View and restore previous backups
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {backupSettings.lastBackup && (
-            <div className="p-4 bg-blue-50 rounded-lg mb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <ClockIcon className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="font-medium">Last Backup</p>
-                    <p className="text-sm text-blue-700">
-                      {new Date(backupSettings.lastBackup).toLocaleString()}
-                    </p>
-                  </div>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Database className="h-5 w-5 text-green-600" />
                 </div>
-                <Button 
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    toast({
-                      title: 'Backup Started',
-                      description: 'Manual backup has been initiated.',
-                    });
-                  }}
-                >
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Backup Now
+                <div>
+                  <p className="font-medium">Daily Backup</p>
+                  <p className="text-sm text-gray-600">June 15, 2024 - 00:00</p>
+                  <p className="text-xs text-gray-500">Size: 24.5 MB</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+                <Button variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Restore
                 </Button>
               </div>
             </div>
-          )}
-          
-          <div className="space-y-2">
-            {backupSettings.backupHistory.map((backup) => (
-              <div 
-                key={backup.id} 
-                className={`p-4 border rounded-lg flex items-center justify-between ${
-                  backup.status === 'success' ? 'border-green-200' : 'border-red-200'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${
-                    backup.status === 'success' ? 'bg-green-100' : 'bg-red-100'
-                  }`}>
-                    {backup.status === 'success' ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <X className="h-4 w-4 text-red-600" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium">
-                      {new Date(backup.date).toLocaleDateString()} at {new Date(backup.date).toLocaleTimeString()}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Size: {backup.size} • Location: {backup.location}
-                    </p>
-                  </div>
+            
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Database className="h-5 w-5 text-green-600" />
                 </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="hover:bg-blue-50 hover:text-blue-600"
-                    onClick={() => {
-                      toast({
-                        title: 'Download Started',
-                        description: 'Backup download has been initiated.',
-                      });
-                    }}
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="hover:bg-green-50 hover:text-green-600"
-                    onClick={() => {
-                      toast({
-                        title: 'Restore Started',
-                        description: 'Backup restore has been initiated.',
-                      });
-                    }}
-                  >
-                    <ArchiveRestore className="h-4 w-4" />
-                  </Button>
+                <div>
+                  <p className="font-medium">Daily Backup</p>
+                  <p className="text-sm text-gray-600">June 14, 2024 - 00:00</p>
+                  <p className="text-xs text-gray-500">Size: 24.2 MB</p>
                 </div>
               </div>
-            ))}
-          </div>
-          
-          {backupSettings.backupHistory.length === 0 && (
-            <div className="text-center py-8">
-              <Database className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No backup history</h3>
-              <p className="text-gray-600 mb-4">
-                No backups have been created yet.
-              </p>
-              <Button>
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Create First Backup
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+                <Button variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Restore
+                </Button>
+              </div>
             </div>
-          )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderPlatformSettings = () => (
+    <div className="space-y-6">
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle>General Settings</CardTitle>
+          <CardDescription>
+            Configure basic platform settings and branding
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="siteName">Site Name</Label>
+              <Input
+                id="siteName"
+                value={platformSettings?.siteName || 'Hairvana'}
+                onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, siteName: e.target.value } : null)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="currency">Currency</Label>
+              <Select 
+                value={platformSettings?.currency || 'USD'} 
+                onValueChange={(value) => setPlatformSettings(prev => prev ? { ...prev, currency: value } : null)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD - US Dollar</SelectItem>
+                  <SelectItem value="EUR">EUR - Euro</SelectItem>
+                  <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                  <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="siteDescription">Site Description</Label>
+            <textarea
+              id="siteDescription"
+              rows={3}
+              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              value={platformSettings?.siteDescription || 'Professional Salon Management Platform'}
+              onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, siteDescription: e.target.value } : null)}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="primaryColor">Primary Color</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="primaryColor"
+                  value={platformSettings?.primaryColor || '#8b5cf6'}
+                  onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, primaryColor: e.target.value } : null)}
+                />
+                <input
+                  type="color"
+                  value={platformSettings?.primaryColor || '#8b5cf6'}
+                  onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, primaryColor: e.target.value } : null)}
+                  className="w-12 h-10 rounded border"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="secondaryColor">Secondary Color</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="secondaryColor"
+                  value={platformSettings?.secondaryColor || '#ec4899'}
+                  onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, secondaryColor: e.target.value } : null)}
+                />
+                <input
+                  type="color"
+                  value={platformSettings?.secondaryColor || '#ec4899'}
+                  onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, secondaryColor: e.target.value } : null)}
+                  className="w-12 h-10 rounded border"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Maintenance Mode</p>
+                <p className="text-sm text-gray-600">Temporarily disable public access</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={platformSettings?.maintenanceMode || false}
+                onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, maintenanceMode: e.target.checked } : null)}
+                className="rounded"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">User Registration</p>
+                <p className="text-sm text-gray-600">Allow new users to register</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={platformSettings?.registrationEnabled || true}
+                onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, registrationEnabled: e.target.checked } : null)}
+                className="rounded"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Email Verification</p>
+                <p className="text-sm text-gray-600">Require email verification for new accounts</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={platformSettings?.emailVerificationRequired || true}
+                onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, emailVerificationRequired: e.target.checked } : null)}
+                className="rounded"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => handleSaveSettings('Platform')}
+              disabled={loading}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {loading ? 'Saving...' : 'Save Platform Settings'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -1758,7 +1437,10 @@ export default function SettingsPage() {
               <h4 className="font-semibold">Email Service</h4>
               <div className="space-y-2">
                 <Label htmlFor="emailProvider">Provider</Label>
-                <Select value={integrationSettings.emailProvider} onValueChange={(value) => setIntegrationSettings(prev => ({ ...prev, emailProvider: value }))}>
+                <Select 
+                  value={integrationSettings?.emailProvider || 'sendgrid'} 
+                  onValueChange={(value) => setIntegrationSettings(prev => prev ? { ...prev, emailProvider: value } : null)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -1776,8 +1458,8 @@ export default function SettingsPage() {
                   id="emailApiKey"
                   type="password"
                   placeholder="Enter API key"
-                  value={integrationSettings.emailApiKey}
-                  onChange={(e) => setIntegrationSettings(prev => ({ ...prev, emailApiKey: e.target.value }))}
+                  value={integrationSettings?.emailApiKey || ''}
+                  onChange={(e) => setIntegrationSettings(prev => prev ? { ...prev, emailApiKey: e.target.value } : null)}
                 />
               </div>
             </div>
@@ -1786,7 +1468,10 @@ export default function SettingsPage() {
               <h4 className="font-semibold">SMS Service</h4>
               <div className="space-y-2">
                 <Label htmlFor="smsProvider">Provider</Label>
-                <Select value={integrationSettings.smsProvider} onValueChange={(value) => setIntegrationSettings(prev => ({ ...prev, smsProvider: value }))}>
+                <Select 
+                  value={integrationSettings?.smsProvider || 'twilio'} 
+                  onValueChange={(value) => setIntegrationSettings(prev => prev ? { ...prev, smsProvider: value } : null)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -1803,8 +1488,8 @@ export default function SettingsPage() {
                   id="smsApiKey"
                   type="password"
                   placeholder="Enter API key"
-                  value={integrationSettings.smsApiKey}
-                  onChange={(e) => setIntegrationSettings(prev => ({ ...prev, smsApiKey: e.target.value }))}
+                  value={integrationSettings?.smsApiKey || ''}
+                  onChange={(e) => setIntegrationSettings(prev => prev ? { ...prev, smsApiKey: e.target.value } : null)}
                 />
               </div>
             </div>
@@ -1813,7 +1498,10 @@ export default function SettingsPage() {
               <h4 className="font-semibold">Payment Gateway</h4>
               <div className="space-y-2">
                 <Label htmlFor="paymentGateway">Provider</Label>
-                <Select value={integrationSettings.paymentGateway} onValueChange={(value) => setIntegrationSettings(prev => ({ ...prev, paymentGateway: value }))}>
+                <Select 
+                  value={integrationSettings?.paymentGateway || 'stripe'} 
+                  onValueChange={(value) => setIntegrationSettings(prev => prev ? { ...prev, paymentGateway: value } : null)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -1830,8 +1518,8 @@ export default function SettingsPage() {
                   id="paymentApiKey"
                   type="password"
                   placeholder="Enter API key"
-                  value={integrationSettings.paymentApiKey}
-                  onChange={(e) => setIntegrationSettings(prev => ({ ...prev, paymentApiKey: e.target.value }))}
+                  value={integrationSettings?.paymentApiKey || ''}
+                  onChange={(e) => setIntegrationSettings(prev => prev ? { ...prev, paymentApiKey: e.target.value } : null)}
                 />
               </div>
             </div>
@@ -1840,7 +1528,10 @@ export default function SettingsPage() {
               <h4 className="font-semibold">Analytics</h4>
               <div className="space-y-2">
                 <Label htmlFor="analyticsProvider">Provider</Label>
-                <Select value={integrationSettings.analyticsProvider} onValueChange={(value) => setIntegrationSettings(prev => ({ ...prev, analyticsProvider: value }))}>
+                <Select 
+                  value={integrationSettings?.analyticsProvider || 'google'} 
+                  onValueChange={(value) => setIntegrationSettings(prev => prev ? { ...prev, analyticsProvider: value } : null)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -1856,8 +1547,8 @@ export default function SettingsPage() {
                 <Input
                   id="analyticsTrackingId"
                   placeholder="Enter tracking ID"
-                  value={integrationSettings.analyticsTrackingId}
-                  onChange={(e) => setIntegrationSettings(prev => ({ ...prev, analyticsTrackingId: e.target.value }))}
+                  value={integrationSettings?.analyticsTrackingId || ''}
+                  onChange={(e) => setIntegrationSettings(prev => prev ? { ...prev, analyticsTrackingId: e.target.value } : null)}
                 />
               </div>
             </div>
@@ -1891,11 +1582,11 @@ export default function SettingsPage() {
             </div>
             <input
               type="checkbox"
-              checked={integrationSettings.socialLogins.google}
-              onChange={(e) => setIntegrationSettings(prev => ({ 
+              checked={integrationSettings?.socialLogins?.google || true}
+              onChange={(e) => setIntegrationSettings(prev => prev ? { 
                 ...prev, 
                 socialLogins: { ...prev.socialLogins, google: e.target.checked }
-              }))}
+              } : null)}
               className="rounded"
             />
           </div>
@@ -1906,11 +1597,11 @@ export default function SettingsPage() {
             </div>
             <input
               type="checkbox"
-              checked={integrationSettings.socialLogins.facebook}
-              onChange={(e) => setIntegrationSettings(prev => ({ 
+              checked={integrationSettings?.socialLogins?.facebook || false}
+              onChange={(e) => setIntegrationSettings(prev => prev ? { 
                 ...prev, 
                 socialLogins: { ...prev.socialLogins, facebook: e.target.checked }
-              }))}
+              } : null)}
               className="rounded"
             />
           </div>
@@ -1921,11 +1612,11 @@ export default function SettingsPage() {
             </div>
             <input
               type="checkbox"
-              checked={integrationSettings.socialLogins.apple}
-              onChange={(e) => setIntegrationSettings(prev => ({ 
+              checked={integrationSettings?.socialLogins?.apple || false}
+              onChange={(e) => setIntegrationSettings(prev => prev ? { 
                 ...prev, 
                 socialLogins: { ...prev.socialLogins, apple: e.target.checked }
-              }))}
+              } : null)}
               className="rounded"
             />
           </div>

@@ -3,23 +3,10 @@
 import { useEffect, useState } from 'react';
 import { Building2, Users, CreditCard, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { fetchAnalytics } from '@/api/analytics';
-
-interface AnalyticsData {
-  overview: {
-    totalSalons: number;
-    activeSalons: number;
-    totalUsers: number;
-    activeUsers: number;
-    totalBookings: number;
-    completedBookings: number;
-    totalRevenue: number;
-    monthlyGrowth: number;
-  };
-}
+import { fetchDashboardStats, DashboardStats } from '@/api/dashboard';
 
 export function StatsCards() {
-  const [stats, setStats] = useState<AnalyticsData['overview'] | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -28,8 +15,8 @@ export function StatsCards() {
       try {
         setLoading(true);
         setError(false);
-        const data = await fetchAnalytics('30d');
-        setStats(data.overview);
+        const data = await fetchDashboardStats();
+        setStats(data);
       } catch (error) {
         console.error('Error loading dashboard stats:', error);
         setError(true);

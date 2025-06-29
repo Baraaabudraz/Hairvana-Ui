@@ -3,7 +3,18 @@ exports.getUserSettings = async (req, res, next) => {
   try {
     const userId = req.user.userId;
     
-    // Get user profile settings
+    // Get user core data from users table
+    const { data: userData, error: userError } = await req.supabase
+      .from('users')
+      .select('id, name, email, phone, avatar, role, status, join_date, last_login')
+      .eq('id', userId)
+      .single();
+    
+    if (userError) {
+      return res.status(500).json({ error: userError.message });
+    }
+    
+    // Get user profile settings (only settings-specific data)
     const { data: userProfile, error: profileError } = await req.supabase
       .from('user_settings')
       .select('*')
@@ -58,8 +69,14 @@ exports.getUserSettings = async (req, res, next) => {
       return res.status(500).json({ error: backupError.message });
     }
     
+    // Combine user data with settings
+    const combinedProfile = {
+      ...userData,
+      ...(userProfile || {})
+    };
+    
     res.json({
-      profile: userProfile || {},
+      profile: combinedProfile,
       security: securitySettings || {},
       notifications: notificationPrefs || {},
       billing: billingSettings || {},
@@ -76,36 +93,78 @@ exports.updateProfileSettings = async (req, res, next) => {
     const userId = req.user.userId;
     const profileData = req.body;
     
-    // Check if settings exist
-    const { data: existingSettings } = await req.supabase
-      .from('user_settings')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
+    // Separate core user data from settings data
+    const userData = {};
+    const settingsData = {};
     
-    let result;
-    if (existingSettings) {
-      // Update existing settings
+    // Core user fields that should be updated in users table
+    const userFields = ['name', 'email', 'phone', 'avatar'];
+    // Settings fields that should be updated in user_settings table
+    const settingsFields = ['department', 'timezone', 'language', 'bio'];
+    
+    // Categorize the data
+    Object.keys(profileData).forEach(key => {
+      if (userFields.includes(key)) {
+        userData[key] = profileData[key];
+      } else if (settingsFields.includes(key)) {
+        settingsData[key] = profileData[key];
+      }
+    });
+    
+    let userResult = null;
+    let settingsResult = null;
+    
+    // Update core user data if any user fields are provided
+    if (Object.keys(userData).length > 0) {
       const { data, error } = await req.supabase
-        .from('user_settings')
-        .update(profileData)
-        .eq('user_id', userId)
+        .from('users')
+        .update(userData)
+        .eq('id', userId)
         .select()
         .single();
       
       if (error) throw error;
-      result = data;
-    } else {
-      // Create new settings
-      const { data, error } = await req.supabase
-        .from('user_settings')
-        .insert({ ...profileData, user_id: userId })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      result = data;
+      userResult = data;
     }
+    
+    // Update settings data if any settings fields are provided
+    if (Object.keys(settingsData).length > 0) {
+      // Check if settings exist
+      const { data: existingSettings } = await req.supabase
+        .from('user_settings')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+      
+      if (existingSettings) {
+        // Update existing settings
+        const { data, error } = await req.supabase
+          .from('user_settings')
+          .update(settingsData)
+          .eq('user_id', userId)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        settingsResult = data;
+      } else {
+        // Create new settings
+        const { data, error } = await req.supabase
+          .from('user_settings')
+          .insert({ ...settingsData, user_id: userId })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        settingsResult = data;
+      }
+    }
+    
+    // Combine results
+    const result = {
+      ...userResult,
+      ...settingsResult
+    };
     
     res.json({
       message: 'Profile settings updated successfully',

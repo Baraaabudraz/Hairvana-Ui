@@ -1,11 +1,40 @@
 import { apiFetch } from '@/lib/api';
 
 export interface UserSettings {
-  profile: any;
+  profile: {
+    // Core user data (from users table)
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    avatar: string;
+    role: string;
+    status: string;
+    join_date: string;
+    last_login: string;
+    // Settings data (from user_settings table)
+    department?: string;
+    timezone?: string;
+    language?: string;
+    bio?: string;
+  };
   security: any;
   notifications: any;
   billing: any;
   backup: any;
+}
+
+export interface ProfileSettings {
+  // Core user fields
+  name?: string;
+  email?: string;
+  phone?: string;
+  avatar?: string;
+  // Settings fields
+  department?: string;
+  timezone?: string;
+  language?: string;
+  bio?: string;
 }
 
 export async function fetchUserSettings() {

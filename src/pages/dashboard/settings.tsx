@@ -287,15 +287,15 @@ export default function SettingsPage() {
         try {
           const data = await fetchUserSettings();
           
-          // Set user profile
+          // Set user profile - now data.profile contains both user and settings data
           if (data.profile) {
             setUserSettings({
-              id: user?.id || '',
+              id: data.profile.id || user?.id || '',
               name: data.profile.name || user?.name || '',
               email: data.profile.email || user?.email || '',
               phone: data.profile.phone || '',
               avatar: data.profile.avatar || user?.avatar || '',
-              role: user?.role || '',
+              role: data.profile.role || user?.role || '',
               department: data.profile.department || 'Administration',
               timezone: data.profile.timezone || 'America/New_York',
               language: data.profile.language || 'en',
@@ -306,7 +306,7 @@ export default function SettingsPage() {
                 desktop: true
               },
               twoFactorEnabled: data.security?.two_factor_enabled || false,
-              lastLogin: new Date().toISOString()
+              lastLogin: data.profile.last_login || new Date().toISOString()
             });
           } else {
             // Use user data from auth store if profile not found
@@ -331,41 +331,16 @@ export default function SettingsPage() {
             });
           }
           
-          // Set notification preferences
-          if (data.notifications) {
-            setNotificationPreferences({
-              email: data.notifications.email || true,
-              push: data.notifications.push || true,
-              sms: data.notifications.sms || false,
-              desktop: data.notifications.desktop || true,
-              marketing_emails: data.notifications.marketing_emails || true,
-              system_notifications: data.notifications.system_notifications || true
-            });
-          }
-          
-          // Set security settings
+          // Set other settings
           if (data.security) {
-            setSecuritySettings({
-              twoFactorRequired: false,
-              passwordExpiry: 90,
-              maxLoginAttempts: 5,
-              lockoutDuration: 15,
-              ipWhitelist: [],
-              sslEnabled: true,
-              encryptionLevel: 'AES-256',
-              auditLogging: true,
-              dataRetentionPeriod: 365,
-              backupFrequency: 'daily',
-              backupRetention: 30
-            });
+            setSecuritySettings(data.security);
           }
-          
-          // Set billing settings
+          if (data.notifications) {
+            setNotificationPreferences(data.notifications);
+          }
           if (data.billing) {
             setBillingSettings(data.billing);
           }
-          
-          // Set backup settings
           if (data.backup) {
             setBackupSettings(data.backup);
           }
@@ -373,39 +348,52 @@ export default function SettingsPage() {
           console.error('Error loading user settings:', error);
           toast({
             title: 'Error',
-            description: 'Failed to load user settings. Please try again.',
+            description: 'Failed to load user settings. Using default values.',
             variant: 'destructive',
           });
+          
+          // Use default values from user store
+          if (user) {
+            setUserSettings({
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              phone: '',
+              avatar: user.avatar || '',
+              role: user.role,
+              department: 'Administration',
+              timezone: 'America/New_York',
+              language: 'en',
+              notifications: {
+                email: true,
+                push: true,
+                sms: false,
+                desktop: true
+              },
+              twoFactorEnabled: false,
+              lastLogin: new Date().toISOString()
+            });
+          }
         }
       }
       
       // Load platform settings
-      if (activeSection === 'platform' && (user?.role === 'admin' || user?.role === 'super_admin')) {
+      if (activeSection === 'platform') {
         try {
           const data = await fetchPlatformSettings();
           setPlatformSettings(data);
         } catch (error) {
           console.error('Error loading platform settings:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to load platform settings. Please try again.',
-            variant: 'destructive',
-          });
         }
       }
       
       // Load integration settings
-      if (activeSection === 'integrations' && (user?.role === 'admin' || user?.role === 'super_admin')) {
+      if (activeSection === 'integrations') {
         try {
           const data = await fetchIntegrationSettings();
           setIntegrationSettings(data);
         } catch (error) {
           console.error('Error loading integration settings:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to load integration settings. Please try again.',
-            variant: 'destructive',
-          });
         }
       }
     } catch (error) {

@@ -14,6 +14,7 @@ import EditSalonPage from './pages/dashboard/salons/edit';
 import NewSalonPage from './pages/dashboard/salons/new';
 import UsersPage from './pages/dashboard/users/index';
 import UserDetailsPage from './pages/dashboard/users/details';
+import EditUserPage from './pages/dashboard/users/edit';
 import NewUserPage from './pages/dashboard/users/new';
 import SubscriptionsPage from './pages/dashboard/subscriptions/index';
 import SubscriptionDetailsPage from './pages/dashboard/subscriptions/details';
@@ -73,6 +74,7 @@ function App() {
         <Route path="salons/new" element={<NewSalonPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:id" element={<UserDetailsPage />} />
+        <Route path="users/:id/edit" element={<EditUserPage />} />
         <Route path="users/new" element={<NewUserPage />} />
         <Route path="subscriptions" element={<SubscriptionsPage />} />
         <Route path="subscriptions/:id" element={<SubscriptionDetailsPage />} />

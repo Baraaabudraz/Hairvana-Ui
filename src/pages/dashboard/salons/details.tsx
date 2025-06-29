@@ -162,6 +162,7 @@ export default function SalonDetailsPage() {
               owner_id: '4',
               owner_name: 'David Chen',
               owner_email: 'david@stylecuts.com',
+              owner_phone: '+1 (555) 456-7890',
               business_license: 'CA987654321',
               tax_id: '98-7654321',
               images: [
@@ -195,6 +196,7 @@ export default function SalonDetailsPage() {
               owner_id: '5',
               owner_name: 'Lisa Thompson',
               owner_email: 'lisa@beautyhaven.com',
+              owner_phone: '+1 (555) 567-8901',
               business_license: 'CA456789123',
               images: []
             }

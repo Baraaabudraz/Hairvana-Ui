@@ -290,12 +290,6 @@ export default function UsersPage() {
               <p className="text-sm font-semibold text-gray-900">
                 {user.totalSalons || 0}
               </p>
-              <p className="text-xs text-gray-500">Salons</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-semibold text-gray-900">
-                ${user.totalRevenue?.toLocaleString() || 0}
-              </p>
               <p className="text-xs text-gray-500">Total Revenue</p>
             </div>
             <div className="text-center">
@@ -584,11 +578,11 @@ export default function UsersPage() {
                             Edit
                           </Link>
                         </DropdownMenuItem>
-                        {user.role === 'salon' && user.salons && user.salons.length > 0 && (
+                        {user.role === 'salon' && (
                           <DropdownMenuItem asChild>
                             <Link to={`/dashboard/salons?ownerId=${user.id}`} className="flex items-center w-full">
                               <Building2 className="mr-2 h-4 w-4" />
-                              View Salons ({user.totalSalons})
+                              View Salons ({user.salons?.length || 0})
                             </Link>
                           </DropdownMenuItem>
                         )}

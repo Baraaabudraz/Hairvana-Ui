@@ -173,6 +173,13 @@ exports.createSubscription = async (req, res) => {
   try {
     const subscriptionData = req.body;
     
+    console.log('Received subscription data:', subscriptionData);
+    
+    // Validate required fields
+    if (!subscriptionData.salon_id || !subscriptionData.plan_id) {
+      return res.status(400).json({ error: 'salon_id and plan_id are required' });
+    }
+    
     // First, get the plan details
     const { data: planData, error: planError } = await req.supabase
       .from('subscription_plans')
@@ -180,18 +187,45 @@ exports.createSubscription = async (req, res) => {
       .eq('id', subscriptionData.plan_id)
       .single();
     
-    if (planError) {
+    if (planError || !planData) {
       return res.status(400).json({ error: 'Invalid plan ID' });
     }
+    
+    // Check if salon exists
+    const { data: salonData, error: salonError } = await req.supabase
+      .from('salons')
+      .select('id, name')
+      .eq('id', subscriptionData.salon_id)
+      .single();
+    
+    if (salonError || !salonData) {
+      return res.status(400).json({ error: 'Invalid salon ID' });
+    }
+    
+    // Prepare subscription data for insertion
+    const insertData = {
+      salon_id: subscriptionData.salon_id,
+      plan_id: subscriptionData.plan_id,
+      status: subscriptionData.status || 'active',
+      start_date: subscriptionData.start_date,
+      next_billing_date: subscriptionData.next_billing_date,
+      amount: subscriptionData.amount,
+      billing_cycle: subscriptionData.billing_cycle,
+      usage: subscriptionData.usage || {},
+      payment_method: subscriptionData.payment_method || {},
+    };
+    
+    console.log('Inserting subscription data:', insertData);
     
     // Create the subscription
     const { data, error } = await req.supabase
       .from('subscriptions')
-      .insert(subscriptionData)
+      .insert(insertData)
       .select()
       .single();
     
     if (error) {
+      console.error('Database error:', error);
       return res.status(400).json({ error: error.message });
     }
     
@@ -217,8 +251,12 @@ exports.createSubscription = async (req, res) => {
       }
     }
     
-    res.status(201).json(data);
+    res.status(201).json({
+      message: 'Subscription created successfully',
+      subscription: data
+    });
   } catch (error) {
+    console.error('Error in createSubscription:', error);
     res.status(500).json({ error: error.message });
   }
 };

@@ -70,6 +70,24 @@ const subscriptionColors = {
   Premium: 'bg-purple-100 text-purple-800',
 };
 
+// Helper function to format dates
+const formatDate = (dateString: string) => {
+  if (!dateString) return 'N/A';
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch (error) {
+    return 'Invalid Date';
+  }
+};
+
 export default function SalonDetailsPage() {
   const params = useParams();
   const navigate = useNavigate();
@@ -357,7 +375,7 @@ export default function SalonDetailsPage() {
                   </div>
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    Joined {salon.join_date}
+                    Joined {formatDate(salon.join_date)}
                   </div>
                 </div>
               </div>

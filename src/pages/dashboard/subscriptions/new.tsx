@@ -189,6 +189,18 @@ export default function CreateSubscriptionPage() {
       start_date: new Date().toISOString().split('T')[0],
       auto_renew: true,
       trial_days: 14,
+      salon_id: '',
+      plan_id: '',
+      amount: 0,
+      status: 'active',
+      payment_method: {
+        type: 'card',
+        cardNumber: '',
+        expiryMonth: '',
+        expiryYear: '',
+        cvv: '',
+        cardholderName: '',
+      },
     },
   });
 
@@ -326,34 +338,16 @@ export default function CreateSubscriptionPage() {
     console.log('Selected salon:', selectedSalon);
     console.log('Selected plan:', selectedPlan);
     
-    // If no salon or plan is selected, use defaults for testing
-    if (!selectedSalon || !selectedPlan) {
-      toast({
-        title: 'Warning',
-        description: 'Please select a salon and plan. Using demo data for testing.',
-        variant: 'default',
-      });
-      
-      // Use first available salon and plan as defaults
-      if (!selectedSalon && salons.length > 0) {
-        setSelectedSalon(salons[0]);
-        setValue('salon_id', salons[0].id);
-      }
-      
-      if (!selectedPlan && plans.length > 0) {
-        setSelectedPlan(plans[0]);
-        setValue('plan_id', plans[0].id);
-      }
-      
-      // Wait a moment for state to update
-      setTimeout(() => {
-        handleSubmit(onSubmit)();
-      }, 100);
-      return;
-    }
-    
     setIsSubmitting(true);
     try {
+      // Use selected salon and plan, or fallback to first available
+      const salonToUse = selectedSalon || salons[0];
+      const planToUse = selectedPlan || plans[0];
+      
+      if (!salonToUse || !planToUse) {
+        throw new Error('Please select a salon and plan');
+      }
+
       // Calculate next billing date
       const startDate = new Date(data.start_date);
       const nextBillingDate = new Date(startDate);
@@ -365,8 +359,8 @@ export default function CreateSubscriptionPage() {
       }
 
       const subscriptionData = {
-        salon_id: data.salon_id || selectedSalon.id,
-        plan_id: data.plan_id || selectedPlan.id,
+        salon_id: salonToUse.id,
+        plan_id: planToUse.id,
         status: data.trial_days && data.trial_days > 0 ? 'trial' : 'active',
         start_date: data.start_date,
         next_billing_date: nextBillingDate.toISOString(),
@@ -384,9 +378,9 @@ export default function CreateSubscriptionPage() {
           bookingsUsed: 0,
           staffUsed: 0,
           locationsUsed: 0,
-          bookingsLimit: selectedPlan?.limits.bookings || 0,
-          staffLimit: selectedPlan?.limits.staff || 0,
-          locationsLimit: selectedPlan?.limits.locations || 0,
+          bookingsLimit: planToUse.limits.bookings || 0,
+          staffLimit: planToUse.limits.staff || 0,
+          locationsLimit: planToUse.limits.locations || 0,
         },
         trial_days: data.trial_days || 0,
         auto_renew: data.auto_renew,
@@ -398,15 +392,16 @@ export default function CreateSubscriptionPage() {
 
       toast({
         title: 'Subscription created successfully',
-        description: `${selectedSalon?.name} has been subscribed to the ${selectedPlan?.name} plan.`,
+        description: `${salonToUse.name} has been subscribed to the ${planToUse.name} plan.`,
       });
 
       navigate('/dashboard/subscriptions');
     } catch (error) {
       console.error('Error creating subscription:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Please try again later.';
       toast({
         title: 'Error creating subscription',
-        description: error.message || 'Please try again later.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -790,6 +785,60 @@ export default function CreateSubscriptionPage() {
               Cancel
             </Button>
           </Link>
+          
+          {/* Test Button for Debugging */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={async () => {
+              try {
+                const testData = {
+                  salon_id: '1',
+                  plan_id: 'basic',
+                  status: 'active',
+                  start_date: new Date().toISOString().split('T')[0],
+                  next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                  amount: 19.99,
+                  billing_cycle: 'monthly',
+                  payment_method: {
+                    type: 'card',
+                    cardNumber: '1234567890123456',
+                    expiryMonth: '12',
+                    expiryYear: '2025',
+                    cvv: '123',
+                    cardholderName: 'Test User',
+                  },
+                  usage: {
+                    bookingsUsed: 0,
+                    staffUsed: 0,
+                    locationsUsed: 0,
+                    bookingsLimit: 100,
+                    staffLimit: 3,
+                    locationsLimit: 1,
+                  },
+                  trial_days: 0,
+                  auto_renew: true,
+                };
+                
+                console.log('Testing with data:', testData);
+                await createSubscription(testData);
+                toast({
+                  title: 'Test successful',
+                  description: 'Subscription created successfully!',
+                });
+              } catch (error) {
+                console.error('Test failed:', error);
+                toast({
+                  title: 'Test failed',
+                  description: error instanceof Error ? error.message : 'Unknown error',
+                  variant: 'destructive',
+                });
+              }
+            }}
+          >
+            Test API
+          </Button>
+          
           <Button
             type="submit"
             disabled={isSubmitting}

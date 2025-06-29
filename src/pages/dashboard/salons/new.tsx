@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,10 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Upload, X, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createSalon } from '@/api/salons';
+import { fetchUsers } from '@/api/users';
 
 const salonSchema = z.object({
   name: z.string().min(2, 'Salon name must be at least 2 characters'),
@@ -23,9 +25,7 @@ const salonSchema = z.object({
   zipCode: z.string().min(5, 'ZIP code must be at least 5 characters'),
   website: z.string().url('Invalid website URL').optional().or(z.literal('')),
   description: z.string().min(20, 'Description must be at least 20 characters'),
-  ownerName: z.string().min(2, 'Owner name is required'),
-  ownerEmail: z.string().email('Invalid owner email'),
-  ownerPhone: z.string().min(10, 'Owner phone is required'),
+  owner_id: z.string().min(1, 'Please select an owner'),
   businessLicense: z.string().min(5, 'Business license number is required'),
   taxId: z.string().min(9, 'Tax ID is required'),
 });
@@ -47,6 +47,9 @@ export default function NewSalonPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [customService, setCustomService] = useState('');
+  const [selectedOwnerId, setSelectedOwnerId] = useState<string>('');
+  const [owners, setOwners] = useState<any[]>([]);
+  const [loadingOwners, setLoadingOwners] = useState(true);
   const [hours, setHours] = useState<Record<string, { open: string; close: string; closed: boolean }>>({
     monday: { open: '09:00', close: '18:00', closed: false },
     tuesday: { open: '09:00', close: '18:00', closed: false },
@@ -61,10 +64,38 @@ export default function NewSalonPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<SalonForm>({
     resolver: zodResolver(salonSchema),
   });
+
+  // Fetch potential salon owners
+  useEffect(() => {
+    const loadOwners = async () => {
+      try {
+        setLoadingOwners(true);
+        const response = await fetchUsers({ role: 'salon' });
+        setOwners(response.users || []);
+      } catch (error) {
+        console.error('Error loading owners:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load salon owners. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoadingOwners(false);
+      }
+    };
+
+    loadOwners();
+  }, [toast]);
+
+  // Update form value when owner is selected
+  useEffect(() => {
+    setValue('owner_id', selectedOwnerId);
+  }, [selectedOwnerId, setValue]);
 
   const handleServiceToggle = (service: string) => {
     setSelectedServices(prev => 
@@ -128,6 +159,12 @@ export default function NewSalonPage() {
   const onSubmit = async (data: SalonForm) => {
     setIsSubmitting(true);
     try {
+      // Get the selected owner details
+      const selectedOwner = owners.find(owner => owner.id === data.owner_id);
+      if (!selectedOwner) {
+        throw new Error('Selected owner not found');
+      }
+
       // Format hours for API
       const formattedHours: Record<string, string> = {};
       Object.entries(hours).forEach(([day, timeData]) => {
@@ -142,12 +179,22 @@ export default function NewSalonPage() {
       const fullAddress = `${data.address}, ${data.city}, ${data.state} ${data.zipCode}`;
 
       const salonData = {
-        ...data,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
         address: fullAddress,
         location: `${data.city}, ${data.state}`,
+        website: data.website || null,
+        description: data.description,
+        owner_id: data.owner_id,
+        owner_name: selectedOwner.name,
+        owner_email: selectedOwner.email,
+        business_license: data.businessLicense,
+        tax_id: data.taxId,
         services: selectedServices,
         hours: formattedHours,
         images: uploadedImages,
+        status: 'pending'
       };
 
       await createSalon(salonData);
@@ -328,55 +375,86 @@ export default function NewSalonPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="ownerName">Owner Name *</Label>
-                <Input
-                  id="ownerName"
-                  placeholder="John Doe"
-                  {...register('ownerName')}
-                />
-                {errors.ownerName && (
-                  <p className="text-sm text-red-500">{errors.ownerName.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ownerEmail">Owner Email *</Label>
-                <Input
-                  id="ownerEmail"
-                  type="email"
-                  placeholder="owner@example.com"
-                  {...register('ownerEmail')}
-                />
-                {errors.ownerEmail && (
-                  <p className="text-sm text-red-500">{errors.ownerEmail.message}</p>
-                )}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="owner_id">Owner *</Label>
+              <Select
+                value={selectedOwnerId}
+                onValueChange={setSelectedOwnerId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an owner" />
+                </SelectTrigger>
+                <SelectContent>
+                  {loadingOwners ? (
+                    <SelectItem value="loading" disabled>Loading owners...</SelectItem>
+                  ) : owners.length === 0 ? (
+                    <SelectItem value="no-owners" disabled>No owners available</SelectItem>
+                  ) : (
+                    owners.map((owner) => (
+                      <SelectItem key={owner.id} value={owner.id}>
+                        {owner.name} ({owner.email})
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {errors.owner_id && (
+                <p className="text-sm text-red-500">{errors.owner_id.message}</p>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="ownerPhone">Owner Phone *</Label>
-                <Input
-                  id="ownerPhone"
-                  placeholder="+1 (555) 123-4567"
-                  {...register('ownerPhone')}
-                />
-                {errors.ownerPhone && (
-                  <p className="text-sm text-red-500">{errors.ownerPhone.message}</p>
-                )}
+            {/* Display selected owner details */}
+            {selectedOwnerId && (
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Selected Owner Details</h4>
+                {(() => {
+                  const selectedOwner = owners.find(owner => owner.id === selectedOwnerId);
+                  if (!selectedOwner) return null;
+                  
+                  return (
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <span className="font-medium">Name:</span> {selectedOwner.name}
+                      </div>
+                      <div>
+                        <span className="font-medium">Email:</span> {selectedOwner.email}
+                      </div>
+                      {selectedOwner.phone && (
+                        <div>
+                          <span className="font-medium">Phone:</span> {selectedOwner.phone}
+                        </div>
+                      )}
+                      <div>
+                        <span className="font-medium">Role:</span> {selectedOwner.role}
+                      </div>
+                      {selectedOwner.status && (
+                        <div>
+                          <span className="font-medium">Status:</span> 
+                          <span className={`ml-1 px-2 py-1 rounded-full text-xs ${
+                            selectedOwner.status === 'active' ? 'bg-green-100 text-green-800' :
+                            selectedOwner.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {selectedOwner.status}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="businessLicense">Business License *</Label>
-                <Input
-                  id="businessLicense"
-                  placeholder="BL123456789"
-                  {...register('businessLicense')}
-                />
-                {errors.businessLicense && (
-                  <p className="text-sm text-red-500">{errors.businessLicense.message}</p>
-                )}
-              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="businessLicense">Business License *</Label>
+              <Input
+                id="businessLicense"
+                placeholder="BL123456789"
+                {...register('businessLicense')}
+              />
+              {errors.businessLicense && (
+                <p className="text-sm text-red-500">{errors.businessLicense.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">

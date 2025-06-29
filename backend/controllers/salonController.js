@@ -5,7 +5,10 @@ exports.getAllSalons = async (req, res, next) => {
     
     let query = req.supabase
       .from('salons')
-      .select('*', { count: 'exact' });
+      .select(`
+        *,
+        owner:users(id, name, email, phone, avatar, role)
+      `, { count: 'exact' });
     
     if (status && status !== 'all') {
       query = query.eq('status', status);
@@ -23,8 +26,22 @@ exports.getAllSalons = async (req, res, next) => {
     
     if (error) throw error;
     
+    // Process the data to merge owner information
+    const processedSalons = (data || []).map(salon => {
+      if (salon.owner) {
+        salon.owner_name = salon.owner_name || salon.owner.name;
+        salon.owner_email = salon.owner_email || salon.owner.email;
+        salon.owner_phone = salon.owner.phone;
+        salon.owner_avatar = salon.owner.avatar;
+        salon.owner_role = salon.owner.role;
+        // Remove the nested owner object
+        delete salon.owner;
+      }
+      return salon;
+    });
+    
     res.json({
-      salons: data || [],
+      salons: processedSalons,
       total: count || 0
     });
   } catch (error) {
@@ -37,17 +54,36 @@ exports.getSalonById = async (req, res, next) => {
   try {
     const { id } = req.params;
     
-    const { data, error } = await req.supabase
+    // First get the salon data
+    const { data: salon, error: salonError } = await req.supabase
       .from('salons')
       .select('*')
       .eq('id', id)
       .single();
     
-    if (error) {
+    if (salonError) {
       return res.status(404).json({ message: 'Salon not found' });
     }
     
-    res.json(data);
+    // If salon has owner_id, get the owner information
+    if (salon.owner_id) {
+      const { data: owner, error: ownerError } = await req.supabase
+        .from('users')
+        .select('id, name, email, phone, avatar, role')
+        .eq('id', salon.owner_id)
+        .single();
+      
+      if (!ownerError && owner) {
+        // Merge owner information with salon data
+        salon.owner_name = salon.owner_name || owner.name;
+        salon.owner_email = salon.owner_email || owner.email;
+        salon.owner_phone = owner.phone;
+        salon.owner_avatar = owner.avatar;
+        salon.owner_role = owner.role;
+      }
+    }
+    
+    res.json(salon);
   } catch (error) {
     next(error);
   }

@@ -105,7 +105,7 @@ export default function ProfilePage() {
         const settings = await fetchUserSettings();
         setUserSettings(settings);
         
-        // Update form with user settings
+        // Update form with user settings - now settings.profile contains both user and settings data
         if (settings.profile) {
           resetProfile({
             name: settings.profile.name || user?.name || '',

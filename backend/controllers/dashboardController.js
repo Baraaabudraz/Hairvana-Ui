@@ -1,75 +1,23 @@
+const { Salon, User, Appointment, Subscription } = require('../models');
+
 // Get dashboard stats
 exports.getDashboardStats = async (req, res, next) => {
   try {
     // Get total salons count
-    const { data: salonsData, error: salonsError, count: totalSalons } = await req.supabase
-      .from('salons')
-      .select('*', { count: 'exact' });
-    
-    if (salonsError) {
-      return res.status(500).json({ error: 'Failed to fetch salons data' });
-    }
-    
+    const totalSalons = await Salon.count();
     // Get active salons count
-    const { data: activeSalonsData, error: activeSalonsError, count: activeSalons } = await req.supabase
-      .from('salons')
-      .select('*', { count: 'exact' })
-      .eq('status', 'active');
-    
-    if (activeSalonsError) {
-      return res.status(500).json({ error: 'Failed to fetch active salons data' });
-    }
-    
+    const activeSalons = await Salon.count({ where: { status: 'active' } });
     // Get total users count
-    const { data: usersData, error: usersError, count: totalUsers } = await req.supabase
-      .from('users')
-      .select('*', { count: 'exact' });
-    
-    if (usersError) {
-      return res.status(500).json({ error: 'Failed to fetch users data' });
-    }
-    
+    const totalUsers = await User.count();
     // Get active users count
-    const { data: activeUsersData, error: activeUsersError, count: activeUsers } = await req.supabase
-      .from('users')
-      .select('*', { count: 'exact' })
-      .eq('status', 'active');
-    
-    if (activeUsersError) {
-      return res.status(500).json({ error: 'Failed to fetch active users data' });
-    }
-    
+    const activeUsers = await User.count({ where: { status: 'active' } });
     // Get total bookings count
-    const { data: bookingsData, error: bookingsError, count: totalBookings } = await req.supabase
-      .from('appointments')
-      .select('*', { count: 'exact' });
-    
-    if (bookingsError) {
-      return res.status(500).json({ error: 'Failed to fetch bookings data' });
-    }
-    
+    const totalBookings = await Appointment.count();
     // Get completed bookings count
-    const { data: completedBookingsData, error: completedBookingsError, count: completedBookings } = await req.supabase
-      .from('appointments')
-      .select('*', { count: 'exact' })
-      .eq('status', 'completed');
-    
-    if (completedBookingsError) {
-      return res.status(500).json({ error: 'Failed to fetch completed bookings data' });
-    }
-    
-    // Calculate total revenue
-    const { data: subscriptionsData, error: subscriptionsError } = await req.supabase
-      .from('subscriptions')
-      .select('amount')
-      .eq('status', 'active');
-    
-    if (subscriptionsError) {
-      return res.status(500).json({ error: 'Failed to fetch subscriptions data' });
-    }
-    
-    const totalRevenue = subscriptionsData.reduce((sum, sub) => sum + sub.amount, 0);
-    
+    const completedBookings = await Appointment.count({ where: { status: 'completed' } });
+    // Calculate total revenue from active subscriptions
+    const activeSubscriptions = await Subscription.findAll({ where: { status: 'active' } });
+    const totalRevenue = activeSubscriptions.reduce((sum, sub) => sum + Number(sub.amount || 0), 0);
     // Return dashboard stats
     res.json({
       totalSalons: totalSalons || 0,

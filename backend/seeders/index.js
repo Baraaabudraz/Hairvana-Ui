@@ -13,6 +13,7 @@ async function seed() {
     await seedSalons();
     await seedSubscriptionPlans();
     await seedSubscriptions();
+    await seedNotificationTemplates();
     
     console.log('✅ Database seeding completed successfully!');
     process.exit(0);
@@ -247,74 +248,93 @@ async function seedSalons() {
 // Seed subscription plans
 async function seedSubscriptionPlans() {
   console.log('Seeding subscription plans...');
-  
   try {
     // Clean slate - delete existing plans
     await db.SubscriptionPlan.destroy({ where: {} });
-    
-    // Example subscription plan data
+    // Plans matching the frontend
     const plans = [
       {
         id: '00000000-0000-0000-0000-000000000001',
         name: 'Basic',
-        description: 'Perfect for small salons just getting started',
-        price: 29.99,
-        yearly_price: 299.99,
+        description: 'Perfect for small salons getting started',
+        price: 19.99,
+        yearly_price: 199.99,
         billing_period: 'monthly',
         features: [
-          'Max staff: 5',
-          'Max services: 10',
-          'Online booking',
-          'Analytics: basic',
-          'Support: email',
-          'Custom branding: false'
+          'Up to 100 bookings/month',
+          'Up to 3 staff members',
+          'Basic customer management',
+          'Online booking widget',
+          'Email support',
+          'Basic reporting'
         ],
+        limits: {
+          bookings: 100,
+          staff: 3,
+          locations: 1
+        },
         status: 'active',
         created_at: new Date(),
         updated_at: new Date()
       },
       {
         id: '00000000-0000-0000-0000-000000000002',
-        name: 'Professional',
-        description: 'Ideal for growing salons with multiple staff members',
-        price: 59.99,
-        yearly_price: 599.99,
+        name: 'Standard',
+        description: 'Great for growing salons with more features',
+        price: 49.99,
+        yearly_price: 499.99,
         billing_period: 'monthly',
         features: [
-          'Max staff: 15',
-          'Max services: 30',
-          'Online booking',
-          'Analytics: advanced',
-          'Support: 24/7',
-          'Custom branding: true'
+          'Up to 500 bookings/month',
+          'Up to 10 staff members',
+          'Advanced customer management',
+          'Online booking & scheduling',
+          'Email & chat support',
+          'Advanced reporting',
+          'SMS notifications',
+          'Inventory management'
         ],
+        limits: {
+          bookings: 500,
+          staff: 10,
+          locations: 1
+        },
         status: 'active',
         created_at: new Date(),
         updated_at: new Date()
       },
       {
         id: '00000000-0000-0000-0000-000000000003',
-        name: 'Enterprise',
-        description: 'Full-featured solution for large salon chains',
+        name: 'Premium',
+        description: 'Complete solution for established salons',
         price: 99.99,
         yearly_price: 999.99,
         billing_period: 'monthly',
         features: [
-          'Max staff: unlimited',
-          'Max services: unlimited',
-          'Online booking',
-          'Analytics: premium',
-          'Support: dedicated',
-          'Custom branding: true'
+          'Unlimited bookings',
+          'Unlimited staff members',
+          'Multi-location support',
+          'Advanced analytics',
+          'Priority support',
+          'Custom branding',
+          'Marketing tools',
+          'API access',
+          'Staff management',
+          'Inventory tracking',
+          'Financial reporting'
         ],
+        limits: {
+          bookings: 'unlimited',
+          staff: 'unlimited',
+          locations: 'unlimited'
+        },
         status: 'active',
         created_at: new Date(),
         updated_at: new Date()
       }
     ];
-    
     await db.SubscriptionPlan.bulkCreate(plans, { fields: [
-      'id', 'name', 'description', 'price', 'yearly_price', 'billing_period', 'features', 'status', 'created_at', 'updated_at'
+      'id', 'name', 'description', 'price', 'yearly_price', 'billing_period', 'features', 'limits', 'status', 'created_at', 'updated_at'
     ] });
     console.log(`Seeded ${plans.length} subscription plans successfully.`);
   } catch (error) {
@@ -352,6 +372,54 @@ async function seedSubscriptions() {
     console.log(`Seeded ${subscriptions.length} subscriptions successfully.`);
   } catch (error) {
     console.error('Error seeding subscriptions:', error);
+    throw error;
+  }
+}
+
+// Seed notification templates
+async function seedNotificationTemplates() {
+  console.log('Seeding notification templates...');
+  try {
+    await db.NotificationTemplate.destroy({ where: {} });
+    const templates = [
+      {
+        name: 'Welcome Email',
+        description: 'Send a welcome email to new users',
+        type: 'info',
+        category: 'system',
+        subject: 'Welcome to Hairvana!',
+        content: 'Hi {{name}}, welcome to Hairvana! We are excited to have you.',
+        channels: ['email'],
+        variables: ['name'],
+        popular: true
+      },
+      {
+        name: 'Booking Confirmation',
+        description: 'Notify users when their booking is confirmed',
+        type: 'success',
+        category: 'transactional',
+        subject: 'Your booking is confirmed',
+        content: 'Hi {{name}}, your booking for {{service}} at {{salon}} is confirmed for {{date}}.',
+        channels: ['email', 'push', 'in-app'],
+        variables: ['name', 'service', 'salon', 'date'],
+        popular: true
+      },
+      {
+        name: 'Promotion Alert',
+        description: 'Send users a promotional offer',
+        type: 'promotion',
+        category: 'marketing',
+        subject: 'Special Offer Just for You!',
+        content: 'Hi {{name}}, enjoy {{discount}} off your next booking. Use code: {{code}}.',
+        channels: ['email', 'push'],
+        variables: ['name', 'discount', 'code'],
+        popular: false
+      }
+    ];
+    await db.NotificationTemplate.bulkCreate(templates);
+    console.log(`Seeded ${templates.length} notification templates successfully.`);
+  } catch (error) {
+    console.error('Error seeding notification templates:', error);
     throw error;
   }
 }

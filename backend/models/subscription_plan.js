@@ -38,6 +38,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ARRAY(DataTypes.TEXT),
       defaultValue: []
     },
+    limits: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: null
+    },
     status: {
       type: DataTypes.ENUM('active', 'inactive'),
       defaultValue: 'active'

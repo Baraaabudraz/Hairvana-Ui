@@ -48,12 +48,12 @@ import {
   Users,
   CheckCircle,
   AlertTriangle,
-  Crown,
-  Star,
-  Zap,
   ArrowUpCircle,
   ArrowDownCircle,
-  RefreshCw
+  RefreshCw,
+  Zap,
+  Star,
+  Crown
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { 
@@ -62,7 +62,8 @@ import {
   updateSubscription, 
   updatePaymentMethod, 
   syncBilling,
-  SubscriptionParams
+  SubscriptionParams,
+  fetchSubscriptionPlans
 } from '@/api/subscriptions';
 
 type SubscriptionStatus = 'active' | 'trial' | 'cancelled' | 'past_due';
@@ -149,14 +150,16 @@ const planColors: Record<PlanType, string> = {
 };
 
 const planIcons = {
-  Basic: Zap,
-  Standard: Star,
-  Premium: Crown,
+  Basic: Zap || (() => <span>⚡</span>),
+  Standard: Star || (() => <span>★</span>),
+  Premium: Crown || (() => <span>👑</span>),
 };
 
 export default function SubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState<string | null>(null);
   const [stats, setStats] = useState<SubscriptionStats>({
     total: 0,
     active: 0,
@@ -184,6 +187,28 @@ export default function SubscriptionsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    loadPlans();
+  }, []);
+
+  const loadPlans = async () => {
+    try {
+      setPlansLoading(true);
+      setPlansError(null);
+      const data = await fetchSubscriptionPlans();
+      setPlans(data);
+    } catch (error: any) {
+      setPlansError('Failed to load plans');
+      toast({
+        title: 'Error',
+        description: 'Failed to load subscription plans. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setPlansLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadSubscriptions();
   }, [statusFilter, planFilter, searchTerm]);
 
@@ -209,10 +234,6 @@ export default function SubscriptionsPage() {
       const data = await fetchSubscriptions(params);
       setSubscriptions(data.subscriptions);
       setStats(data.stats);
-      
-      if (data.plans) {
-        setPlans(data.plans);
-      }
     } catch (error) {
       console.error('Error loading subscriptions:', error);
       toast({
@@ -536,50 +557,60 @@ export default function SubscriptionsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {plans.map((plan) => {
-              const PlanIcon = planIcons[plan.name as PlanType];
-              return (
-                <div key={plan.id} className={`relative p-6 rounded-lg border-2 ${
-                  plan.popular ? 'border-purple-200 bg-purple-50' : 'border-gray-200 bg-white'
-                }`}>
-                  {plan.popular && (
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                      <Badge className="bg-purple-600 text-white">Most Popular</Badge>
-                    </div>
-                  )}
-                  <div className="text-center">
-                    <div className="flex justify-center mb-4">
-                      <div className={`p-3 rounded-lg bg-gradient-to-r ${
-                        plan.name === 'Basic' ? 'from-gray-600 to-gray-700' :
-                        plan.name === 'Standard' ? 'from-blue-600 to-blue-700' :
-                        'from-purple-600 to-purple-700'
-                      }`}>
-                        <PlanIcon className="h-6 w-6 text-white" />
+          {plansLoading ? (
+            <div className="min-h-[200px] flex items-center justify-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600"></div>
+            </div>
+          ) : plansError ? (
+            <div className="min-h-[200px] flex items-center justify-center text-red-500">
+              {plansError}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {plans.map((plan) => {
+                const PlanIcon = planIcons[plan.name as PlanType];
+                return (
+                  <div key={plan.id} className={`relative p-6 rounded-lg border-2 ${
+                    plan.popular ? 'border-purple-200 bg-purple-50' : 'border-gray-200 bg-white'
+                  }`}>
+                    {plan.popular && (
+                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                        <Badge className="bg-purple-600 text-white">Most Popular</Badge>
                       </div>
+                    )}
+                    <div className="text-center">
+                      <div className="flex justify-center mb-4">
+                        <div className={`p-3 rounded-lg bg-gradient-to-r ${
+                          plan.name === 'Basic' ? 'from-gray-600 to-gray-700' :
+                          plan.name === 'Standard' ? 'from-blue-600 to-blue-700' :
+                          'from-purple-600 to-purple-700'
+                        }`}>
+                          {PlanIcon ? <PlanIcon className="h-6 w-6 text-white" /> : <span className="h-6 w-6">?</span>}
+                        </div>
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
+                      <p className="text-gray-600 mt-2">{plan.description}</p>
+                      <div className="mt-4">
+                        <span className="text-3xl font-bold text-gray-900">${plan.price}</span>
+                        <span className="text-gray-600">/month</span>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">
+                        or ${plan.yearlyPrice}/year (save ${((plan.price * 12) - plan.yearlyPrice).toFixed(2)})
+                      </p>
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                    <p className="text-gray-600 mt-2">{plan.description}</p>
-                    <div className="mt-4">
-                      <span className="text-3xl font-bold text-gray-900">${plan.price}</span>
-                      <span className="text-gray-600">/month</span>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      or ${plan.yearlyPrice}/year (save ${((plan.price * 12) - plan.yearlyPrice).toFixed(2)})
-                    </p>
+                    <ul className="mt-6 space-y-3">
+                      {plan.features.map((feature, index) => (
+                        <li key={index} className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <span className="text-sm text-gray-700">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <ul className="mt-6 space-y-3">
-                    {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span className="text-sm text-gray-700">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -667,8 +698,13 @@ export default function SubscriptionsPage() {
           <div className="space-y-4">
             {filteredSubscriptions.map((subscription) => {
               const PlanIcon = planIcons[subscription.plan];
-              const bookingsPercentage = getUsagePercentage(subscription.usage.bookings, subscription.usage.bookingsLimit);
-              const staffPercentage = getUsagePercentage(subscription.usage.staff, subscription.usage.staffLimit);
+              const usage = subscription.usage || {};
+              const bookings = usage.bookings ?? 0;
+              const bookingsLimit = usage.bookingsLimit ?? 'unlimited';
+              const staff = usage.staff ?? 0;
+              const staffLimit = usage.staffLimit ?? 'unlimited';
+              const bookingsPercentage = getUsagePercentage(bookings, bookingsLimit);
+              const staffPercentage = getUsagePercentage(staff, staffLimit);
               
               return (
                 <div key={subscription.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
@@ -679,7 +715,7 @@ export default function SubscriptionsPage() {
                         <AvatarFallback>{subscription.salonName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                       </Avatar>
                       <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1">
-                        <PlanIcon className="h-3 w-3 text-gray-600" />
+                        {PlanIcon ? <PlanIcon className="h-3 w-3 text-gray-600" /> : <span className="h-3 w-3">?</span>}
                       </div>
                     </div>
                     <div>
@@ -699,11 +735,11 @@ export default function SubscriptionsPage() {
                     {/* Usage Indicators */}
                     <div className="text-center">
                       <p className="text-sm font-semibold text-gray-900">
-                        {subscription.usage.bookings}
-                        {subscription.usage.bookingsLimit !== 'unlimited' && `/${subscription.usage.bookingsLimit}`}
+                        {bookings}
+                        {bookingsLimit !== 'unlimited' && `/${bookingsLimit}`}
                       </p>
                       <p className="text-xs text-gray-500">Bookings</p>
-                      {subscription.usage.bookingsLimit !== 'unlimited' && (
+                      {bookingsLimit !== 'unlimited' && (
                         <div className="w-16 h-1 bg-gray-200 rounded-full mt-1">
                           <div 
                             className={`h-1 rounded-full ${getUsageColor(bookingsPercentage)}`}
@@ -715,11 +751,11 @@ export default function SubscriptionsPage() {
                     
                     <div className="text-center">
                       <p className="text-sm font-semibold text-gray-900">
-                        {subscription.usage.staff}
-                        {subscription.usage.staffLimit !== 'unlimited' && `/${subscription.usage.staffLimit}`}
+                        {staff}
+                        {staffLimit !== 'unlimited' && `/${staffLimit}`}
                       </p>
                       <p className="text-xs text-gray-500">Staff</p>
-                      {subscription.usage.staffLimit !== 'unlimited' && (
+                      {staffLimit !== 'unlimited' && (
                         <div className="w-16 h-1 bg-gray-200 rounded-full mt-1">
                           <div 
                             className={`h-1 rounded-full ${getUsageColor(staffPercentage)}`}
@@ -868,7 +904,7 @@ export default function SubscriptionsPage() {
                       <div className={`p-2 rounded-lg bg-gradient-to-r ${
                         plan.name === 'Standard' ? 'from-blue-600 to-blue-700' : 'from-purple-600 to-purple-700'
                       }`}>
-                        <PlanIcon className="h-5 w-5 text-white" />
+                        {PlanIcon ? <PlanIcon className="h-5 w-5 text-white" /> : <span className="h-5 w-5">?</span>}
                       </div>
                       <div>
                         <h3 className="font-bold text-gray-900">{plan.name}</h3>
@@ -946,7 +982,7 @@ export default function SubscriptionsPage() {
                       <div className={`p-2 rounded-lg bg-gradient-to-r ${
                         plan.name === 'Basic' ? 'from-gray-600 to-gray-700' : 'from-blue-600 to-blue-700'
                       }`}>
-                        <PlanIcon className="h-5 w-5 text-white" />
+                        {PlanIcon ? <PlanIcon className="h-5 w-5 text-white" /> : <span className="h-5 w-5">?</span>}
                       </div>
                       <div>
                         <h3 className="font-bold text-gray-900">{plan.name}</h3>

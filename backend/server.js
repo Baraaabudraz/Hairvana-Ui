@@ -3,7 +3,7 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-const { createClient } = require('@supabase/supabase-js');
+const { sequelize } = require('./lib/supabase');
 
 // Import routes
 const userRoutes = require('./routes/users');
@@ -18,33 +18,6 @@ const notificationRoutes = require('./routes/notifications');
 const settingsRoutes = require('./routes/settings');
 const dashboardRoutes = require('./routes/dashboard');
 
-// Validate environment variables
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || supabaseUrl === 'your_supabase_url' || !supabaseUrl.startsWith('http')) {
-  console.error('❌ Error: SUPABASE_URL is not properly configured in .env file');
-  console.error('Please set SUPABASE_URL to your actual Supabase project URL');
-  console.error('Example: SUPABASE_URL=https://your-project.supabase.co');
-  process.exit(1);
-}
-
-if (!supabaseKey || supabaseKey === 'your_supabase_service_role_key') {
-  console.error('❌ Error: SUPABASE_SERVICE_ROLE_KEY is not properly configured in .env file');
-  console.error('Please set SUPABASE_SERVICE_ROLE_KEY to your actual Supabase service role key');
-  process.exit(1);
-}
-
-// Initialize Supabase client
-let supabase;
-try {
-  supabase = createClient(supabaseUrl, supabaseKey);
-  console.log('✅ Supabase client initialized successfully');
-} catch (error) {
-  console.error('❌ Error initializing Supabase client:', error.message);
-  process.exit(1);
-}
-
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -54,12 +27,6 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Make supabase client available to all routes
-app.use((req, res, next) => {
-  req.supabase = supabase;
-  next();
-});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -89,10 +56,18 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+// Start server and authenticate Sequelize
+sequelize.authenticate()
+  .then(() => {
+    console.log('✅ Database connection established successfully');
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  })
+  .catch((err) => {
+    console.error('❌ Unable to connect to the database:', err);
+    process.exit(1);
+  });
 
 module.exports = app;

@@ -46,12 +46,21 @@ export async function createUser(userData: any) {
 
 export async function updateUser(id: string, userData: any) {
   try {
-    return await apiFetch(`/api/users/${id}`, {
+    const response = await apiFetch(`/api/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(userData),
     });
-  } catch (error) {
-    console.error(`Error updating user with ID ${id}:`, error);
+    return response;
+  } catch (error: any) {
+    // If the error is a 422 Unprocessable Entity, show validation messages
+    if (error.response && error.response.status === 422) {
+      const errorData = await error.response.json();
+      let message = errorData.message || 'Validation error';
+      if (errorData.errors && Array.isArray(errorData.errors)) {
+        message += '\n' + errorData.errors.map((e: any) => `${e.path}: ${e.message}`).join('\n');
+      }
+      throw new Error(message);
+    }
     throw error;
   }
 }

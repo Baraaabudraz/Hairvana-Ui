@@ -1,25 +1,15 @@
+const { Service } = require('../models');
+const { Op } = require('sequelize');
+
 // Get all services
 exports.getAllServices = async (req, res, next) => {
   try {
     const { salonId, category } = req.query;
-    
-    let query = req.supabase
-      .from('services')
-      .select('*');
-    
-    if (salonId) {
-      query = query.eq('salon_id', salonId);
-    }
-    
-    if (category) {
-      query = query.eq('category', category);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    res.json(data || []);
+    const where = {};
+    if (salonId) where.salon_id = salonId;
+    if (category) where.category = category;
+    const services = await Service.findAll({ where });
+    res.json(services);
   } catch (error) {
     next(error);
   }
@@ -29,18 +19,11 @@ exports.getAllServices = async (req, res, next) => {
 exports.getServiceById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    const { data, error } = await req.supabase
-      .from('services')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) {
+    const service = await Service.findOne({ where: { id } });
+    if (!service) {
       return res.status(404).json({ message: 'Service not found' });
     }
-    
-    res.json(data);
+    res.json(service);
   } catch (error) {
     next(error);
   }
@@ -50,18 +33,8 @@ exports.getServiceById = async (req, res, next) => {
 exports.createService = async (req, res, next) => {
   try {
     const serviceData = req.body;
-    
-    const { data, error } = await req.supabase
-      .from('services')
-      .insert(serviceData)
-      .select()
-      .single();
-    
-    if (error) {
-      return res.status(400).json({ message: error.message });
-    }
-    
-    res.status(201).json(data);
+    const newService = await Service.create(serviceData);
+    res.status(201).json(newService);
   } catch (error) {
     next(error);
   }
@@ -72,19 +45,14 @@ exports.updateService = async (req, res, next) => {
   try {
     const { id } = req.params;
     const serviceData = req.body;
-    
-    const { data, error } = await req.supabase
-      .from('services')
-      .update(serviceData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      return res.status(400).json({ message: error.message });
+    const [affectedRows, [updatedService]] = await Service.update(serviceData, {
+      where: { id },
+      returning: true
+    });
+    if (!updatedService) {
+      return res.status(404).json({ message: 'Service not found' });
     }
-    
-    res.json(data);
+    res.json(updatedService);
   } catch (error) {
     next(error);
   }
@@ -94,16 +62,10 @@ exports.updateService = async (req, res, next) => {
 exports.deleteService = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    const { error } = await req.supabase
-      .from('services')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      return res.status(400).json({ message: error.message });
+    const deleted = await Service.destroy({ where: { id } });
+    if (!deleted) {
+      return res.status(404).json({ message: 'Service not found' });
     }
-    
     res.json({ message: 'Service deleted successfully' });
   } catch (error) {
     next(error);

@@ -9,6 +9,9 @@ router.use(protect);
 // GET all subscriptions
 router.get('/', subscriptionController.getAllSubscriptions);
 
+// GET subscription plans
+router.get('/plans', subscriptionController.getSubscriptionPlans);
+
 // GET subscription by ID
 router.get('/:id', subscriptionController.getSubscriptionById);
 
@@ -20,9 +23,6 @@ router.put('/:id', subscriptionController.updateSubscription);
 
 // PATCH cancel a subscription
 router.patch('/:id/cancel', subscriptionController.cancelSubscription);
-
-// GET subscription plans
-router.get('/plans', subscriptionController.getSubscriptionPlans);
 
 // POST create a billing record
 router.post('/billing', subscriptionController.createBillingRecord);

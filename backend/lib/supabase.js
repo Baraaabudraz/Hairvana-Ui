@@ -1,15 +1,16 @@
-const { createClient } = require('@supabase/supabase-js');
+const { Sequelize } = require('sequelize');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASSWORD,
+  {
+    host: process.env.DB_HOST,
+    dialect: process.env.DB_DIALECT || 'mysql',
+    logging: false,
+  }
+);
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Supabase URL or Service Role Key is missing. Please check your environment variables.');
-  process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-module.exports = { supabase };
+module.exports = { sequelize };

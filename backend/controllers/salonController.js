@@ -1,49 +1,38 @@
+const { Salon, User, Service } = require('../models');
+const { Op } = require('sequelize');
+
 // Get all salons
 exports.getAllSalons = async (req, res, next) => {
   try {
     const { status, search, ownerId } = req.query;
-    
-    let query = req.supabase
-      .from('salons')
-      .select(`
-        *,
-        owner:users(id, name, email, phone, avatar, role)
-      `, { count: 'exact' });
-    
-    if (status && status !== 'all') {
-      query = query.eq('status', status);
-    }
-    
+    const where = {};
+    if (status && status !== 'all') where.status = status;
+    if (ownerId) where.owner_id = ownerId;
     if (search) {
-      query = query.or(`name.ilike.%${search}%,location.ilike.%${search}%,owner_name.ilike.%${search}%`);
+      where[Op.or] = [
+        { name: { [Op.iLike]: `%${search}%` } },
+        { location: { [Op.iLike]: `%${search}%` } },
+        { owner_name: { [Op.iLike]: `%${search}%` } }
+      ];
     }
-    
-    if (ownerId) {
-      query = query.eq('owner_id', ownerId);
-    }
-    
-    const { data, error, count } = await query;
-    
-    if (error) throw error;
-    
-    // Process the data to merge owner information
-    const processedSalons = (data || []).map(salon => {
-      if (salon.owner) {
-        salon.owner_name = salon.owner_name || salon.owner.name;
-        salon.owner_email = salon.owner_email || salon.owner.email;
-        salon.owner_phone = salon.owner.phone;
-        salon.owner_avatar = salon.owner.avatar;
-        salon.owner_role = salon.owner.role;
-        // Remove the nested owner object
-        delete salon.owner;
+    const salons = await Salon.findAll({
+      where,
+      include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] }]
+    });
+    // Merge owner info
+    const processedSalons = salons.map(salon => {
+      const s = salon.toJSON();
+      if (s.owner) {
+        s.owner_name = s.owner_name || s.owner.name;
+        s.owner_email = s.owner_email || s.owner.email;
+        s.owner_phone = s.owner.phone;
+        s.owner_avatar = s.owner.avatar;
+        s.owner_role = s.owner.role;
+        delete s.owner;
       }
-      return salon;
+      return s;
     });
-    
-    res.json({
-      salons: processedSalons,
-      total: count || 0
-    });
+    res.json({ salons: processedSalons, total: salons.length });
   } catch (error) {
     next(error);
   }
@@ -53,37 +42,23 @@ exports.getAllSalons = async (req, res, next) => {
 exports.getSalonById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    // First get the salon data
-    const { data: salon, error: salonError } = await req.supabase
-      .from('salons')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (salonError) {
+    const salon = await Salon.findOne({
+      where: { id },
+      include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] }]
+    });
+    if (!salon) {
       return res.status(404).json({ message: 'Salon not found' });
     }
-    
-    // If salon has owner_id, get the owner information
-    if (salon.owner_id) {
-      const { data: owner, error: ownerError } = await req.supabase
-        .from('users')
-        .select('id, name, email, phone, avatar, role')
-        .eq('id', salon.owner_id)
-        .single();
-      
-      if (!ownerError && owner) {
-        // Merge owner information with salon data
-        salon.owner_name = salon.owner_name || owner.name;
-        salon.owner_email = salon.owner_email || owner.email;
-        salon.owner_phone = owner.phone;
-        salon.owner_avatar = owner.avatar;
-        salon.owner_role = owner.role;
-      }
+    const s = salon.toJSON();
+    if (s.owner) {
+      s.owner_name = s.owner_name || s.owner.name;
+      s.owner_email = s.owner_email || s.owner.email;
+      s.owner_phone = s.owner.phone;
+      s.owner_avatar = s.owner.avatar;
+      s.owner_role = s.owner.role;
+      delete s.owner;
     }
-    
-    res.json(salon);
+    res.json(s);
   } catch (error) {
     next(error);
   }
@@ -93,18 +68,8 @@ exports.getSalonById = async (req, res, next) => {
 exports.createSalon = async (req, res, next) => {
   try {
     const salonData = req.body;
-    
-    const { data, error } = await req.supabase
-      .from('salons')
-      .insert(salonData)
-      .select()
-      .single();
-    
-    if (error) {
-      return res.status(400).json({ message: error.message });
-    }
-    
-    res.status(201).json(data);
+    const newSalon = await Salon.create(salonData);
+    res.status(201).json(newSalon.toJSON());
   } catch (error) {
     next(error);
   }
@@ -115,19 +80,14 @@ exports.updateSalon = async (req, res, next) => {
   try {
     const { id } = req.params;
     const salonData = req.body;
-    
-    const { data, error } = await req.supabase
-      .from('salons')
-      .update(salonData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      return res.status(400).json({ message: error.message });
+    const [affectedRows, [updatedSalon]] = await Salon.update(salonData, {
+      where: { id },
+      returning: true
+    });
+    if (!updatedSalon) {
+      return res.status(404).json({ message: 'Salon not found' });
     }
-    
-    res.json(data);
+    res.json(updatedSalon.toJSON());
   } catch (error) {
     next(error);
   }
@@ -137,16 +97,10 @@ exports.updateSalon = async (req, res, next) => {
 exports.deleteSalon = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    const { error } = await req.supabase
-      .from('salons')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      return res.status(400).json({ message: error.message });
+    const deleted = await Salon.destroy({ where: { id } });
+    if (!deleted) {
+      return res.status(404).json({ message: 'Salon not found' });
     }
-    
     res.json({ message: 'Salon deleted successfully' });
   } catch (error) {
     next(error);
@@ -158,23 +112,17 @@ exports.updateSalonStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
     if (!['active', 'pending', 'suspended'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
-    
-    const { data, error } = await req.supabase
-      .from('salons')
-      .update({ status })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      return res.status(400).json({ message: error.message });
+    const [affectedRows, [updatedSalon]] = await Salon.update({ status }, {
+      where: { id },
+      returning: true
+    });
+    if (!updatedSalon) {
+      return res.status(404).json({ message: 'Salon not found' });
     }
-    
-    res.json(data);
+    res.json(updatedSalon.toJSON());
   } catch (error) {
     next(error);
   }
@@ -184,15 +132,8 @@ exports.updateSalonStatus = async (req, res, next) => {
 exports.getSalonServices = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    const { data, error } = await req.supabase
-      .from('services')
-      .select('*')
-      .eq('salon_id', id);
-    
-    if (error) throw error;
-    
-    res.json(data || []);
+    const services = await Service.findAll({ where: { salon_id: id } });
+    res.json(services || []);
   } catch (error) {
     next(error);
   }

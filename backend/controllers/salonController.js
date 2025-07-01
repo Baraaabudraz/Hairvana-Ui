@@ -1,4 +1,4 @@
-const { Salon, User, Service } = require('../models');
+const { Salon, User, Service, Staff, Appointment } = require('../models');
 const { Op } = require('sequelize');
 
 // Get all salons
@@ -143,15 +143,8 @@ exports.getSalonServices = async (req, res, next) => {
 exports.getSalonStaff = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    const { data, error } = await req.supabase
-      .from('staff')
-      .select('*')
-      .eq('salon_id', id);
-    
-    if (error) throw error;
-    
-    res.json(data || []);
+    const staff = await Staff.findAll({ where: { salon_id: id } });
+    res.json(staff || []);
   } catch (error) {
     next(error);
   }
@@ -162,37 +155,20 @@ exports.getSalonAppointments = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status, from, to } = req.query;
-    
-    let query = req.supabase
-      .from('appointments')
-      .select(`
-        *,
-        user:users(id, name, email, phone, avatar),
-        service:services(id, name, price, duration),
-        staff:staff(id, name, avatar)
-      `)
-      .eq('salon_id', id);
-    
-    if (status && status !== 'all') {
-      query = query.eq('status', status);
-    }
-    
-    if (from) {
-      query = query.gte('date', from);
-    }
-    
-    if (to) {
-      query = query.lte('date', to);
-    }
-    
-    // Order by date
-    query = query.order('date', { ascending: false });
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    res.json(data || []);
+    const where = { salon_id: id };
+    if (status && status !== 'all') where.status = status;
+    if (from) where.date = { [Op.gte]: from };
+    if (to) where.date = { ...(where.date || {}), [Op.lte]: to };
+    const appointments = await Appointment.findAll({
+      where,
+      order: [['date', 'DESC']],
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'avatar'] },
+        { model: Service, as: 'service', attributes: ['id', 'name', 'price', 'duration'] },
+        { model: Staff, as: 'staff', attributes: ['id', 'name', 'avatar'] }
+      ]
+    });
+    res.json(appointments || []);
   } catch (error) {
     next(error);
   }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -69,6 +69,9 @@ export default function SalonsPage() {
   const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const ownerId = params.get('ownerId');
 
   useEffect(() => {
     loadSalons();
@@ -85,6 +88,10 @@ export default function SalonsPage() {
       
       if (searchTerm) {
         params.search = searchTerm;
+      }
+      
+      if (ownerId) {
+        params.ownerId = ownerId;
       }
       
       const data = await fetchSalons(params);

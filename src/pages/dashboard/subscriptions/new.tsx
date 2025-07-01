@@ -29,7 +29,7 @@ import {
   Phone
 } from 'lucide-react';
 import { fetchSalons } from '@/api/salons';
-import { createSubscription } from '@/api/subscriptions';
+import { createSubscription, fetchSubscriptionPlans } from '@/api/subscriptions';
 
 const subscriptionSchema = z.object({
   salon_id: z.string().min(1, 'Please select a salon'),
@@ -78,79 +78,6 @@ interface Salon {
   avatar: string;
 }
 
-const plans: Plan[] = [
-  {
-    id: 'basic',
-    name: 'Basic',
-    price: 19.99,
-    yearlyPrice: 199.99,
-    description: 'Perfect for small salons getting started',
-    features: [
-      'Up to 100 bookings/month',
-      'Up to 3 staff members',
-      'Basic customer management',
-      'Online booking widget',
-      'Email support',
-      'Basic reporting'
-    ],
-    limits: {
-      bookings: 100,
-      staff: 3,
-      locations: 1
-    },
-    popular: false
-  },
-  {
-    id: 'standard',
-    name: 'Standard',
-    price: 49.99,
-    yearlyPrice: 499.99,
-    description: 'Great for growing salons with more features',
-    features: [
-      'Up to 500 bookings/month',
-      'Up to 10 staff members',
-      'Advanced customer management',
-      'Online booking & scheduling',
-      'Email & chat support',
-      'Advanced reporting',
-      'SMS notifications',
-      'Inventory management'
-    ],
-    limits: {
-      bookings: 500,
-      staff: 10,
-      locations: 1
-    },
-    popular: true
-  },
-  {
-    id: 'premium',
-    name: 'Premium',
-    price: 99.99,
-    yearlyPrice: 999.99,
-    description: 'Complete solution for established salons',
-    features: [
-      'Unlimited bookings',
-      'Unlimited staff members',
-      'Multi-location support',
-      'Advanced analytics',
-      'Priority support',
-      'Custom branding',
-      'Marketing tools',
-      'API access',
-      'Staff management',
-      'Inventory tracking',
-      'Financial reporting'
-    ],
-    limits: {
-      bookings: 'unlimited',
-      staff: 'unlimited',
-      locations: 'unlimited'
-    },
-    popular: false
-  }
-];
-
 const planIcons = {
   Basic: Zap,
   Standard: Star,
@@ -175,6 +102,9 @@ export default function CreateSubscriptionPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [showSalonSearch, setShowSalonSearch] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState<string | null>(null);
 
   const {
     register,
@@ -409,6 +339,28 @@ export default function CreateSubscriptionPage() {
     }
   };
 
+  useEffect(() => {
+    loadPlans();
+  }, []);
+
+  const loadPlans = async () => {
+    try {
+      setPlansLoading(true);
+      setPlansError(null);
+      const data = await fetchSubscriptionPlans();
+      setPlans(data);
+    } catch (error: any) {
+      setPlansError('Failed to load plans');
+      toast({
+        title: 'Error',
+        description: 'Failed to load subscription plans. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setPlansLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -552,65 +504,76 @@ export default function CreateSubscriptionPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {plans.map((plan) => {
-                const PlanIcon = planIcons[plan.name];
-                const isSelected = selectedPlan?.id === plan.id;
-                const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.price;
-                const savings = billingCycle === 'yearly' ? (plan.price * 12) - plan.yearlyPrice : 0;
-                
-                return (
-                  <div
-                    key={plan.id}
-                    onClick={() => handlePlanSelect(plan)}
-                    className={`relative p-6 rounded-lg border-2 cursor-pointer transition-all ${
-                      isSelected
-                        ? 'border-purple-200 bg-purple-50 shadow-lg'
-                        : plan.popular
-                        ? 'border-blue-200 bg-blue-50'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}
-                  >
-                    {plan.popular && !isSelected && (
-                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                        <Badge className="bg-blue-600 text-white">Most Popular</Badge>
-                      </div>
-                    )}
-                    {isSelected && (
-                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                        <Badge className="bg-purple-600 text-white">Selected</Badge>
-                      </div>
-                    )}
-                    
-                    <div className="text-center">
-                      <div className="flex justify-center mb-4">
-                        <div className={`p-3 rounded-lg bg-gradient-to-r ${planColors[plan.name]}`}>
-                          <PlanIcon className="h-6 w-6 text-white" />
+              {plansLoading ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Building2 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Loading plans...</p>
+                </div>
+              ) : plansError ? (
+                <div className="text-center py-8 text-red-500">
+                  <p>{plansError}</p>
+                </div>
+              ) : (
+                plans.map((plan) => {
+                  const PlanIcon = planIcons[plan.name];
+                  const isSelected = selectedPlan?.id === plan.id;
+                  const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.price;
+                  const savings = billingCycle === 'yearly' ? (plan.price * 12) - plan.yearlyPrice : 0;
+                  
+                  return (
+                    <div
+                      key={plan.id}
+                      onClick={() => handlePlanSelect(plan)}
+                      className={`relative p-6 rounded-lg border-2 cursor-pointer transition-all ${
+                        isSelected
+                          ? 'border-purple-200 bg-purple-50 shadow-lg'
+                          : plan.popular
+                          ? 'border-blue-200 bg-blue-50'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      {plan.popular && !isSelected && (
+                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                          <Badge className="bg-blue-600 text-white">Most Popular</Badge>
                         </div>
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                      <p className="text-gray-600 mt-2">{plan.description}</p>
-                      <div className="mt-4">
-                        <span className="text-3xl font-bold text-gray-900">${price}</span>
-                        <span className="text-gray-600">/{billingCycle === 'yearly' ? 'year' : 'month'}</span>
-                      </div>
-                      {billingCycle === 'yearly' && savings > 0 && (
-                        <p className="text-sm text-green-600 mt-1">
-                          Save ${savings.toFixed(2)} per year
-                        </p>
                       )}
+                      {isSelected && (
+                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                          <Badge className="bg-purple-600 text-white">Selected</Badge>
+                        </div>
+                      )}
+                      
+                      <div className="text-center">
+                        <div className="flex justify-center mb-4">
+                          <div className={`p-3 rounded-lg bg-gradient-to-r ${planColors[plan.name]}`}>
+                            <PlanIcon className="h-6 w-6 text-white" />
+                          </div>
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
+                        <p className="text-gray-600 mt-2">{plan.description}</p>
+                        <div className="mt-4">
+                          <span className="text-3xl font-bold text-gray-900">${price}</span>
+                          <span className="text-gray-600">/{billingCycle === 'yearly' ? 'year' : 'month'}</span>
+                        </div>
+                        {billingCycle === 'yearly' && savings > 0 && (
+                          <p className="text-sm text-green-600 mt-1">
+                            Save ${savings.toFixed(2)} per year
+                          </p>
+                        )}
+                      </div>
+                      
+                      <ul className="mt-6 space-y-3">
+                        {plan.features.map((feature, index) => (
+                          <li key={index} className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <span className="text-sm text-gray-700">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    
-                    <ul className="mt-6 space-y-3">
-                      {plan.features.map((feature, index) => (
-                        <li key={index} className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                          <span className="text-sm text-gray-700">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
             {errors.plan_id && (
               <p className="text-sm text-red-500 mt-4">{errors.plan_id.message}</p>

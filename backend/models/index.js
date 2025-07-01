@@ -24,6 +24,8 @@ const Salon = require('./salon');
 const SubscriptionPlan = require('./subscription_plan');
 const Subscription = require('./subscription');
 const Appointment = require('./appointment');
+const Notification = require('./notification');
+const NotificationTemplate = require('./notification_template');
 
 // Initialize models
 const models = {
@@ -33,7 +35,9 @@ const models = {
   Salon: Salon(sequelize, Sequelize.DataTypes),
   SubscriptionPlan: SubscriptionPlan(sequelize, Sequelize.DataTypes),
   Subscription: Subscription(sequelize, Sequelize.DataTypes),
-  Appointment: Appointment(sequelize, Sequelize.DataTypes)
+  Appointment: Appointment(sequelize, Sequelize.DataTypes),
+  Notification: Notification(sequelize, Sequelize.DataTypes),
+  NotificationTemplate: NotificationTemplate(sequelize, Sequelize.DataTypes)
 };
 
 // Initialize associations

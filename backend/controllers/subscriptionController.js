@@ -1,87 +1,52 @@
+const { Subscription, Salon, SubscriptionPlan } = require('../models');
+const { Op } = require('sequelize');
+
 // Get all subscriptions
 exports.getAllSubscriptions = async (req, res) => {
   try {
     const { status, salonId, ownerId, search, includePlans } = req.query;
-    
-    let query = req.supabase
-      .from('subscriptions')
-      .select(`
-        *,
-        salon:salons(id, name, location, owner_id, owner_name, owner_email),
-        plan:subscription_plans(*)
-      `, { count: 'exact' });
-    
-    if (status && status !== 'all') {
-      query = query.eq('status', status);
-    }
-    
-    if (salonId) {
-      query = query.eq('salon_id', salonId);
-    }
-    
-    if (ownerId) {
-      query = query.eq('salon.owner_id', ownerId);
-    }
-    
+    const where = {};
+    if (status && status !== 'all') where.status = status;
+    if (salonId) where.salon_id = salonId;
+    // For ownerId, filter by salon's owner
+    const salonWhere = {};
+    if (ownerId) salonWhere.owner_id = ownerId;
     if (search) {
-      query = query.or(`salon.name.ilike.%${search}%,salon.owner_name.ilike.%${search}%`);
+      salonWhere[Op.or] = [
+        { name: { [Op.iLike]: `%${search}%` } },
+        { owner_name: { [Op.iLike]: `%${search}%` } }
+      ];
     }
-    
-    const { data, error, count } = await query;
-    
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-    
-    // Fetch billing history for each subscription
-    if (data && data.length > 0) {
-      const subscriptionIds = data.map(sub => sub.id);
-      
-      const { data: billingData, error: billingError } = await req.supabase
-        .from('billing_history')
-        .select('*')
-        .in('subscription_id', subscriptionIds)
-        .order('date', { ascending: false });
-      
-      if (!billingError && billingData) {
-        // Group billing history by subscription_id
-        const billingBySubscription = billingData.reduce((acc, bill) => {
-          if (!acc[bill.subscription_id]) {
-            acc[bill.subscription_id] = [];
-          }
-          acc[bill.subscription_id].push(bill);
-          return acc;
-        }, {});
-        
-        // Add billing history to each subscription
-        data.forEach(subscription => {
-          subscription.billingHistory = billingBySubscription[subscription.id] || [];
-        });
-      }
-    }
-    
+    // Fetch subscriptions with associations
+    const subscriptions = await Subscription.findAll({
+      where,
+      include: [
+        { model: Salon, as: 'salon', where: Object.keys(salonWhere).length ? salonWhere : undefined, required: !!(ownerId || search) },
+        { model: SubscriptionPlan, as: 'plan' }
+      ]
+    });
     // Format subscriptions for the frontend
-    const formattedSubscriptions = data?.map(sub => {
+    const formattedSubscriptions = subscriptions.map(sub => {
+      const s = sub.toJSON();
       return {
-        id: sub.id,
-        salonId: sub.salon_id,
-        salonName: sub.salon.name,
-        ownerId: sub.salon.owner_id,
-        ownerName: sub.salon.owner_name,
-        ownerEmail: sub.salon.owner_email,
-        plan: sub.plan.name,
-        status: sub.status,
-        startDate: sub.start_date,
-        nextBillingDate: sub.next_billing_date,
-        amount: sub.amount,
-        billingCycle: sub.billing_cycle,
-        features: sub.plan.features,
-        usage: sub.usage,
-        paymentMethod: sub.payment_method,
-        billingHistory: sub.billingHistory || []
+        id: s.id,
+        salonId: s.salon_id,
+        salonName: s.salon?.name,
+        ownerId: s.salon?.owner_id,
+        ownerName: s.salon?.owner_name,
+        ownerEmail: s.salon?.owner_email,
+        plan: s.plan?.name,
+        status: s.status,
+        startDate: s.start_date,
+        nextBillingDate: s.next_billing_date,
+        amount: s.amount,
+        billingCycle: s.billing_cycle,
+        features: s.plan?.features,
+        usage: s.usage,
+        paymentMethod: s.payment_method,
+        billingHistory: [] // Add billing history here if model exists
       };
-    }) || [];
-    
+    });
     // Calculate stats
     const stats = {
       total: formattedSubscriptions.length,
@@ -90,26 +55,18 @@ exports.getAllSubscriptions = async (req, res) => {
       cancelled: formattedSubscriptions.filter(s => s.status === 'cancelled').length,
       totalRevenue: formattedSubscriptions
         .filter(s => s.status === 'active')
-        .reduce((sum, s) => sum + s.amount, 0),
+        .reduce((sum, s) => sum + Number(s.amount || 0), 0),
     };
-    
     const response = {
       subscriptions: formattedSubscriptions,
-      total: count || 0,
+      total: formattedSubscriptions.length,
       stats
     };
-    
     // Include plans if requested
     if (includePlans === 'true') {
-      const { data: plansData, error: plansError } = await req.supabase
-        .from('subscription_plans')
-        .select('*');
-      
-      if (!plansError) {
-        response.plans = plansData;
-      }
+      const plans = await SubscriptionPlan.findAll();
+      response.plans = plans;
     }
-    
     res.json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -120,48 +77,35 @@ exports.getAllSubscriptions = async (req, res) => {
 exports.getSubscriptionById = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const { data, error } = await req.supabase
-      .from('subscriptions')
-      .select(`
-        *,
-        salon:salons(id, name, location, owner_id, owner_name, owner_email),
-        plan:subscription_plans(*)
-      `)
-      .eq('id', id)
-      .single();
-    
-    if (error) {
+    const sub = await Subscription.findOne({
+      where: { id },
+      include: [
+        { model: Salon, as: 'salon' },
+        { model: SubscriptionPlan, as: 'plan' }
+      ]
+    });
+    if (!sub) {
       return res.status(404).json({ error: 'Subscription not found' });
     }
-    
-    // Fetch billing history
-    const { data: billingData, error: billingError } = await req.supabase
-      .from('billing_history')
-      .select('*')
-      .eq('subscription_id', id)
-      .order('date', { ascending: false });
-    
-    // Format subscription for the frontend
+    const s = sub.toJSON();
     const formattedSubscription = {
-      id: data.id,
-      salonId: data.salon_id,
-      salonName: data.salon.name,
-      ownerId: data.salon.owner_id,
-      ownerName: data.salon.owner_name,
-      ownerEmail: data.salon.owner_email,
-      plan: data.plan.name,
-      status: data.status,
-      startDate: data.start_date,
-      nextBillingDate: data.next_billing_date,
-      amount: data.amount,
-      billingCycle: data.billing_cycle,
-      features: data.plan.features,
-      usage: data.usage,
-      paymentMethod: data.payment_method,
-      billingHistory: billingError ? [] : billingData || []
+      id: s.id,
+      salonId: s.salon_id,
+      salonName: s.salon?.name,
+      ownerId: s.salon?.owner_id,
+      ownerName: s.salon?.owner_name,
+      ownerEmail: s.salon?.owner_email,
+      plan: s.plan?.name,
+      status: s.status,
+      startDate: s.start_date,
+      nextBillingDate: s.next_billing_date,
+      amount: s.amount,
+      billingCycle: s.billing_cycle,
+      features: s.plan?.features,
+      usage: s.usage,
+      paymentMethod: s.payment_method,
+      billingHistory: [] // Add billing history here if model exists
     };
-    
     res.json(formattedSubscription);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -172,91 +116,30 @@ exports.getSubscriptionById = async (req, res) => {
 exports.createSubscription = async (req, res) => {
   try {
     const subscriptionData = req.body;
-    
-    console.log('Received subscription data:', subscriptionData);
-    
     // Validate required fields
     if (!subscriptionData.salon_id || !subscriptionData.plan_id) {
       return res.status(400).json({ error: 'salon_id and plan_id are required' });
     }
-    
-    // First, get the plan details
-    const { data: planData, error: planError } = await req.supabase
-      .from('subscription_plans')
-      .select('*')
-      .eq('id', subscriptionData.plan_id)
-      .single();
-    
-    if (planError || !planData) {
+    // Check if plan exists
+    const plan = await SubscriptionPlan.findOne({ where: { id: subscriptionData.plan_id } });
+    if (!plan) {
       return res.status(400).json({ error: 'Invalid plan ID' });
     }
-    
     // Check if salon exists
-    const { data: salonData, error: salonError } = await req.supabase
-      .from('salons')
-      .select('id, name')
-      .eq('id', subscriptionData.salon_id)
-      .single();
-    
-    if (salonError || !salonData) {
+    const salon = await Salon.findOne({ where: { id: subscriptionData.salon_id } });
+    if (!salon) {
       return res.status(400).json({ error: 'Invalid salon ID' });
     }
-    
-    // Prepare subscription data for insertion
-    const insertData = {
-      salon_id: subscriptionData.salon_id,
-      plan_id: subscriptionData.plan_id,
+    // Create subscription
+    const newSub = await Subscription.create({
+      ...subscriptionData,
+      amount: plan.price, // or use subscriptionData.amount if you want to allow override
+      start_date: subscriptionData.start_date || new Date(),
       status: subscriptionData.status || 'active',
-      start_date: subscriptionData.start_date,
-      next_billing_date: subscriptionData.next_billing_date,
-      amount: subscriptionData.amount,
-      billing_cycle: subscriptionData.billing_cycle,
-      usage: subscriptionData.usage || {},
-      payment_method: subscriptionData.payment_method || {},
-    };
-    
-    console.log('Inserting subscription data:', insertData);
-    
-    // Create the subscription
-    const { data, error } = await req.supabase
-      .from('subscriptions')
-      .insert(insertData)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Database error:', error);
-      return res.status(400).json({ error: error.message });
-    }
-    
-    // If not a trial, create the first billing record
-    if (subscriptionData.status === 'active') {
-      const billingRecord = {
-        subscription_id: data.id,
-        date: new Date().toISOString(),
-        amount: subscriptionData.amount,
-        status: 'paid',
-        description: `${planData.name} Plan - ${subscriptionData.billing_cycle === 'monthly' ? 'Monthly' : 'Yearly'}`,
-        invoice_number: `INV-${Date.now()}`,
-        tax_amount: subscriptionData.amount * 0.08, // Assuming 8% tax
-        subtotal: subscriptionData.amount * 0.92
-      };
-      
-      const { error: billingError } = await req.supabase
-        .from('billing_history')
-        .insert(billingRecord);
-      
-      if (billingError) {
-        console.error('Error creating billing record:', billingError);
-      }
-    }
-    
-    res.status(201).json({
-      message: 'Subscription created successfully',
-      subscription: data
+      billing_cycle: subscriptionData.billing_cycle || plan.billing_period
     });
+    res.status(201).json(newSub.toJSON());
   } catch (error) {
-    console.error('Error in createSubscription:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -266,42 +149,33 @@ exports.updateSubscription = async (req, res) => {
   try {
     const { id } = req.params;
     const subscriptionData = req.body;
-    
+
     // If changing plan, get the new plan details
     if (subscriptionData.plan_id) {
-      const { data: planData, error: planError } = await req.supabase
-        .from('subscription_plans')
-        .select('*')
-        .eq('id', subscriptionData.plan_id)
-        .single();
-      
-      if (planError) {
+      const plan = await SubscriptionPlan.findOne({ where: { id: subscriptionData.plan_id } });
+      if (!plan) {
         return res.status(400).json({ error: 'Invalid plan ID' });
       }
-      
       // Update with new plan limits
       if (subscriptionData.usage) {
         subscriptionData.usage = {
           ...subscriptionData.usage,
-          bookingsLimit: planData.limits.bookings,
-          staffLimit: planData.limits.staff,
-          locationsLimit: planData.limits.locations
+          bookingsLimit: plan.limits.bookings,
+          staffLimit: plan.limits.staff,
+          locationsLimit: plan.limits.locations
         };
       }
+      subscriptionData.amount = plan.price;
     }
-    
-    const { data, error } = await req.supabase
-      .from('subscriptions')
-      .update(subscriptionData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      return res.status(400).json({ error: error.message });
+
+    const [updatedCount, updatedRows] = await Subscription.update(subscriptionData, {
+      where: { id },
+      returning: true
+    });
+    if (updatedCount === 0) {
+      return res.status(404).json({ error: 'Subscription not found' });
     }
-    
-    res.json(data);
+    res.json(updatedRows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -311,19 +185,14 @@ exports.updateSubscription = async (req, res) => {
 exports.cancelSubscription = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const { data, error } = await req.supabase
-      .from('subscriptions')
-      .update({ status: 'cancelled' })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      return res.status(400).json({ error: error.message });
+    const [updatedCount, updatedRows] = await Subscription.update(
+      { status: 'cancelled' },
+      { where: { id }, returning: true }
+    );
+    if (updatedCount === 0) {
+      return res.status(404).json({ error: 'Subscription not found' });
     }
-    
-    res.json(data);
+    res.json(updatedRows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -332,15 +201,8 @@ exports.cancelSubscription = async (req, res) => {
 // Get subscription plans
 exports.getSubscriptionPlans = async (req, res) => {
   try {
-    const { data, error } = await req.supabase
-      .from('subscription_plans')
-      .select('*');
-    
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-    
-    res.json(data || []);
+    const plans = await SubscriptionPlan.findAll();
+    res.json(plans);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

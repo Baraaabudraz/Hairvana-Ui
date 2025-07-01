@@ -241,33 +241,22 @@ export default function EditUserPage() {
 
   const onSubmit = async (data: UserForm) => {
     if (!user) return;
-    
     try {
       setSaving(true);
-      
-      // Try to update via API first
-      try {
-        await updateUser(user.id, data);
-      } catch (apiError) {
-        console.warn('API update failed:', apiError);
-        // In a real app, you might want to show an error here
-        // For now, we'll just show success since we're using mock data
-      }
-      
+      await updateUser(user.id, data);
       toast({
         title: 'Success',
         description: 'User updated successfully.',
       });
-      
-      // Navigate back to user details
       navigate(`/dashboard/users/${user.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating user:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to update user. Please try again.',
+        title: 'Validation Error',
+        description: error.message || 'Failed to update user. Please check the fields and try again.',
         variant: 'destructive',
       });
+      // Do not navigate or show success
     } finally {
       setSaving(false);
     }

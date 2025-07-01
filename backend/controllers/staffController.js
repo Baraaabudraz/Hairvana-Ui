@@ -1,25 +1,15 @@
+const { Staff } = require('../models');
+const { Op } = require('sequelize');
+
 // Get all staff
 exports.getAllStaff = async (req, res, next) => {
   try {
     const { salonId, serviceId } = req.query;
-    
-    let query = req.supabase
-      .from('staff')
-      .select('*');
-    
-    if (salonId) {
-      query = query.eq('salon_id', salonId);
-    }
-    
-    if (serviceId) {
-      query = query.contains('services', [serviceId]);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    res.json(data || []);
+    const where = {};
+    if (salonId) where.salon_id = salonId;
+    if (serviceId) where.services = { [Op.contains]: [serviceId] };
+    const staff = await Staff.findAll({ where });
+    res.json(staff);
   } catch (error) {
     next(error);
   }
@@ -29,18 +19,11 @@ exports.getAllStaff = async (req, res, next) => {
 exports.getStaffById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    const { data, error } = await req.supabase
-      .from('staff')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) {
+    const staff = await Staff.findOne({ where: { id } });
+    if (!staff) {
       return res.status(404).json({ message: 'Staff member not found' });
     }
-    
-    res.json(data);
+    res.json(staff);
   } catch (error) {
     next(error);
   }
@@ -50,18 +33,8 @@ exports.getStaffById = async (req, res, next) => {
 exports.createStaff = async (req, res, next) => {
   try {
     const staffData = req.body;
-    
-    const { data, error } = await req.supabase
-      .from('staff')
-      .insert(staffData)
-      .select()
-      .single();
-    
-    if (error) {
-      return res.status(400).json({ message: error.message });
-    }
-    
-    res.status(201).json(data);
+    const newStaff = await Staff.create(staffData);
+    res.status(201).json(newStaff);
   } catch (error) {
     next(error);
   }
@@ -72,19 +45,14 @@ exports.updateStaff = async (req, res, next) => {
   try {
     const { id } = req.params;
     const staffData = req.body;
-    
-    const { data, error } = await req.supabase
-      .from('staff')
-      .update(staffData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      return res.status(400).json({ message: error.message });
+    const [affectedRows, [updatedStaff]] = await Staff.update(staffData, {
+      where: { id },
+      returning: true
+    });
+    if (!updatedStaff) {
+      return res.status(404).json({ message: 'Staff member not found' });
     }
-    
-    res.json(data);
+    res.json(updatedStaff);
   } catch (error) {
     next(error);
   }
@@ -94,16 +62,10 @@ exports.updateStaff = async (req, res, next) => {
 exports.deleteStaff = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    const { error } = await req.supabase
-      .from('staff')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      return res.status(400).json({ message: error.message });
+    const deleted = await Staff.destroy({ where: { id } });
+    if (!deleted) {
+      return res.status(404).json({ message: 'Staff member not found' });
     }
-    
     res.json({ message: 'Staff member deleted successfully' });
   } catch (error) {
     next(error);
@@ -115,31 +77,15 @@ exports.assignService = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { serviceId } = req.body;
-    
-    // First get current services
-    const { data: staffData, error: fetchError } = await req.supabase
-      .from('staff')
-      .select('services')
-      .eq('id', id)
-      .single();
-    
-    if (fetchError) {
+    const staff = await Staff.findOne({ where: { id } });
+    if (!staff) {
       return res.status(404).json({ message: 'Staff member not found' });
     }
-    
-    // Add the new service if it's not already assigned
-    const currentServices = staffData.services || [];
+    const currentServices = staff.services || [];
     if (!currentServices.includes(serviceId)) {
-      const { error: updateError } = await req.supabase
-        .from('staff')
-        .update({ services: [...currentServices, serviceId] })
-        .eq('id', id);
-      
-      if (updateError) {
-        return res.status(400).json({ message: updateError.message });
-      }
+      staff.services = [...currentServices, serviceId];
+      await staff.save();
     }
-    
     res.json({ message: 'Service assigned successfully' });
   } catch (error) {
     next(error);
@@ -150,31 +96,13 @@ exports.assignService = async (req, res, next) => {
 exports.removeService = async (req, res, next) => {
   try {
     const { id, serviceId } = req.params;
-    
-    // First get current services
-    const { data: staffData, error: fetchError } = await req.supabase
-      .from('staff')
-      .select('services')
-      .eq('id', id)
-      .single();
-    
-    if (fetchError) {
+    const staff = await Staff.findOne({ where: { id } });
+    if (!staff) {
       return res.status(404).json({ message: 'Staff member not found' });
     }
-    
-    // Remove the service
-    const currentServices = staffData.services || [];
-    const updatedServices = currentServices.filter(id => id !== serviceId);
-    
-    const { error: updateError } = await req.supabase
-      .from('staff')
-      .update({ services: updatedServices })
-      .eq('id', id);
-    
-    if (updateError) {
-      return res.status(400).json({ message: updateError.message });
-    }
-    
+    const currentServices = staff.services || [];
+    staff.services = currentServices.filter(sid => sid !== serviceId);
+    await staff.save();
     res.json({ message: 'Service removed successfully' });
   } catch (error) {
     next(error);

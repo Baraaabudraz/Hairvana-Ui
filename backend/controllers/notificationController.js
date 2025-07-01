@@ -1,29 +1,21 @@
+const { Notification, NotificationTemplate } = require('../models');
+const { Sequelize } = require('sequelize');
+
 // Get all notifications
 exports.getAllNotifications = async (req, res, next) => {
   try {
     const { type, status, search } = req.query;
-    
-    let query = req.supabase
-      .from('notifications')
-      .select('*');
-    
-    if (type && type !== 'all') {
-      query = query.eq('type', type);
-    }
-    
-    if (status && status !== 'all') {
-      query = query.eq('status', status);
-    }
-    
+    const where = {};
+    if (type && type !== 'all') where.type = type;
+    if (status && status !== 'all') where.status = status;
     if (search) {
-      query = query.or(`title.ilike.%${search}%,message.ilike.%${search}%`);
+      where[Sequelize.Op.or] = [
+        { title: { [Sequelize.Op.iLike]: `%${search}%` } },
+        { message: { [Sequelize.Op.iLike]: `%${search}%` } }
+      ];
     }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    res.json(data || []);
+    const notifications = await Notification.findAll({ where });
+    res.json(notifications);
   } catch (error) {
     next(error);
   }
@@ -33,37 +25,20 @@ exports.getAllNotifications = async (req, res, next) => {
 exports.createNotification = async (req, res, next) => {
   try {
     const notificationData = req.body;
-    
-    // Add creator info
     notificationData.createdBy = req.user.name || req.user.email;
-    notificationData.createdAt = new Date().toISOString();
-    
-    // If sending now, set sentAt
+    notificationData.createdAt = new Date();
     if (notificationData.scheduleType === 'now') {
       notificationData.status = 'sent';
-      notificationData.sentAt = new Date().toISOString();
+      notificationData.sentAt = new Date();
     } else if (notificationData.scheduleType === 'later') {
       notificationData.status = 'scheduled';
       notificationData.scheduledAt = notificationData.scheduledAt;
     } else {
       notificationData.status = 'draft';
     }
-    
-    // Remove scheduleType as it's not stored in the database
     delete notificationData.scheduleType;
-    
-    const { data, error } = await req.supabase
-      .from('notifications')
-      .insert(notificationData)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    // In a real app, you'd also trigger the actual notification sending
-    // through email, push, etc. based on the channels
-    
-    res.status(201).json(data);
+    const newNotification = await Notification.create(notificationData);
+    res.status(201).json(newNotification);
   } catch (error) {
     next(error);
   }
@@ -72,13 +47,8 @@ exports.createNotification = async (req, res, next) => {
 // Get notification templates
 exports.getNotificationTemplates = async (req, res, next) => {
   try {
-    const { data, error } = await req.supabase
-      .from('notification_templates')
-      .select('*');
-    
-    if (error) throw error;
-    
-    res.json(data || []);
+    const templates = await NotificationTemplate.findAll();
+    res.json(templates);
   } catch (error) {
     next(error);
   }
@@ -88,14 +58,7 @@ exports.getNotificationTemplates = async (req, res, next) => {
 exports.deleteNotification = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    const { error } = await req.supabase
-      .from('notifications')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-    
+    await Notification.destroy({ where: { id } });
     res.json({ message: 'Notification deleted successfully' });
   } catch (error) {
     next(error);
@@ -106,39 +69,17 @@ exports.deleteNotification = async (req, res, next) => {
 exports.sendNotification = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    // Get the notification
-    const { data: notification, error: fetchError } = await req.supabase
-      .from('notifications')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (fetchError) throw fetchError;
-    
+    const notification = await Notification.findByPk(id);
     if (!notification) {
       return res.status(404).json({ message: 'Notification not found' });
     }
-    
-    // Update the notification status
-    const { data, error } = await req.supabase
-      .from('notifications')
-      .update({
-        status: 'sent',
-        sentAt: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    // In a real app, you'd trigger the actual notification sending here
-    
+    notification.status = 'sent';
+    notification.sentAt = new Date();
+    await notification.save();
     res.json({
       id,
       status: 'sent',
-      sentAt: data.sentAt,
+      sentAt: notification.sentAt,
       message: 'Notification sent successfully'
     });
   } catch (error) {

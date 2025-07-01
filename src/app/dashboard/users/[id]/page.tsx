@@ -36,7 +36,7 @@ import {
   Eye
 } from 'lucide-react';
 import Link from 'next/link';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format, isValid, formatDistanceToNow } from 'date-fns';
 
 interface Salon {
   id: string;
@@ -55,8 +55,10 @@ interface User {
   phone: string;
   role: 'admin' | 'super_admin' | 'salon' | 'user';
   status: 'active' | 'pending' | 'suspended';
-  joinDate: string;
-  lastLogin: string | null;
+  join_date?: string;
+  joinDate?: string;
+  last_login?: string | null;
+  lastLogin?: string | null;
   avatar: string;
   // Admin specific
   permissions?: string[];
@@ -102,6 +104,20 @@ const permissionLabels: Record<string, string> = {
   full_access: 'Full Access',
 };
 
+function formatDateSafely(dateString: string | null | undefined, fallback: string = 'N/A'): string {
+  if (!dateString) return fallback;
+  const date = new Date(dateString);
+  if (!isValid(date)) return fallback;
+  return format(date, 'MMM dd, yyyy');
+}
+
+function formatDistanceSafely(dateString: string | null | undefined, fallback: string = 'N/A'): string {
+  if (!dateString) return fallback;
+  const date = new Date(dateString);
+  if (!isValid(date)) return fallback;
+  return formatDistanceToNow(date, { addSuffix: true });
+}
+
 export default function UserDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -121,8 +137,8 @@ export default function UserDetailsPage() {
             phone: '+1 (555) 123-4567',
             role: 'admin',
             status: 'active',
-            joinDate: '2024-01-01',
-            lastLogin: '2024-06-15T10:30:00Z',
+            join_date: '2024-01-01',
+            last_login: '2024-06-15T10:30:00Z',
             avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
             permissions: ['manage_salons', 'manage_users', 'view_analytics', 'manage_subscriptions'],
           },
@@ -133,8 +149,8 @@ export default function UserDetailsPage() {
             phone: '+1 (555) 234-5678',
             role: 'super_admin',
             status: 'active',
-            joinDate: '2024-01-01',
-            lastLogin: '2024-06-15T09:15:00Z',
+            join_date: '2024-01-01',
+            last_login: '2024-06-15T09:15:00Z',
             avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
             permissions: ['full_access'],
           },
@@ -145,8 +161,8 @@ export default function UserDetailsPage() {
             phone: '+1 (555) 345-6789',
             role: 'salon',
             status: 'active',
-            joinDate: '2024-01-15',
-            lastLogin: '2024-06-15T14:20:00Z',
+            join_date: '2024-01-15',
+            last_login: '2024-06-15T14:20:00Z',
             avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
             salons: [
               {
@@ -179,8 +195,8 @@ export default function UserDetailsPage() {
             phone: '+1 (555) 111-2222',
             role: 'salon',
             status: 'active',
-            joinDate: '2024-01-10',
-            lastLogin: '2024-06-15T16:45:00Z',
+            join_date: '2024-01-10',
+            last_login: '2024-06-15T16:45:00Z',
             avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
             salons: [
               {
@@ -222,8 +238,8 @@ export default function UserDetailsPage() {
             phone: '+1 (555) 678-9012',
             role: 'user',
             status: 'active',
-            joinDate: '2024-02-01',
-            lastLogin: '2024-06-15T13:20:00Z',
+            join_date: '2024-02-01',
+            last_login: '2024-06-15T13:20:00Z',
             avatar: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
             totalBookings: 12,
             totalSpent: 850,
@@ -347,12 +363,12 @@ export default function UserDetailsPage() {
                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    Joined {format(new Date(user.joinDate), 'MMM dd, yyyy')}
+                    Joined {formatDateSafely(user.join_date || user.joinDate)}
                   </div>
-                  {user.lastLogin && (
+                  {(user.last_login || user.lastLogin) && (
                     <div className="flex items-center gap-1">
                       <Activity className="h-4 w-4" />
-                      Last seen {formatDistanceToNow(new Date(user.lastLogin), { addSuffix: true })}
+                      Last seen {formatDistanceSafely(user.last_login || user.lastLogin)}
                     </div>
                   )}
                 </div>
@@ -495,17 +511,17 @@ export default function UserDetailsPage() {
               <div>
                 <p className="text-sm font-medium">Member Since</p>
                 <p className="text-sm text-gray-600">
-                  {format(new Date(user.joinDate), 'MMMM dd, yyyy')}
+                  {formatDateSafely(user.join_date || user.joinDate)}
                 </p>
               </div>
             </div>
-            {user.lastLogin && (
+            {user.last_login && (
               <div className="flex items-center gap-3">
                 <Activity className="h-4 w-4 text-gray-400" />
                 <div>
                   <p className="text-sm font-medium">Last Login</p>
                   <p className="text-sm text-gray-600">
-                    {format(new Date(user.lastLogin), 'MMM dd, yyyy HH:mm')}
+                    {formatDateSafely(user.last_login || user.lastLogin)}
                   </p>
                 </div>
               </div>

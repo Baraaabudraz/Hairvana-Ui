@@ -64,8 +64,8 @@ interface User {
   phone: string;
   role: UserRole;
   status: UserStatus;
-  joinDate: string;
-  lastLogin: string | null;
+  join_date: string;
+  last_login: string | null;
   avatar: string;
   // Admin specific
   permissions?: string[];
@@ -532,13 +532,13 @@ export default function UsersPage() {
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-3 w-3 text-gray-400" />
                         <span className="text-xs text-gray-500">
-                          Joined {formatDateSafely(user.joinDate, 'Unknown')}
+                          Joined {formatDateSafely(user.join_date, 'Unknown')}
                         </span>
-                        {user.lastLogin && (
+                        {user.last_login && (
                           <>
                             <span className="text-gray-300">•</span>
                             <span className="text-xs text-gray-500">
-                              Last seen {formatDateSafely(user.lastLogin, 'Unknown')}
+                              Last seen {formatDateSafely(user.last_login, 'Unknown')}
                             </span>
                           </>
                         )}

@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Notification.init({
-    user_id: DataTypes.INTEGER,
+    user_id: DataTypes.UUID,
     type: DataTypes.STRING,
     title: DataTypes.STRING,
     message: DataTypes.STRING,
@@ -23,6 +23,9 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'Notification',
+    tableName: 'notifications',
+    timestamps: true,
+    underscored: true
   });
   return Notification;
 };

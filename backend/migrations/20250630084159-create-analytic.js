@@ -2,91 +2,6 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Create notifications table
-    await queryInterface.createTable('notifications', {
-      id: {
-        type: Sequelize.UUID,
-        defaultValue: Sequelize.literal('gen_random_uuid()'),
-        primaryKey: true
-      },
-      title: {
-        type: Sequelize.TEXT,
-        allowNull: false
-      },
-      message: {
-        type: Sequelize.TEXT,
-        allowNull: false
-      },
-      type: {
-        type: Sequelize.TEXT,
-        allowNull: false,
-        validate: {
-          isIn: [['info', 'success', 'warning', 'error', 'announcement', 'promotion']]
-        }
-      },
-      priority: {
-        type: Sequelize.TEXT,
-        allowNull: false,
-        validate: {
-          isIn: [['low', 'medium', 'high', 'urgent']]
-        }
-      },
-      status: {
-        type: Sequelize.TEXT,
-        allowNull: false,
-        validate: {
-          isIn: [['draft', 'scheduled', 'sent', 'failed']]
-        }
-      },
-      target_audience: {
-        type: Sequelize.TEXT,
-        allowNull: false,
-        validate: {
-          isIn: [['all', 'salons', 'users', 'admins', 'custom']]
-        }
-      },
-      channels: {
-        type: Sequelize.ARRAY(Sequelize.TEXT),
-        allowNull: false
-      },
-      scheduled_at: {
-        type: Sequelize.DATE
-      },
-      sent_at: {
-        type: Sequelize.DATE
-      },
-      created_at: {
-        type: Sequelize.DATE,
-        allowNull: false
-      },
-      created_by: {
-        type: Sequelize.TEXT,
-        allowNull: false
-      },
-      recipients: {
-        type: Sequelize.JSONB,
-        allowNull: false,
-        defaultValue: {
-          total: 0,
-          sent: 0,
-          delivered: 0,
-          opened: 0,
-          clicked: 0
-        }
-      },
-      custom_filters: {
-        type: Sequelize.JSONB
-      },
-      created_at_timestamp: {
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
-      },
-      updated_at: {
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
-      }
-    });
-
     // Create notification_templates table
     await queryInterface.createTable('notification_templates', {
       id: {
@@ -147,11 +62,6 @@ module.exports = {
 
     // Create triggers for updated_at
     await queryInterface.sequelize.query(`
-      CREATE TRIGGER update_notifications_updated_at
-        BEFORE UPDATE ON notifications
-        FOR EACH ROW
-        EXECUTE PROCEDURE update_updated_at_column();
-
       CREATE TRIGGER update_notification_templates_updated_at
         BEFORE UPDATE ON notification_templates
         FOR EACH ROW
@@ -247,8 +157,7 @@ module.exports = {
     ]);
   },
   async down(queryInterface, Sequelize) {
-    // Drop tables in reverse order
+    // Only drop notification_templates table
     await queryInterface.dropTable('notification_templates');
-    await queryInterface.dropTable('notifications');
   }
 };

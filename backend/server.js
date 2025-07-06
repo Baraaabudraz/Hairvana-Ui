@@ -17,6 +17,13 @@ const authRoutes = require('./routes/auth');
 const notificationRoutes = require('./routes/notifications');
 const settingsRoutes = require('./routes/settings');
 const dashboardRoutes = require('./routes/dashboard');
+const reportTemplatesRouter = require('./routes/reportTemplates');
+const reportsRouter = require('./routes/reports');
+const mobileAuthRoutes = require('./routes/Api/mobileAuth');
+const mobileUserRoutes = require('./routes/Api/mobileUser');
+const salonRoutesApi = require('./routes/Api/salon');
+const hairstyleRoutes = require('./routes/Api/hairstyle');
+const appointmentRoutesApi = require('./routes/Api/appointment');
 
 // Initialize Express app
 const app = express();
@@ -46,6 +53,16 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/billing-histories', require('./routes/billingHistories'));
+app.use('/api/report-templates', reportTemplatesRouter);
+app.use('/api/reports', reportsRouter);
+
+// Mobile API routes
+app.use('/api/mobile/auth', mobileAuthRoutes);
+app.use('/api/mobile/user', mobileUserRoutes);
+app.use('/api/mobile/salons', salonRoutesApi);
+app.use('/api/mobile/hairstyles', hairstyleRoutes);
+app.use('/api/mobile', appointmentRoutesApi);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

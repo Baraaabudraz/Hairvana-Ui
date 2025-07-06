@@ -428,3 +428,5 @@ async function seedNotificationTemplates() {
 if (require.main === module) {
   seed();
 }
+
+module.exports = { seed };

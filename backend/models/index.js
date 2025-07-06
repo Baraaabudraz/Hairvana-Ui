@@ -23,7 +23,11 @@ const SalonOwner = require('./salon_owner');
 const Salon = require('./salon');
 const SubscriptionPlan = require('./subscription_plan');
 const Subscription = require('./subscription');
+const Service = require('./service');
+const Staff = require('./staff');
 const Appointment = require('./appointment');
+const Payment = require('./payment');
+const AppointmentService = require('./appointment_service');
 const Notification = require('./notification');
 const NotificationTemplate = require('./notification_template');
 const UserSettings = require('./user_settings');
@@ -32,12 +36,8 @@ const BillingSettings = require('./billing_settings');
 const ReportTemplate = require('./report_template')(sequelize);
 const Report = require('./report');
 const Hairstyle = require('./hairstyle');
-const Staff = require('./staff');
-const Service = require('./service');
-const Payment = require('./payment');
-const AppointmentService = require('./appointment_service');
 
-// Initialize models
+// Initialize models in dependency order
 const models = {
   User: User(sequelize, Sequelize.DataTypes),
   Customer: Customer(sequelize, Sequelize.DataTypes),
@@ -45,7 +45,11 @@ const models = {
   Salon: Salon(sequelize, Sequelize.DataTypes),
   SubscriptionPlan: SubscriptionPlan(sequelize, Sequelize.DataTypes),
   Subscription: Subscription(sequelize, Sequelize.DataTypes),
+  Service: Service(sequelize, Sequelize.DataTypes),
+  Staff: Staff(sequelize, Sequelize.DataTypes),
   Appointment: Appointment(sequelize, Sequelize.DataTypes),
+  Payment: Payment(sequelize, Sequelize.DataTypes),
+  AppointmentService: AppointmentService(sequelize, Sequelize.DataTypes),
   Notification: Notification(sequelize, Sequelize.DataTypes),
   NotificationTemplate: NotificationTemplate(sequelize, Sequelize.DataTypes),
   UserSettings: UserSettings(sequelize, Sequelize.DataTypes),
@@ -53,11 +57,7 @@ const models = {
   BillingSettings: BillingSettings(sequelize, Sequelize.DataTypes),
   ReportTemplate: ReportTemplate,
   Report: Report(sequelize, Sequelize.DataTypes),
-  Hairstyle: Hairstyle(sequelize, Sequelize.DataTypes),
-  Staff: Staff(sequelize, Sequelize.DataTypes),
-  Service: Service(sequelize, Sequelize.DataTypes),
-  Payment: Payment(sequelize, Sequelize.DataTypes),
-  AppointmentService: AppointmentService(sequelize, Sequelize.DataTypes)
+  Hairstyle: Hairstyle(sequelize, Sequelize.DataTypes)
 };
 
 // Initialize associations
@@ -67,9 +67,57 @@ Object.values(models).forEach(model => {
   }
 });
 
+// Custom sync function that ensures proper table creation order
+async function syncOrdered(options = {}) {
+  try {
+    console.log('🔄 Starting ordered database sync...');
+    
+    // Drop all tables first if force is true
+    if (options.force) {
+      await sequelize.drop();
+      console.log('🗑️  All tables dropped');
+    }
+    
+    // Create tables in dependency order
+    const tableOrder = [
+      'users',
+      'salons', 
+      'subscription_plans',
+      'hairstyles',
+      'notification_templates',
+      'report_templates',
+      'services',
+      'staff',
+      'subscriptions',
+      'appointments',
+      'payments',
+      'appointment_services',
+      'notifications',
+      'user_settings',
+      'billing_histories',
+      'billing_settings',
+      'reports'
+    ];
+    
+    for (const tableName of tableOrder) {
+      const model = Object.values(models).find(m => m.tableName === tableName);
+      if (model) {
+        await model.sync({ force: false });
+        console.log(`✅ Created table: ${tableName}`);
+      }
+    }
+    
+    console.log('✅ Database synced successfully with correct table order!');
+  } catch (error) {
+    console.error('❌ Error syncing database:', error);
+    throw error;
+  }
+}
+
 // Export models and Sequelize instance
 module.exports = {
   ...models,
   sequelize,
-  Sequelize
+  Sequelize,
+  syncOrdered
 };

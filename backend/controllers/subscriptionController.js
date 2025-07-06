@@ -1,4 +1,4 @@
-const { Subscription, Salon, SubscriptionPlan } = require('../models');
+const { Subscription, Salon, SubscriptionPlan, BillingHistory } = require('../models');
 const { Op } = require('sequelize');
 
 // Get all subscriptions
@@ -32,6 +32,8 @@ exports.getAllSubscriptions = async (req, res) => {
         id: s.id,
         salonId: s.salon_id,
         salonName: s.salon?.name,
+        salonPhone: s.salon?.phone,
+        salonEmail: s.salon?.email,
         ownerId: s.salon?.owner_id,
         ownerName: s.salon?.owner_name,
         ownerEmail: s.salon?.owner_email,
@@ -88,10 +90,37 @@ exports.getSubscriptionById = async (req, res) => {
       return res.status(404).json({ error: 'Subscription not found' });
     }
     const s = sub.toJSON();
+    // Ensure usage is never null
+    let usage = s.usage;
+    if (!usage) {
+      usage = {
+        bookings: 0,
+        bookingsLimit: (s.plan && s.plan.limits && s.plan.limits.bookings != null) ? s.plan.limits.bookings : 0,
+        staff: 0,
+        staffLimit: (s.plan && s.plan.limits && s.plan.limits.staff != null) ? s.plan.limits.staff : 0,
+        locations: 1,
+        locationsLimit: (s.plan && s.plan.limits && s.plan.limits.locations != null) ? s.plan.limits.locations : 1
+      };
+    }
+    // Fetch billing history for this subscription
+    let billingHistory = await BillingHistory.findAll({
+      where: { subscription_id: s.id },
+      order: [['date', 'DESC']]
+    });
+    // Map each record to ensure total is present and correct
+    billingHistory = billingHistory.map(bh => {
+      const obj = bh.toJSON();
+      return {
+        ...obj,
+        total: obj.total !== undefined ? obj.total : (Number(obj.amount) + Number(obj.tax_amount || 0)),
+      };
+    });
     const formattedSubscription = {
       id: s.id,
       salonId: s.salon_id,
       salonName: s.salon?.name,
+      salonPhone: s.salon?.phone,
+      salonEmail: s.salon?.email,
       ownerId: s.salon?.owner_id,
       ownerName: s.salon?.owner_name,
       ownerEmail: s.salon?.owner_email,
@@ -102,9 +131,9 @@ exports.getSubscriptionById = async (req, res) => {
       amount: s.amount,
       billingCycle: s.billing_cycle,
       features: s.plan?.features,
-      usage: s.usage,
+      usage,
       paymentMethod: s.payment_method,
-      billingHistory: [] // Add billing history here if model exists
+      billingHistory // <-- now includes real data
     };
     res.json(formattedSubscription);
   } catch (error) {
@@ -404,5 +433,62 @@ exports.updatePaymentMethod = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// --- PLAN CRUD OPERATIONS ---
+
+// Create a new plan
+exports.createPlan = async (req, res, next) => {
+  try {
+    const plan = await SubscriptionPlan.create(req.body);
+    res.status(201).json(plan);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get all plans
+exports.getPlans = async (req, res, next) => {
+  try {
+    const plans = await SubscriptionPlan.findAll();
+    res.json(plans);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get a plan by ID
+exports.getPlanById = async (req, res, next) => {
+  try {
+    const plan = await SubscriptionPlan.findByPk(req.params.id);
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+    res.json(plan);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update a plan
+exports.updatePlan = async (req, res, next) => {
+  try {
+    const plan = await SubscriptionPlan.findByPk(req.params.id);
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+    await plan.update(req.body);
+    res.json(plan);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete a plan
+exports.deletePlan = async (req, res, next) => {
+  try {
+    const plan = await SubscriptionPlan.findByPk(req.params.id);
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+    await plan.destroy();
+    res.status(204).end();
+  } catch (error) {
+    next(error);
   }
 };

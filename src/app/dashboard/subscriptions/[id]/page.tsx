@@ -117,177 +117,26 @@ export default function SubscriptionDetailsPage() {
   const router = useRouter();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSubscription = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        // In a real app, you would fetch from your API
-        // For demo purposes, we'll use mock data based on the ID
-        const mockSubscriptions: Record<string, Subscription> = {
-          '1': {
-            id: '1',
-            salonId: '1',
-            salonName: 'Luxe Hair Studio',
-            ownerId: '3',
-            ownerName: 'Maria Rodriguez',
-            ownerEmail: 'maria@luxehair.com',
-            plan: 'Premium',
-            status: 'active',
-            startDate: '2024-01-15',
-            nextBillingDate: '2024-07-15',
-            amount: 99.99,
-            billingCycle: 'monthly',
-            features: [
-              'Unlimited bookings',
-              'Advanced analytics',
-              'Priority support',
-              'Custom branding',
-              'Marketing tools',
-              'Multi-location support',
-              'Staff management',
-              'Inventory tracking'
-            ],
-            usage: {
-              bookings: 156,
-              bookingsLimit: 'unlimited',
-              staff: 8,
-              staffLimit: 'unlimited',
-              locations: 2,
-              locationsLimit: 'unlimited'
-            },
-            paymentMethod: {
-              type: 'card',
-              last4: '4242',
-              brand: 'Visa',
-              expiryMonth: 12,
-              expiryYear: 2025
-            },
-            billingHistory: [
-              {
-                id: 'inv_001',
-                date: '2024-06-15',
-                amount: 99.99,
-                status: 'paid',
-                description: 'Premium Plan - Monthly',
-                invoiceNumber: 'INV-2024-001',
-                taxAmount: 8.00,
-                subtotal: 91.99
-              },
-              {
-                id: 'inv_002',
-                date: '2024-05-15',
-                amount: 99.99,
-                status: 'paid',
-                description: 'Premium Plan - Monthly',
-                invoiceNumber: 'INV-2024-002',
-                taxAmount: 8.00,
-                subtotal: 91.99
-              },
-              {
-                id: 'inv_003',
-                date: '2024-04-15',
-                amount: 99.99,
-                status: 'paid',
-                description: 'Premium Plan - Monthly',
-                invoiceNumber: 'INV-2024-003',
-                taxAmount: 8.00,
-                subtotal: 91.99
-              },
-              {
-                id: 'inv_004',
-                date: '2024-03-15',
-                amount: 99.99,
-                status: 'paid',
-                description: 'Premium Plan - Monthly',
-                invoiceNumber: 'INV-2024-004',
-                taxAmount: 8.00,
-                subtotal: 91.99
-              },
-              {
-                id: 'inv_005',
-                date: '2024-02-15',
-                amount: 99.99,
-                status: 'paid',
-                description: 'Premium Plan - Monthly',
-                invoiceNumber: 'INV-2024-005',
-                taxAmount: 8.00,
-                subtotal: 91.99
-              }
-            ]
-          },
-          '2': {
-            id: '2',
-            salonId: '4',
-            salonName: 'Luxe Hair Downtown',
-            ownerId: '3',
-            ownerName: 'Maria Rodriguez',
-            ownerEmail: 'maria@luxehair.com',
-            plan: 'Standard',
-            status: 'active',
-            startDate: '2024-02-01',
-            nextBillingDate: '2024-07-01',
-            amount: 49.99,
-            billingCycle: 'monthly',
-            features: [
-              'Up to 500 bookings/month',
-              'Basic analytics',
-              'Email support',
-              'Online booking',
-              'Customer management',
-              'Basic reporting'
-            ],
-            usage: {
-              bookings: 89,
-              bookingsLimit: 500,
-              staff: 4,
-              staffLimit: 10,
-              locations: 1,
-              locationsLimit: 1
-            },
-            paymentMethod: {
-              type: 'card',
-              last4: '4242',
-              brand: 'Visa',
-              expiryMonth: 12,
-              expiryYear: 2025
-            },
-            billingHistory: [
-              {
-                id: 'inv_006',
-                date: '2024-06-01',
-                amount: 49.99,
-                status: 'paid',
-                description: 'Standard Plan - Monthly',
-                invoiceNumber: 'INV-2024-006',
-                taxAmount: 4.00,
-                subtotal: 45.99
-              },
-              {
-                id: 'inv_007',
-                date: '2024-05-01',
-                amount: 49.99,
-                status: 'paid',
-                description: 'Standard Plan - Monthly',
-                invoiceNumber: 'INV-2024-007',
-                taxAmount: 4.00,
-                subtotal: 45.99
-              }
-            ]
-          }
-        };
-        
-        const subscriptionData = mockSubscriptions[params.id as string];
-        if (subscriptionData) {
-          setSubscription(subscriptionData);
-        }
-      } catch (error) {
-        console.error('Error fetching subscription:', error);
+        const response = await fetch(`/api/subscriptions/${params.id}`);
+        if (!response.ok) throw new Error('Failed to fetch subscription');
+        const data = await response.json();
+        if (!data.subscription) throw new Error('Subscription not found');
+        setSubscription(data.subscription);
+      } catch (error: any) {
+        setError(error.message || 'An error occurred');
+        setSubscription(null);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchSubscription();
+    if (params.id) fetchSubscription();
   }, [params.id]);
 
   const generateInvoiceHTML = (invoice: BillingHistory) => {
@@ -610,24 +459,39 @@ Hairvana Team`;
     window.open(mailtoLink);
   };
 
+  // Add handlers for the action buttons
+  const handleUpgradePlan = () => {
+    alert('Upgrade Plan clicked!');
+  };
+  const handleDowngradePlan = () => {
+    alert('Downgrade Plan clicked!');
+  };
+  const handleCancelSubscription = () => {
+    alert('Cancel Subscription clicked!');
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+      <div className="flex justify-center items-center h-96">
+        <span className="text-lg text-gray-500">Loading subscription details...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col justify-center items-center h-96">
+        <span className="text-lg text-red-500 mb-2">{error}</span>
+        <Button onClick={() => router.back()}>Go Back</Button>
       </div>
     );
   }
 
   if (!subscription) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900">Subscription not found</h2>
-          <p className="text-gray-600 mt-2">The subscription you're looking for doesn't exist.</p>
-          <Link href="/dashboard/subscriptions">
-            <Button className="mt-4">Back to Subscriptions</Button>
-          </Link>
-        </div>
+      <div className="flex flex-col justify-center items-center h-96">
+        <span className="text-lg text-gray-500 mb-2">Subscription not found.</span>
+        <Button onClick={() => router.back()}>Go Back</Button>
       </div>
     );
   }
@@ -645,8 +509,8 @@ Hairvana Team`;
     return 'bg-green-500';
   };
 
-  const bookingsPercentage = getUsagePercentage(subscription.usage.bookings, subscription.usage.bookingsLimit);
-  const staffPercentage = getUsagePercentage(subscription.usage.staff, subscription.usage.staffLimit);
+  const bookingsPercentage = subscription.usage ? getUsagePercentage(subscription.usage.bookings, subscription.usage.bookingsLimit) : 0;
+  const staffPercentage = subscription.usage ? getUsagePercentage(subscription.usage.staff, subscription.usage.staffLimit) : 0;
 
   return (
     <div className="space-y-6">
@@ -717,15 +581,15 @@ Hairvana Team`;
             <div className="flex gap-2">
               {subscription.status === 'active' && (
                 <>
-                  <Button variant="outline" className="text-blue-600 hover:text-blue-700">
+                  <Button variant="outline" className="text-blue-600 hover:text-blue-700" onClick={handleUpgradePlan}>
                     <ArrowUpCircle className="h-4 w-4 mr-2" />
                     Upgrade Plan
                   </Button>
-                  <Button variant="outline" className="text-orange-600 hover:text-orange-700">
+                  <Button variant="outline" className="text-orange-600 hover:text-orange-700" onClick={handleDowngradePlan}>
                     <ArrowDownCircle className="h-4 w-4 mr-2" />
                     Downgrade Plan
                   </Button>
-                  <Button variant="outline" className="text-red-600 hover:text-red-700">
+                  <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={handleCancelSubscription}>
                     <XCircle className="h-4 w-4 mr-2" />
                     Cancel Subscription
                   </Button>
@@ -744,13 +608,13 @@ Hairvana Team`;
               <div>
                 <p className="text-sm font-medium text-gray-600">Bookings Usage</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {subscription.usage.bookings}
-                  {subscription.usage.bookingsLimit !== 'unlimited' && `/${subscription.usage.bookingsLimit}`}
+                  {subscription.usage ? subscription.usage.bookings : '-'}
+                  {subscription.usage && subscription.usage.bookingsLimit !== 'unlimited' && `/${subscription.usage.bookingsLimit}`}
                 </p>
               </div>
               <Calendar className="h-8 w-8 text-blue-500" />
             </div>
-            {subscription.usage.bookingsLimit !== 'unlimited' && (
+            {subscription.usage && subscription.usage.bookingsLimit !== 'unlimited' && (
               <div className="w-full h-2 bg-gray-200 rounded-full">
                 <div 
                   className={`h-2 rounded-full ${getUsageColor(bookingsPercentage)}`}
@@ -758,7 +622,7 @@ Hairvana Team`;
                 />
               </div>
             )}
-            {subscription.usage.bookingsLimit === 'unlimited' && (
+            {subscription.usage && subscription.usage.bookingsLimit === 'unlimited' && (
               <p className="text-sm text-green-600 font-medium">Unlimited</p>
             )}
           </CardContent>
@@ -770,13 +634,13 @@ Hairvana Team`;
               <div>
                 <p className="text-sm font-medium text-gray-600">Staff Members</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {subscription.usage.staff}
-                  {subscription.usage.staffLimit !== 'unlimited' && `/${subscription.usage.staffLimit}`}
+                  {subscription.usage ? subscription.usage.staff : '-'}
+                  {subscription.usage && subscription.usage.staffLimit !== 'unlimited' && `/${subscription.usage.staffLimit}`}
                 </p>
               </div>
               <Users className="h-8 w-8 text-green-500" />
             </div>
-            {subscription.usage.staffLimit !== 'unlimited' && (
+            {subscription.usage && subscription.usage.staffLimit !== 'unlimited' && (
               <div className="w-full h-2 bg-gray-200 rounded-full">
                 <div 
                   className={`h-2 rounded-full ${getUsageColor(staffPercentage)}`}
@@ -784,7 +648,7 @@ Hairvana Team`;
                 />
               </div>
             )}
-            {subscription.usage.staffLimit === 'unlimited' && (
+            {subscription.usage && subscription.usage.staffLimit === 'unlimited' && (
               <p className="text-sm text-green-600 font-medium">Unlimited</p>
             )}
           </CardContent>
@@ -796,17 +660,19 @@ Hairvana Team`;
               <div>
                 <p className="text-sm font-medium text-gray-600">Locations</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {subscription.usage.locations}
-                  {subscription.usage.locationsLimit !== 'unlimited' && `/${subscription.usage.locationsLimit}`}
+                  {subscription.usage ? subscription.usage.locations : '-'}
+                  {subscription.usage && subscription.usage.locationsLimit !== 'unlimited' && `/${subscription.usage.locationsLimit}`}
                 </p>
               </div>
               <Building2 className="h-8 w-8 text-purple-500" />
             </div>
-            {subscription.usage.locationsLimit === 'unlimited' ? (
+            {subscription.usage && subscription.usage.locationsLimit === 'unlimited' ? (
               <p className="text-sm text-green-600 font-medium">Unlimited</p>
             ) : (
               <p className="text-sm text-gray-600">
-                {subscription.usage.locationsLimit - subscription.usage.locations} remaining
+                {subscription.usage && subscription.usage.locationsLimit && subscription.usage.locations !== undefined
+                  ? subscription.usage.locationsLimit - subscription.usage.locations
+                  : '-'} remaining
               </p>
             )}
           </CardContent>

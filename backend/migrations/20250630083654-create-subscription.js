@@ -61,7 +61,7 @@ module.exports = {
     await queryInterface.createTable('subscriptions', {
       id: {
         type: Sequelize.UUID,
-        defaultValue: Sequelize.literal('gen_random_uuid()'),
+        defaultValue: Sequelize.literal('uuid_generate_v4()'),
         primaryKey: true
       },
       salon_id: {
@@ -137,7 +137,7 @@ module.exports = {
     await queryInterface.createTable('billing_history', {
       id: {
         type: Sequelize.UUID,
-        defaultValue: Sequelize.literal('gen_random_uuid()'),
+        defaultValue: Sequelize.literal('uuid_generate_v4()'),
         primaryKey: true
       },
       subscription_id: {

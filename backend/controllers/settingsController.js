@@ -1,86 +1,45 @@
+// At the top of the file, import models
+const { User, UserSettings, BillingSettings } = require('../models');
+// TODO: Import or define Sequelize models for the following tables if/when they exist:
+// SecuritySettings, NotificationPreferences, BackupSettings, PlatformSettings, IntegrationSettings
+
 // Get user settings
 exports.getUserSettings = async (req, res, next) => {
   try {
     const userId = req.user.userId;
-    
-    // Get user core data from users table
-    const { data: userData, error: userError } = await req.supabase
-      .from('users')
-      .select('id, name, email, phone, avatar, role, status, join_date, last_login')
-      .eq('id', userId)
-      .single();
-    
-    if (userError) {
-      return res.status(500).json({ error: userError.message });
+    const user = await User.findByPk(userId, {
+      include: [{ model: UserSettings, as: 'userSettings' }]
+    });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
-    
-    // Get user profile settings (only settings-specific data)
-    const { data: userProfile, error: profileError } = await req.supabase
-      .from('user_settings')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-    
-    if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      return res.status(500).json({ error: profileError.message });
+    const settings = user.userSettings || {};
+    // Fetch billing settings
+    let billing = await BillingSettings.findOne({ where: { user_id: userId } });
+    let billingData = {};
+    if (billing) {
+      billingData = billing.get({ plain: true });
     }
-    
-    // Get security settings
-    const { data: securitySettings, error: securityError } = await req.supabase
-      .from('security_settings')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-    
-    if (securityError && securityError.code !== 'PGRST116') {
-      return res.status(500).json({ error: securityError.message });
-    }
-    
-    // Get notification preferences
-    const { data: notificationPrefs, error: notifError } = await req.supabase
-      .from('notification_preferences')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-    
-    if (notifError && notifError.code !== 'PGRST116') {
-      return res.status(500).json({ error: notifError.message });
-    }
-    
-    // Get billing settings
-    const { data: billingSettings, error: billingError } = await req.supabase
-      .from('billing_settings')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-    
-    if (billingError && billingError.code !== 'PGRST116') {
-      return res.status(500).json({ error: billingError.message });
-    }
-    
-    // Get backup settings
-    const { data: backupSettings, error: backupError } = await req.supabase
-      .from('backup_settings')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-    
-    if (backupError && backupError.code !== 'PGRST116') {
-      return res.status(500).json({ error: backupError.message });
-    }
-    
-    // Combine user data with settings
-    const combinedProfile = {
-      ...userData,
-      ...(userProfile || {})
-    };
-    
     res.json({
-      profile: combinedProfile,
-      security: securitySettings || {},
-      notifications: notificationPrefs || {},
-      billing: billingSettings || {},
-      backup: backupSettings || {}
+      profile: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+        role: user.role,
+        status: user.status,
+        join_date: user.join_date,
+        last_login: user.last_login,
+        department: settings.department || 'Administration',
+        timezone: settings.timezone || 'America/New_York',
+        language: settings.language || 'en',
+        bio: settings.bio || ''
+      },
+      security: {},
+      notifications: {},
+      billing: billingData,
+      backup: {}
     });
   } catch (error) {
     next(error);
@@ -92,17 +51,11 @@ exports.updateProfileSettings = async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const profileData = req.body;
-    
     // Separate core user data from settings data
     const userData = {};
     const settingsData = {};
-    
-    // Core user fields that should be updated in users table
     const userFields = ['name', 'email', 'phone', 'avatar'];
-    // Settings fields that should be updated in user_settings table
     const settingsFields = ['department', 'timezone', 'language', 'bio'];
-    
-    // Categorize the data
     Object.keys(profileData).forEach(key => {
       if (userFields.includes(key)) {
         userData[key] = profileData[key];
@@ -110,62 +63,28 @@ exports.updateProfileSettings = async (req, res, next) => {
         settingsData[key] = profileData[key];
       }
     });
-    
     let userResult = null;
     let settingsResult = null;
-    
-    // Update core user data if any user fields are provided
     if (Object.keys(userData).length > 0) {
-      const { data, error } = await req.supabase
-        .from('users')
-        .update(userData)
-        .eq('id', userId)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      userResult = data;
+      userResult = await User.update(userData, {
+        where: { id: userId },
+        returning: true,
+        plain: true
+      });
     }
-    
-    // Update settings data if any settings fields are provided
     if (Object.keys(settingsData).length > 0) {
-      // Check if settings exist
-      const { data: existingSettings } = await req.supabase
-        .from('user_settings')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
-      
-      if (existingSettings) {
-        // Update existing settings
-        const { data, error } = await req.supabase
-          .from('user_settings')
-          .update(settingsData)
-          .eq('user_id', userId)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        settingsResult = data;
+      let userSettings = await UserSettings.findOne({ where: { user_id: userId } });
+      if (userSettings) {
+        await userSettings.update(settingsData);
+        settingsResult = userSettings;
       } else {
-        // Create new settings
-        const { data, error } = await req.supabase
-          .from('user_settings')
-          .insert({ ...settingsData, user_id: userId })
-          .select()
-          .single();
-        
-        if (error) throw error;
-        settingsResult = data;
+        settingsResult = await UserSettings.create({ ...settingsData, user_id: userId });
       }
     }
-    
-    // Combine results
     const result = {
-      ...userResult,
-      ...settingsResult
+      ...(userResult && userResult[1] ? userResult[1].get({ plain: true }) : {}),
+      ...(settingsResult ? settingsResult.get({ plain: true }) : {})
     };
-    
     res.json({
       message: 'Profile settings updated successfully',
       settings: result
@@ -177,330 +96,94 @@ exports.updateProfileSettings = async (req, res, next) => {
 
 // Update security settings
 exports.updateSecuritySettings = async (req, res, next) => {
-  try {
-    const userId = req.user.userId;
-    const securityData = req.body;
-    
-    // Check if settings exist
-    const { data: existingSettings } = await req.supabase
-      .from('security_settings')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-    
-    let result;
-    if (existingSettings) {
-      // Update existing settings
-      const { data, error } = await req.supabase
-        .from('security_settings')
-        .update(securityData)
-        .eq('user_id', userId)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      result = data;
-    } else {
-      // Create new settings
-      const { data, error } = await req.supabase
-        .from('security_settings')
-        .insert({ ...securityData, user_id: userId })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      result = data;
-    }
-    
-    res.json({
-      message: 'Security settings updated successfully',
-      settings: result
-    });
-  } catch (error) {
-    next(error);
-  }
+  // TODO: Implement with Sequelize model for security_settings
+  return res.status(501).json({ error: 'Not implemented: updateSecuritySettings (Sequelize model missing)' });
 };
 
 // Update notification preferences
 exports.updateNotificationPreferences = async (req, res, next) => {
-  try {
-    const userId = req.user.userId;
-    const notificationData = req.body;
-    
-    // Check if preferences exist
-    const { data: existingPrefs } = await req.supabase
-      .from('notification_preferences')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-    
-    let result;
-    if (existingPrefs) {
-      // Update existing preferences
-      const { data, error } = await req.supabase
-        .from('notification_preferences')
-        .update(notificationData)
-        .eq('user_id', userId)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      result = data;
-    } else {
-      // Create new preferences
-      const { data, error } = await req.supabase
-        .from('notification_preferences')
-        .insert({ ...notificationData, user_id: userId })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      result = data;
-    }
-    
-    res.json({
-      message: 'Notification preferences updated successfully',
-      settings: result
-    });
-  } catch (error) {
-    next(error);
-  }
+  // TODO: Implement with Sequelize model for notification_preferences
+  return res.status(501).json({ error: 'Not implemented: updateNotificationPreferences (Sequelize model missing)' });
 };
 
 // Update billing settings
 exports.updateBillingSettings = async (req, res, next) => {
   try {
     const userId = req.user.userId;
-    const billingData = req.body;
-    
-    // Check if settings exist
-    const { data: existingSettings } = await req.supabase
-      .from('billing_settings')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-    
-    let result;
-    if (existingSettings) {
-      // Update existing settings
-      const { data, error } = await req.supabase
-        .from('billing_settings')
-        .update(billingData)
-        .eq('user_id', userId)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      result = data;
-    } else {
-      // Create new settings
-      const { data, error } = await req.supabase
-        .from('billing_settings')
-        .insert({ ...billingData, user_id: userId })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      result = data;
+    const data = req.body;
+    // Required fields
+    if (!data.invoice_email || !/^\S+@\S+\.\S+$/.test(data.invoice_email)) {
+      return res.status(400).json({ error: 'invoice_email is required and must be a valid email' });
     }
-    
-    res.json({
-      message: 'Billing settings updated successfully',
-      settings: result
-    });
+    if (!data.default_payment_method || typeof data.default_payment_method !== 'string') {
+      return res.status(400).json({ error: 'default_payment_method is required and must be a string' });
+    }
+    if (!data.billing_address || typeof data.billing_address !== 'string') {
+      return res.status(400).json({ error: 'billing_address is required and must be a string' });
+    }
+    // Optional fields validation
+    if (data.auto_pay !== undefined && typeof data.auto_pay !== 'boolean') {
+      return res.status(400).json({ error: 'auto_pay must be a boolean' });
+    }
+    if (data.tax_id && typeof data.tax_id !== 'string') {
+      return res.status(400).json({ error: 'tax_id must be a string' });
+    }
+    // Force payment_methods to be a real array/object before saving
+    if (typeof data.payment_methods === 'string') {
+      try {
+        data.payment_methods = JSON.parse(data.payment_methods);
+      } catch {
+        if (data.payment_methods === '[]') {
+          data.payment_methods = [];
+        } else {
+          return res.status(400).json({ error: 'payment_methods must be valid JSON' });
+        }
+      }
+    }
+    if (!Array.isArray(data.payment_methods) && typeof data.payment_methods !== 'object') {
+      data.payment_methods = [];
+    }
+    // Debug log for payment_methods
+    console.log('payment_methods type:', typeof data.payment_methods, data.payment_methods);
+    let billing = await BillingSettings.findOne({ where: { user_id: userId } });
+    if (billing) {
+      await billing.update(data);
+    } else {
+      billing = await BillingSettings.create({ ...data, user_id: userId });
+    }
+    res.json({ message: 'Billing settings updated', billing: billing.get({ plain: true }) });
   } catch (error) {
-    next(error);
+    console.error('Billing settings error:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message, stack: error.stack });
   }
 };
 
 // Update backup settings
 exports.updateBackupSettings = async (req, res, next) => {
-  try {
-    const userId = req.user.userId;
-    const backupData = req.body;
-    
-    // Check if settings exist
-    const { data: existingSettings } = await req.supabase
-      .from('backup_settings')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-    
-    let result;
-    if (existingSettings) {
-      // Update existing settings
-      const { data, error } = await req.supabase
-        .from('backup_settings')
-        .update(backupData)
-        .eq('user_id', userId)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      result = data;
-    } else {
-      // Create new settings
-      const { data, error } = await req.supabase
-        .from('backup_settings')
-        .insert({ ...backupData, user_id: userId })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      result = data;
-    }
-    
-    res.json({
-      message: 'Backup settings updated successfully',
-      settings: result
-    });
-  } catch (error) {
-    next(error);
-  }
+  // TODO: Implement with Sequelize model for backup_settings
+  return res.status(501).json({ error: 'Not implemented: updateBackupSettings (Sequelize model missing)' });
 };
 
 // Get platform settings (admin only)
 exports.getPlatformSettings = async (req, res, next) => {
-  try {
-    // Check if user is admin
-    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
-      return res.status(403).json({ error: 'Not authorized to access platform settings' });
-    }
-    
-    // Get platform settings
-    const { data, error } = await req.supabase
-      .from('platform_settings')
-      .select('*')
-      .single();
-    
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-    
-    res.json(data || {});
-  } catch (error) {
-    next(error);
-  }
+  // TODO: Implement with Sequelize model for platform_settings
+  return res.status(501).json({ error: 'Not implemented: getPlatformSettings (Sequelize model missing)' });
 };
 
 // Update platform settings (admin only)
 exports.updatePlatformSettings = async (req, res, next) => {
-  try {
-    // Check if user is admin
-    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
-      return res.status(403).json({ error: 'Not authorized to update platform settings' });
-    }
-    
-    const platformData = req.body;
-    
-    // Check if settings exist
-    const { data: existingSettings } = await req.supabase
-      .from('platform_settings')
-      .select('id')
-      .single();
-    
-    let result;
-    if (existingSettings) {
-      // Update existing settings
-      const { data, error } = await req.supabase
-        .from('platform_settings')
-        .update(platformData)
-        .eq('id', existingSettings.id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      result = data;
-    } else {
-      // Create new settings
-      const { data, error } = await req.supabase
-        .from('platform_settings')
-        .insert(platformData)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      result = data;
-    }
-    
-    res.json({
-      message: 'Platform settings updated successfully',
-      settings: result
-    });
-  } catch (error) {
-    next(error);
-  }
+  // TODO: Implement with Sequelize model for platform_settings
+  return res.status(501).json({ error: 'Not implemented: updatePlatformSettings (Sequelize model missing)' });
 };
 
 // Get integration settings (admin only)
 exports.getIntegrationSettings = async (req, res, next) => {
-  try {
-    // Check if user is admin
-    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
-      return res.status(403).json({ error: 'Not authorized to access integration settings' });
-    }
-    
-    // Get integration settings
-    const { data, error } = await req.supabase
-      .from('integration_settings')
-      .select('*')
-      .single();
-    
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-    
-    res.json(data || {});
-  } catch (error) {
-    next(error);
-  }
+  // TODO: Implement with Sequelize model for integration_settings
+  return res.status(501).json({ error: 'Not implemented: getIntegrationSettings (Sequelize model missing)' });
 };
 
 // Update integration settings (admin only)
 exports.updateIntegrationSettings = async (req, res, next) => {
-  try {
-    // Check if user is admin
-    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
-      return res.status(403).json({ error: 'Not authorized to update integration settings' });
-    }
-    
-    const integrationData = req.body;
-    
-    // Check if settings exist
-    const { data: existingSettings } = await req.supabase
-      .from('integration_settings')
-      .select('id')
-      .single();
-    
-    let result;
-    if (existingSettings) {
-      // Update existing settings
-      const { data, error } = await req.supabase
-        .from('integration_settings')
-        .update(integrationData)
-        .eq('id', existingSettings.id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      result = data;
-    } else {
-      // Create new settings
-      const { data, error } = await req.supabase
-        .from('integration_settings')
-        .insert(integrationData)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      result = data;
-    }
-    
-    res.json({
-      message: 'Integration settings updated successfully',
-      settings: result
-    });
-  } catch (error) {
-    next(error);
-  }
+  // TODO: Implement with Sequelize model for integration_settings
+  return res.status(501).json({ error: 'Not implemented: updateIntegrationSettings (Sequelize model missing)' });
 };

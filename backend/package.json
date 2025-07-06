@@ -10,6 +10,7 @@
     "sync:fresh": "node syncDatabase.js",
     "sync:alter": "node -e \"const { sequelize } = require('./models'); sequelize.sync({ alter: true }).then(() => { console.log('Database synced with alterations!'); process.exit(0); }).catch(err => { console.error('Error:', err); process.exit(1); });\"",
     "sync:force": "node -e \"const { sequelize } = require('./models'); sequelize.sync({ force: true }).then(() => { console.log('Database synced with force (all tables dropped and recreated)!'); process.exit(0); }).catch(err => { console.error('Error:', err); process.exit(1); });\"",
+    "sync:ordered": "node -e \"const { syncOrdered } = require('./models'); syncOrdered({ force: true }).then(() => { console.log('Database synced with ordered force!'); process.exit(0); }).catch(err => { console.error('Error:', err); process.exit(1); });\"",
     "migrate": "npx sequelize-cli db:migrate",
     "migrate:undo": "npx sequelize-cli db:migrate:undo",
     "migrate:undo:all": "npx sequelize-cli db:migrate:undo:all",

@@ -1,4 +1,4 @@
-const { Appointment, Salon, Service, Staff, User } = require('../models');
+const { Appointment, Salon, Service, Staff, User, Payment } = require('../models');
 const { Op } = require('sequelize');
 
 // Get all appointments
@@ -16,9 +16,10 @@ exports.getAllAppointments = async (req, res, next) => {
       order: [['date', 'DESC']],
       include: [
         { model: Salon, as: 'salon', attributes: ['id', 'name', 'location', 'address', 'phone', 'email', 'images'] },
-        { model: Service, as: 'service', attributes: ['id', 'name', 'price', 'duration', 'description'] },
+        { model: Service, as: 'services', attributes: ['id', 'name', 'price', 'duration', 'description'] },
         { model: Staff, as: 'staff', attributes: ['id', 'name', 'avatar', 'bio'] },
-        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'avatar'] }
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'avatar'] },
+        { model: Payment, as: 'payment', attributes: ['id', 'amount', 'method', 'status', 'transaction_id'] }
       ]
     });
     res.json(appointments);
@@ -35,9 +36,10 @@ exports.getAppointmentById = async (req, res, next) => {
       where: { id },
       include: [
         { model: Salon, as: 'salon', attributes: ['id', 'name', 'location', 'address', 'phone', 'email', 'images'] },
-        { model: Service, as: 'service', attributes: ['id', 'name', 'price', 'duration', 'description'] },
+        { model: Service, as: 'services', attributes: ['id', 'name', 'price', 'duration', 'description'] },
         { model: Staff, as: 'staff', attributes: ['id', 'name', 'avatar', 'bio'] },
-        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'avatar'] }
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'avatar'] },
+        { model: Payment, as: 'payment', attributes: ['id', 'amount', 'method', 'status', 'transaction_id'] }
       ]
     });
     if (!appointment) {

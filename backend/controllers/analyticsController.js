@@ -1,114 +1,124 @@
+const { ReportTemplate } = require('../models');
+const { User, Salon, Appointment, BillingHistory, Service } = require('../models');
+
 // Get analytics data
 exports.getAnalytics = async (req, res, next) => {
   try {
     const { period = '30d' } = req.query;
-    
-    // In a real app, you'd query aggregated data from your database
-    // For this demo, we'll return mock data that matches the expected format
-    
-    // You could implement actual queries like:
-    /*
-    const startDate = getStartDateForPeriod(period);
-    
-    // Get revenue data
-    const { data: revenueData, error: revenueError } = await req.supabase
-      .from('billing_history')
-      .select('date, amount')
-      .gte('date', startDate)
-      .order('date', { ascending: true });
-    
-    // Get booking data
-    const { data: bookingsData, error: bookingsError } = await req.supabase
-      .from('appointments')
-      .select('date, status')
-      .gte('date', startDate)
-      .order('date', { ascending: true });
-    
-    // Get user growth data
-    const { data: usersData, error: usersError } = await req.supabase
-      .from('users')
-      .select('join_date')
-      .gte('join_date', startDate)
-      .order('join_date', { ascending: true });
-    
-    // Then process this data to create the analytics object
-    */
-    
-    // For now, return mock data
+    // Calculate start date for the period
+    const startDate = new Date();
+    if (period === '7d') startDate.setDate(startDate.getDate() - 7);
+    else if (period === '30d') startDate.setDate(startDate.getDate() - 30);
+    else if (period === '90d') startDate.setDate(startDate.getDate() - 90);
+    else if (period === '1y') startDate.setFullYear(startDate.getFullYear() - 1);
+
+    // Overview
+    const [totalSalons, activeSalons, totalUsers, activeUsers, totalBookings, completedBookings, totalRevenue] = await Promise.all([
+      Salon.count(),
+      Salon.count({ where: { status: 'active' } }),
+      User.count(),
+      User.count({ where: { status: 'active' } }),
+      Appointment.count(),
+      Appointment.count({ where: { status: 'completed' } }),
+      BillingHistory.sum('amount')
+    ]);
+
+    // Revenue (current period and previous period)
+    const revenueCurrent = await BillingHistory.sum('amount', { where: { date: { [require('sequelize').Op.gte]: startDate } } });
+    const prevStartDate = new Date(startDate);
+    if (period === '7d') prevStartDate.setDate(prevStartDate.getDate() - 7);
+    else if (period === '30d') prevStartDate.setDate(prevStartDate.getDate() - 30);
+    else if (period === '90d') prevStartDate.setDate(prevStartDate.getDate() - 90);
+    else if (period === '1y') prevStartDate.setFullYear(prevStartDate.getFullYear() - 1);
+    const revenuePrevious = await BillingHistory.sum('amount', { where: { date: { [require('sequelize').Op.gte]: prevStartDate, [require('sequelize').Op.lt]: startDate } } });
+    const revenueGrowth = revenuePrevious && revenuePrevious > 0 ? ((revenueCurrent - revenuePrevious) / revenuePrevious) * 100 : 0;
+
+    // Bookings
+    const bookingsTotal = await Appointment.count({ where: { date: { [require('sequelize').Op.gte]: startDate } } });
+    const bookingsCompleted = await Appointment.count({ where: { status: 'completed', date: { [require('sequelize').Op.gte]: startDate } } });
+    const bookingsCancelled = await Appointment.count({ where: { status: 'cancelled', date: { [require('sequelize').Op.gte]: startDate } } });
+    const bookingsNoShow = await Appointment.count({ where: { status: 'no_show', date: { [require('sequelize').Op.gte]: startDate } } });
+
+    // User Growth
+    const newUsers = await User.count({ where: { join_date: { [require('sequelize').Op.gte]: startDate } } });
+    // For returning users, you may need a more complex query; for now, set to 0
+    const returningUsers = 0;
+
+    // Top Services (by bookings)
+    // This requires joining appointments and services; for now, just count by service_id
+    const topServicesRaw = await Appointment.findAll({
+      attributes: ['service_id', [require('sequelize').fn('COUNT', require('sequelize').col('service_id')), 'bookings']],
+      where: { date: { [require('sequelize').Op.gte]: startDate } },
+      group: ['service_id'],
+      order: [[require('sequelize').fn('COUNT', require('sequelize').col('service_id')), 'DESC']],
+      limit: 5
+    });
+    const topServices = await Promise.all(topServicesRaw.map(async (row) => {
+      const service = await Service.findByPk(row.service_id);
+      return {
+        name: service ? service.name : 'Unknown',
+        bookings: row.get('bookings'),
+        revenue: 0, // You can sum price from appointments if needed
+        growth: 0 // Not implemented
+      };
+    }));
+
+    // Geographic Data (by salon location)
+    const salons = await Salon.findAll();
+    const geoMap = {};
+    salons.forEach(salon => {
+      const loc = salon.location || 'Unknown';
+      if (!geoMap[loc]) geoMap[loc] = { location: loc, salons: 0, users: 0, revenue: 0 };
+      geoMap[loc].salons += 1;
+      geoMap[loc].revenue += Number(salon.revenue || 0);
+    });
+    // Count users by location (if you have user location info, otherwise skip)
+    const geographicData = Object.values(geoMap);
+
+    // Performance Metrics (example calculations)
+    const averageBookingValue = bookingsTotal > 0 ? (revenueCurrent / bookingsTotal) : 0;
+    const customerRetentionRate = 0; // Not implemented
+    const salonUtilizationRate = 0; // Not implemented
+    const averageRating = salons.length > 0 ? (salons.reduce((sum, s) => sum + Number(s.rating || 0), 0) / salons.length) : 0;
+
     const analytics = {
       overview: {
-        totalSalons: 1247,
-        activeSalons: 1156,
-        totalUsers: 45231,
-        activeUsers: 38942,
-        totalBookings: 8942,
-        completedBookings: 8234,
-        totalRevenue: 127450,
-        monthlyGrowth: 23,
+        totalSalons,
+        activeSalons,
+        totalUsers,
+        activeUsers,
+        totalBookings,
+        completedBookings,
+        totalRevenue,
+        monthlyGrowth: revenueGrowth
       },
       revenue: {
-        current: 127450,
-        previous: 103620,
-        growth: 23,
-        data: [
-          { month: 'Jan', revenue: 65000, subscriptions: 45000, commissions: 20000 },
-          { month: 'Feb', revenue: 72000, subscriptions: 52000, commissions: 20000 },
-          { month: 'Mar', revenue: 68000, subscriptions: 48000, commissions: 20000 },
-          { month: 'Apr', revenue: 85000, subscriptions: 62000, commissions: 23000 },
-          { month: 'May', revenue: 92000, subscriptions: 67000, commissions: 25000 },
-          { month: 'Jun', revenue: 127450, subscriptions: 89450, commissions: 38000 },
-        ],
+        current: revenueCurrent,
+        previous: revenuePrevious,
+        growth: revenueGrowth,
+        data: [] // You can add monthly breakdown if needed
       },
       bookings: {
-        total: 8942,
-        completed: 8234,
-        cancelled: 456,
-        noShow: 252,
-        data: [
-          { date: '2024-06-01', bookings: 145, completed: 132, cancelled: 8 },
-          { date: '2024-06-02', bookings: 167, completed: 154, cancelled: 9 },
-          { date: '2024-06-03', bookings: 134, completed: 125, cancelled: 6 },
-          { date: '2024-06-04', bookings: 189, completed: 175, cancelled: 10 },
-          { date: '2024-06-05', bookings: 156, completed: 143, cancelled: 8 },
-          { date: '2024-06-06', bookings: 178, completed: 164, cancelled: 9 },
-          { date: '2024-06-07', bookings: 142, completed: 131, cancelled: 7 },
-        ],
+        total: bookingsTotal,
+        completed: bookingsCompleted,
+        cancelled: bookingsCancelled,
+        noShow: bookingsNoShow,
+        data: [] // You can add daily breakdown if needed
       },
       userGrowth: {
-        newUsers: 1234,
-        returningUsers: 37708,
-        data: [
-          { month: 'Jan', newUsers: 856, returningUsers: 5234, totalUsers: 6090 },
-          { month: 'Feb', newUsers: 923, returningUsers: 6123, totalUsers: 7046 },
-          { month: 'Mar', newUsers: 1045, returningUsers: 6789, totalUsers: 7834 },
-          { month: 'Apr', newUsers: 1156, returningUsers: 7234, totalUsers: 8390 },
-          { month: 'May', newUsers: 1089, returningUsers: 7456, totalUsers: 8545 },
-          { month: 'Jun', newUsers: 1234, returningUsers: 7890, totalUsers: 9124 },
-        ],
+        newUsers,
+        returningUsers,
+        data: [] // You can add monthly breakdown if needed
       },
-      topServices: [
-        { name: 'Haircut', bookings: 3245, revenue: 48675, growth: 12.5 },
-        { name: 'Hair Color', bookings: 2156, revenue: 64680, growth: 18.3 },
-        { name: 'Styling', bookings: 1834, revenue: 27510, growth: 8.7 },
-        { name: 'Treatment', bookings: 1245, revenue: 37350, growth: 15.2 },
-        { name: 'Beard Trim', bookings: 462, revenue: 4620, growth: -2.1 },
-      ],
-      geographicData: [
-        { location: 'California', salons: 234, users: 12456, revenue: 45230 },
-        { location: 'New York', salons: 189, users: 9876, revenue: 38450 },
-        { location: 'Texas', salons: 156, users: 8234, revenue: 29870 },
-        { location: 'Florida', salons: 134, users: 7123, revenue: 25690 },
-        { location: 'Illinois', salons: 98, users: 5432, revenue: 19340 },
-        { location: 'Other States', salons: 436, users: 11110, revenue: 38920 },
-      ],
+      topServices,
+      geographicData,
       performanceMetrics: {
-        averageBookingValue: 67.50,
-        customerRetentionRate: 78.5,
-        salonUtilizationRate: 82.3,
-        averageRating: 4.7,
-      },
+        averageBookingValue,
+        customerRetentionRate,
+        salonUtilizationRate,
+        averageRating
+      }
     };
-    
     res.json(analytics);
   } catch (error) {
     next(error);
@@ -119,151 +129,157 @@ exports.getAnalytics = async (req, res, next) => {
 exports.generateReport = async (req, res, next) => {
   try {
     const { templateId, parameters } = req.body;
-    
-    // In a real app, you'd generate a report based on the template and parameters
-    // For this demo, we'll return mock data
-    
-    // Simulate report generation delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Generate mock report data based on template
-    const reportData = generateReportData(templateId, parameters);
-    
-    res.json({
-      success: true,
-      reportId: `report_${Date.now()}`,
-      data: reportData,
-      generatedAt: new Date().toISOString(),
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+    const template = await ReportTemplate.findByPk(templateId);
+    if (!template) {
+      // Template not found, return error
+      return res.status(404).json({ success: false, error: 'Report template not found' });
+    }
 
-// Helper function to get mock report data
-function generateReportData(templateId, parameters) {
-  const baseData = {
+    // Parse fields (ensure it's an array)
+    let fields = template.fields;
+    if (typeof fields === 'string') {
+      try { fields = JSON.parse(fields); } catch { fields = []; }
+    }
+
+    // Prepare data object dynamically
+    const data = {};
+    for (const field of fields) {
+      switch (field) {
+        case 'Total Revenue':
+          data.totalRevenue = await BillingHistory.sum('amount');
+          break;
+        case 'Subscription Revenue':
+          data.subscriptionRevenue = 0;
+          break;
+        case 'Commission Revenue':
+          data.commissionRevenue = 0;
+          break;
+        case 'Growth Rate': {
+          const startDate = parameters && parameters.dateRange ? getStartDateForPeriod(parameters.dateRange) : getStartDateForPeriod('30d');
+          const start = new Date(startDate);
+          const prevStart = new Date(start);
+          prevStart.setDate(prevStart.getDate() - (parameters.dateRange === '7d' ? 7 : parameters.dateRange === '30d' ? 30 : 30));
+          const revenueCurrent = await BillingHistory.sum('amount', { where: { date: { [require('sequelize').Op.gte]: start } } });
+          const revenuePrevious = await BillingHistory.sum('amount', { where: { date: { [require('sequelize').Op.gte]: prevStart, [require('sequelize').Op.lt]: start } } });
+          data.growthRate = revenuePrevious && revenuePrevious > 0 ? ((revenueCurrent - revenuePrevious) / revenuePrevious) * 100 : 0;
+          break;
+        }
+        case 'Geographic Breakdown': {
+          const salons = await Salon.findAll();
+          const geoMap = {};
+          for (const salon of salons) {
+            const loc = salon.location || 'Unknown';
+            if (!geoMap[loc]) geoMap[loc] = { location: loc, salons: 0, revenue: 0 };
+            geoMap[loc].salons += 1;
+            geoMap[loc].revenue += 0;
+          }
+          data.geographicBreakdown = Object.values(geoMap);
+          break;
+        }
+        case 'Active Salons':
+          data.activeSalons = await Salon.count({ where: { status: 'active' } });
+          break;
+        case 'Booking Volume':
+          data.bookingVolume = await Appointment.count();
+          break;
+        case 'Average Rating': {
+          const salons = await Salon.findAll();
+          data.averageRating = salons.length > 0 ? (salons.reduce((sum, s) => sum + Number(s.rating || 0), 0) / salons.length).toFixed(2) : 'N/A';
+          break;
+        }
+        case 'Utilization Rate':
+          data.utilizationRate = 'N/A'; // Not implemented
+          break;
+        case 'Top Performers': {
+          const topSalonsRaw = await Appointment.findAll({
+            attributes: ['salon_id', [require('sequelize').fn('COUNT', require('sequelize').col('salon_id')), 'bookings']],
+            group: ['salon_id'],
+            order: [[require('sequelize').fn('COUNT', require('sequelize').col('salon_id')), 'DESC']],
+            limit: 5
+          });
+          data.topPerformers = await Promise.all(topSalonsRaw.map(async (row) => {
+            const salon = await Salon.findByPk(row.salon_id);
+            return {
+              name: salon ? salon.name : 'Unknown',
+              bookings: row.get('bookings'),
+              rating: salon ? salon.rating : 'N/A',
+            };
+          }));
+          break;
+        }
+        case 'New Users':
+          data.newUsers = await User.count({ where: { createdAt: { [require('sequelize').Op.gte]: getStartDateForPeriod(parameters.dateRange || '30d') } } });
+          break;
+        case 'Active Users':
+          data.activeUsers = await User.count({ where: { status: 'active' } });
+          break;
+        case 'Retention Rate':
+          data.retentionRate = 'N/A'; // Not implemented
+          break;
+        case 'User Journey':
+          data.userJourney = 'N/A'; // Not implemented
+          break;
+        case 'Demographics':
+          data.demographics = 'N/A'; // Not implemented
+          break;
+        case 'System Uptime':
+          data.systemUptime = 'N/A'; // Not implemented
+          break;
+        case 'Response Times':
+          data.responseTimes = 'N/A'; // Not implemented
+          break;
+        case 'Error Rates':
+          data.errorRates = 'N/A'; // Not implemented
+          break;
+        case 'User Sessions':
+          data.userSessions = 'N/A'; // Not implemented
+          break;
+        case 'Platform Health':
+          data.platformHealth = 'N/A'; // Not implemented
+          break;
+        case 'Revenue':
+          data.revenue = await BillingHistory.sum('amount');
+          break;
+        case 'Expenses':
+          data.expenses = 0; // Not implemented
+          break;
+        case 'Profit Margin':
+          data.profitMargin = 'N/A'; // Not implemented
+          break;
+        case 'Cash Flow':
+          data.cashFlow = 'N/A'; // Not implemented
+          break;
+        case 'Financial Ratios':
+          data.financialRatios = 'N/A'; // Not implemented
+          break;
+        default:
+          data[field] = 'N/A';
+      }
+    }
+
+    // Build the report
+    const reportData = {
     metadata: {
       templateId,
       generatedAt: new Date().toISOString(),
       parameters,
       reportPeriod: getDateRangeLabel(parameters.dateRange),
-    }
-  };
-
-  switch (templateId) {
-    case 'revenue-summary':
-      return {
-        ...baseData,
-        title: 'Revenue Summary Report',
+      },
+      title: template.name,
         sections: [
           {
             title: 'Executive Summary',
             type: 'summary',
-            data: {
-              totalRevenue: 127450,
-              growth: 23.5,
-              subscriptionRevenue: 89450,
-              commissionRevenue: 38000,
-              topPerformingRegion: 'California',
-              keyInsights: [
-                'Revenue increased by 23.5% compared to previous period',
-                'Subscription revenue accounts for 70% of total revenue',
-                'California region shows strongest performance with $45,230',
-                'Premium plan subscriptions grew by 35%'
-              ]
-            }
-          },
-          {
-            title: 'Revenue Breakdown',
-            type: 'chart',
-            chartType: 'bar',
-            data: [
-              { category: 'Subscriptions', amount: 89450, percentage: 70.2 },
-              { category: 'Commissions', amount: 38000, percentage: 29.8 }
-            ]
-          },
-          {
-            title: 'Monthly Trends',
-            type: 'chart',
-            chartType: 'line',
-            data: [
-              { month: 'Jan', revenue: 65000, subscriptions: 45000, commissions: 20000 },
-              { month: 'Feb', revenue: 72000, subscriptions: 52000, commissions: 20000 },
-              { month: 'Mar', revenue: 68000, subscriptions: 48000, commissions: 20000 },
-              { month: 'Apr', revenue: 85000, subscriptions: 62000, commissions: 23000 },
-              { month: 'May', revenue: 92000, subscriptions: 67000, commissions: 25000 },
-              { month: 'Jun', revenue: 127450, subscriptions: 89450, commissions: 38000 }
-            ]
-          },
-          {
-            title: 'Geographic Performance',
-            type: 'table',
-            headers: ['Region', 'Revenue', 'Growth', 'Salons', 'Market Share'],
-            data: [
-              ['California', '$45,230', '+15.2%', '234', '35.5%'],
-              ['New York', '$38,450', '+12.8%', '189', '30.2%'],
-              ['Texas', '$29,870', '+18.5%', '156', '23.4%'],
-              ['Florida', '$25,690', '+8.3%', '134', '20.2%'],
-              ['Others', '$38,920', '+11.7%', '436', '30.5%']
-            ]
-          }
-        ]
-      };
-    
-    case 'salon-performance':
-      return {
-        ...baseData,
-        title: 'Salon Performance Analysis',
-        sections: [
-          {
-            title: 'Performance Overview',
-            type: 'summary',
-            data: {
-              totalSalons: 1247,
-              activeSalons: 1156,
-              averageRating: 4.7,
-              totalBookings: 8942,
-              keyMetrics: [
-                'Average salon utilization: 82.3%',
-                'Top performing salon: Luxe Hair Studio (4.9★)',
-                'Average bookings per salon: 7.7 per day',
-                'Customer satisfaction rate: 94.2%'
-              ]
-            }
-          },
-          {
-            title: 'Top Performing Salons',
-            type: 'table',
-            headers: ['Salon Name', 'Location', 'Rating', 'Bookings', 'Revenue', 'Growth'],
-            data: [
-              ['Luxe Hair Studio', 'Beverly Hills, CA', '4.9★', '156', '$12,450', '+23%'],
-              ['Urban Cuts', 'Manhattan, NY', '4.8★', '134', '$9,820', '+18%'],
-              ['Style & Grace', 'Miami, FL', '4.7★', '98', '$8,650', '+15%'],
-              ['Hair Empire', 'Austin, TX', '4.9★', '198', '$15,600', '+28%'],
-              ['The Hair Lounge', 'Dallas, TX', '4.6★', '87', '$7,230', '+12%']
-            ]
-          }
-        ]
-      };
-    
-    default:
-      return {
-        ...baseData,
-        title: 'Custom Report',
-        sections: [
-          {
-            title: 'Report Data',
-            type: 'summary',
-            data: {
-              message: 'Custom report data would be generated based on specific parameters',
-              parameters: parameters
-            }
-          }
-        ]
-      };
+          data
+        }
+      ]
+    };
+
+    return res.json({ success: true, reportId: `report_${Date.now()}`, data: reportData, generatedAt: new Date().toISOString() });
+  } catch (error) {
+    next(error);
   }
-}
+};
 
 function getDateRangeLabel(range) {
   switch (range) {

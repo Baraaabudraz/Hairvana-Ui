@@ -5,7 +5,7 @@ module.exports = {
     await queryInterface.createTable('mobile_devices', {
       id: {
       type: Sequelize.UUID,
-      defaultValue: Sequelize.literal('gen_random_uuid()'),
+      defaultValue: Sequelize.literal('uuid_generate_v4()'),
       primaryKey: true
     },
     user_id: {

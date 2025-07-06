@@ -20,6 +20,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Salons', href: '/dashboard/salons', icon: Building2 },
   { name: 'Users', href: '/dashboard/users', icon: Users },
+  { name: 'Plans', href: '/dashboard/plans', icon: CreditCard },
   { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: CreditCard },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
   { name: 'Reports', href: '/dashboard/reports', icon: MessageSquare },

@@ -61,7 +61,8 @@ import {
   Printer,
   Calendar,
   Users,
-  Building2
+  Building2,
+  Crown
 } from 'lucide-react';
 import { 
   fetchUserSettings, 
@@ -76,6 +77,7 @@ import {
   updateIntegrationSettings 
 } from '@/api/settings';
 import { useAuthStore } from '@/stores/auth-store';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 interface SettingsSection {
   id: string;
@@ -273,6 +275,9 @@ export default function SettingsPage() {
   const [uploadedAvatar, setUploadedAvatar] = useState<string>('');
   const { user } = useAuthStore();
   const { toast } = useToast();
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [editingPaymentIndex, setEditingPaymentIndex] = useState<number | null>(null);
+  const [paymentForm, setPaymentForm] = useState({ brand: '', last4: '', expiry: '' });
 
   useEffect(() => {
     loadSettings();
@@ -339,7 +344,14 @@ export default function SettingsPage() {
             setNotificationPreferences(data.notifications);
           }
           if (data.billing) {
-            setBillingSettings(data.billing);
+            setBillingSettings({
+              defaultPaymentMethod: data.billing.default_payment_method || '',
+              billingAddress: data.billing.billing_address || '',
+              taxId: data.billing.tax_id || '',
+              invoiceEmail: data.billing.invoice_email || '',
+              autoPay: typeof data.billing.auto_pay === 'boolean' ? data.billing.auto_pay : false,
+              paymentMethods: Array.isArray(data.billing.payment_methods) ? data.billing.payment_methods : [],
+            });
           }
           if (data.backup) {
             setBackupSettings(data.backup);
@@ -440,7 +452,17 @@ export default function SettingsPage() {
           break;
         case 'Billing':
           if (billingSettings) {
-            await updateBillingSettings(billingSettings);
+            // Map camelCase to snake_case for backend
+            const payload = {
+              invoice_email: billingSettings.invoiceEmail,
+              default_payment_method: billingSettings.defaultPaymentMethod,
+              billing_address: billingSettings.billingAddress,
+              tax_id: billingSettings.taxId,
+              auto_pay: billingSettings.autoPay,
+              payment_methods: Array.isArray(billingSettings.paymentMethods) ? billingSettings.paymentMethods : [],
+            };
+            await updateBillingSettings(payload);
+            await loadSettings(); // Reload settings so form is not emptied
           }
           break;
         case 'Backup':
@@ -544,6 +566,57 @@ export default function SettingsPage() {
   };
 
   const RoleIcon = getRoleIcon();
+
+  const openAddPaymentDialog = () => {
+    setEditingPaymentIndex(null);
+    setPaymentForm({ brand: '', last4: '', expiry: '' });
+    setPaymentDialogOpen(true);
+  };
+
+  const openEditPaymentDialog = (idx: number) => {
+    setEditingPaymentIndex(idx);
+    const method = billingSettings?.paymentMethods?.[idx];
+    setPaymentForm(method ? { ...method } : { brand: '', last4: '', expiry: '' });
+    setPaymentDialogOpen(true);
+  };
+
+  const handleDeletePayment = (idx: number) => {
+    setBillingSettings(prev => prev ? {
+      ...prev,
+      paymentMethods: prev.paymentMethods.filter((_: any, i: number) => i !== idx)
+    } : null);
+  };
+
+  const handlePaymentFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPaymentForm({ ...paymentForm, [e.target.name]: e.target.value });
+  };
+
+  const handleSavePayment = () => {
+    if (!paymentForm.brand || !paymentForm.last4 || !paymentForm.expiry) return;
+    setBillingSettings(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev };
+      if (editingPaymentIndex !== null) {
+        updated.paymentMethods[editingPaymentIndex] = { ...paymentForm };
+      } else {
+        updated.paymentMethods = [...(updated.paymentMethods || []), { ...paymentForm }];
+      }
+      return updated;
+    });
+    setPaymentDialogOpen(false);
+  };
+
+  const handleSetDefaultPayment = (idx: number) => {
+    setBillingSettings(prev => {
+      if (!prev) return prev;
+      const methods = [...(prev.paymentMethods || [])];
+      if (idx > 0) {
+        const [selected] = methods.splice(idx, 1);
+        methods.unshift(selected);
+      }
+      return { ...prev, paymentMethods: methods };
+    });
+  };
 
   const renderProfileSettings = () => (
     <div className="space-y-6">
@@ -990,40 +1063,88 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="p-4 border rounded-lg">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <CreditCard className="h-5 w-5 text-blue-600" />
+          {(billingSettings?.paymentMethods || []).map((method: any, idx: number) => (
+            <div key={idx} className="p-4 border rounded-lg mb-2">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <CreditCard className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{method.brand} ending in {method.last4}</p>
+                    <p className="text-sm text-gray-600">Expires {method.expiry}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium">Visa ending in 4242</p>
-                  <p className="text-sm text-gray-600">Expires 12/2025</p>
-                </div>
+                {idx === 0 && <Badge>Default</Badge>}
               </div>
-              <Badge>Default</Badge>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => openEditPaymentDialog(idx)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+                <Button variant="outline" size="sm" className="text-red-600" onClick={() => handleDeletePayment(idx)}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove
+                </Button>
+                {idx !== 0 && (
+                  <Button variant="outline" size="sm" onClick={() => handleSetDefaultPayment(idx)}>
+                    Set as Default
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-              <Button variant="outline" size="sm" className="text-red-600">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Remove
-              </Button>
-            </div>
-          </div>
-          
-          <Button variant="outline" className="w-full">
+          ))}
+          <Button variant="outline" className="w-full" onClick={openAddPaymentDialog}>
             <Plus className="h-4 w-4 mr-2" />
             Add Payment Method
           </Button>
-          
+          <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingPaymentIndex !== null ? 'Edit Payment Method' : 'Add Payment Method'}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="brand">Card Brand</Label>
+                  <Input id="brand" name="brand" value={paymentForm.brand} onChange={handlePaymentFormChange} placeholder="Visa, MasterCard, etc." />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="last4">Last 4 Digits</Label>
+                  <Input id="last4" name="last4" value={paymentForm.last4} onChange={handlePaymentFormChange} placeholder="1234" maxLength={4} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expiry">Expiry</Label>
+                  <Input id="expiry" name="expiry" value={paymentForm.expiry} onChange={handlePaymentFormChange} placeholder="MM/YYYY" />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleSavePayment} className="bg-purple-600 hover:bg-purple-700">Save</Button>
+                <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>Cancel</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-4">Billing Preferences</h3>
             
             <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="defaultPaymentMethod">Default Payment Method</Label>
+                <Input
+                  id="defaultPaymentMethod"
+                  placeholder="e.g. Visa ending in 4242"
+                  value={billingSettings?.defaultPaymentMethod || ''}
+                  onChange={(e) => setBillingSettings(prev => prev ? { ...prev, defaultPaymentMethod: e.target.value } : null)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="billingAddress">Billing Address</Label>
+                <Input
+                  id="billingAddress"
+                  placeholder="Enter billing address"
+                  value={billingSettings?.billingAddress || ''}
+                  onChange={(e) => setBillingSettings(prev => prev ? { ...prev, billingAddress: e.target.value } : null)}
+                />
+              </div>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Auto-pay Invoices</p>
@@ -1031,12 +1152,11 @@ export default function SettingsPage() {
                 </div>
                 <input
                   type="checkbox"
-                  checked={billingSettings?.autoPay || true}
+                  checked={billingSettings?.autoPay || false}
                   onChange={(e) => setBillingSettings(prev => prev ? { ...prev, autoPay: e.target.checked } : null)}
                   className="rounded"
                 />
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="invoiceEmail">Invoice Email</Label>
                 <Input
@@ -1048,7 +1168,6 @@ export default function SettingsPage() {
                 />
                 <p className="text-xs text-gray-500">Where to send invoice receipts and payment notifications</p>
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="taxId">Tax ID / VAT Number</Label>
                 <Input

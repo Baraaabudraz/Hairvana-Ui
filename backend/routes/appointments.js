@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const appointmentController = require('../controllers/appointmentController');
 const { createAppointmentValidation, updateAppointmentValidation } = require('../validation/appointmentValidation');
-const { validate } = require('../middleware/validationMiddleware');
+const validate = require('../middleware/validate');
 const { protect } = require('../middleware/authMiddleware');
 
 // Protect all routes

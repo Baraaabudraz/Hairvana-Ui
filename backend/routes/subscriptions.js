@@ -6,11 +6,15 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 // Protect all routes
 router.use(protect);
 
+// --- PLAN ROUTES ---
+router.get('/plans', subscriptionController.getPlans);
+router.get('/plans/:id', subscriptionController.getPlanById);
+router.post('/plans', subscriptionController.createPlan);
+router.put('/plans/:id', subscriptionController.updatePlan);
+router.delete('/plans/:id', subscriptionController.deletePlan);
+
 // GET all subscriptions
 router.get('/', subscriptionController.getAllSubscriptions);
-
-// GET subscription plans
-router.get('/plans', subscriptionController.getSubscriptionPlans);
 
 // GET subscription by ID
 router.get('/:id', subscriptionController.getSubscriptionById);

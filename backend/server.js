@@ -58,11 +58,11 @@ app.use('/api/report-templates', reportTemplatesRouter);
 app.use('/api/reports', reportsRouter);
 
 // Mobile API routes
-app.use('/api/mobile/auth', mobileAuthRoutes);
-app.use('/api/mobile/user', mobileUserRoutes);
-app.use('/api/mobile/salons', salonRoutesApi);
-app.use('/api/mobile/hairstyles', hairstyleRoutes);
-app.use('/api/mobile', appointmentRoutesApi);
+app.use('/backend/api/mobile/auth', mobileAuthRoutes);
+app.use('/backend/api/mobile/user', mobileUserRoutes);
+app.use('/backend/api/mobile/salons', salonRoutesApi);
+app.use('/backend/api/mobile/hairstyles', hairstyleRoutes);
+app.use('/backend/api/mobile', appointmentRoutesApi);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

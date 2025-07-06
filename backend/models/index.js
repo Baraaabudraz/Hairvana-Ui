@@ -26,6 +26,16 @@ const Subscription = require('./subscription');
 const Appointment = require('./appointment');
 const Notification = require('./notification');
 const NotificationTemplate = require('./notification_template');
+const UserSettings = require('./user_settings');
+const BillingHistory = require('./billing_history');
+const BillingSettings = require('./billing_settings');
+const ReportTemplate = require('./report_template')(sequelize);
+const Report = require('./report');
+const Hairstyle = require('./hairstyle');
+const Staff = require('./staff');
+const Service = require('./service');
+const Payment = require('./payment');
+const AppointmentService = require('./appointment_service');
 
 // Initialize models
 const models = {
@@ -37,7 +47,17 @@ const models = {
   Subscription: Subscription(sequelize, Sequelize.DataTypes),
   Appointment: Appointment(sequelize, Sequelize.DataTypes),
   Notification: Notification(sequelize, Sequelize.DataTypes),
-  NotificationTemplate: NotificationTemplate(sequelize, Sequelize.DataTypes)
+  NotificationTemplate: NotificationTemplate(sequelize, Sequelize.DataTypes),
+  UserSettings: UserSettings(sequelize, Sequelize.DataTypes),
+  BillingHistory: BillingHistory(sequelize, Sequelize.DataTypes),
+  BillingSettings: BillingSettings(sequelize, Sequelize.DataTypes),
+  ReportTemplate: ReportTemplate,
+  Report: Report(sequelize, Sequelize.DataTypes),
+  Hairstyle: Hairstyle(sequelize, Sequelize.DataTypes),
+  Staff: Staff(sequelize, Sequelize.DataTypes),
+  Service: Service(sequelize, Sequelize.DataTypes),
+  Payment: Payment(sequelize, Sequelize.DataTypes),
+  AppointmentService: AppointmentService(sequelize, Sequelize.DataTypes)
 };
 
 // Initialize associations

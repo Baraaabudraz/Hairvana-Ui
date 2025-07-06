@@ -14,6 +14,18 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'owner_id',
         as: 'owner'
       });
+      Salon.hasMany(models.Report, {
+        foreignKey: 'salon_id',
+        as: 'reports'
+      });
+      Salon.hasMany(models.Staff, {
+        foreignKey: 'salon_id',
+        as: 'staff'
+      });
+      Salon.hasMany(models.Appointment, {
+        foreignKey: 'salon_id',
+        as: 'appointments'
+      });
     }
   }
   Salon.init({
@@ -69,6 +81,10 @@ module.exports = (sequelize, DataTypes) => {
     hours: {
       type: DataTypes.JSONB,
       defaultValue: {}
+    },
+    gallery: {
+      type: DataTypes.ARRAY(DataTypes.STRING),
+      allowNull: true
     }
   }, {
     sequelize,

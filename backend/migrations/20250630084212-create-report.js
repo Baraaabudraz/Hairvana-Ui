@@ -10,16 +10,36 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       user_id: {
-        type: Sequelize.INTEGER
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: 'users',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL'
       },
       salon_id: {
-        type: Sequelize.INTEGER
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: 'salons',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL'
       },
       type: {
-        type: Sequelize.STRING
+        type: Sequelize.ENUM('revenue', 'bookings', 'customers', 'services', 'staff', 'analytics', 'custom'),
+        allowNull: false
       },
       period: {
-        type: Sequelize.STRING
+        type: Sequelize.ENUM('daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom'),
+        allowNull: false
+      },
+      status: {
+        type: Sequelize.ENUM('pending', 'generating', 'completed', 'failed'),
+        defaultValue: 'pending'
       },
       data: {
         type: Sequelize.JSON

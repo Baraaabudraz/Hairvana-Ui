@@ -55,6 +55,14 @@ import {
 } from 'lucide-react';
 import { format, subDays, subMonths, subYears } from 'date-fns';
 import { generateReport } from '@/api/analytics';
+import {
+  fetchReports as fetchReportsApi,
+  createReport as createReportApi,
+  deleteReport as deleteReportApi,
+  fetchReportTemplates as fetchReportTemplatesApi,
+  fetchReportById
+} from '@/api/reports';
+import * as LucideIcons from 'lucide-react';
 
 interface Report {
   id: string;
@@ -84,69 +92,6 @@ interface ReportTemplate {
   fields: string[];
   popular: boolean;
 }
-
-const reportTemplates: ReportTemplate[] = [
-  {
-    id: 'revenue-summary',
-    name: 'Revenue Summary',
-    description: 'Comprehensive revenue analysis with breakdowns by source, time period, and geography',
-    type: 'financial',
-    icon: DollarSign,
-    color: 'from-green-600 to-emerald-600',
-    fields: ['Total Revenue', 'Subscription Revenue', 'Commission Revenue', 'Growth Rate', 'Geographic Breakdown'],
-    popular: true
-  },
-  {
-    id: 'salon-performance',
-    name: 'Salon Performance',
-    description: 'Detailed analysis of salon metrics including bookings, ratings, and utilization',
-    type: 'salon',
-    icon: Building2,
-    color: 'from-blue-600 to-cyan-600',
-    fields: ['Active Salons', 'Booking Volume', 'Average Rating', 'Utilization Rate', 'Top Performers'],
-    popular: true
-  },
-  {
-    id: 'user-analytics',
-    name: 'User Analytics',
-    description: 'User behavior analysis including acquisition, retention, and engagement metrics',
-    type: 'user',
-    icon: Users,
-    color: 'from-purple-600 to-pink-600',
-    fields: ['New Users', 'Active Users', 'Retention Rate', 'User Journey', 'Demographics'],
-    popular: false
-  },
-  {
-    id: 'booking-trends',
-    name: 'Booking Trends',
-    description: 'Booking patterns, seasonal trends, and service popularity analysis',
-    type: 'operational',
-    icon: Calendar,
-    color: 'from-orange-600 to-red-600',
-    fields: ['Booking Volume', 'Completion Rate', 'Popular Services', 'Peak Times', 'Cancellation Analysis'],
-    popular: true
-  },
-  {
-    id: 'financial-overview',
-    name: 'Financial Overview',
-    description: 'Complete financial dashboard with P&L, cash flow, and key financial metrics',
-    type: 'financial',
-    icon: BarChart3,
-    color: 'from-indigo-600 to-purple-600',
-    fields: ['Revenue', 'Expenses', 'Profit Margin', 'Cash Flow', 'Financial Ratios'],
-    popular: false
-  },
-  {
-    id: 'operational-metrics',
-    name: 'Operational Metrics',
-    description: 'Platform operational health including uptime, performance, and system metrics',
-    type: 'operational',
-    icon: Activity,
-    color: 'from-teal-600 to-green-600',
-    fields: ['System Uptime', 'Response Times', 'Error Rates', 'User Sessions', 'Platform Health'],
-    popular: false
-  }
-];
 
 const statusColors = {
   completed: 'bg-green-100 text-green-800',
@@ -191,102 +136,40 @@ export default function ReportsPage() {
   const [generatingReports, setGeneratingReports] = useState<Set<string>>(new Set());
   const [viewingReport, setViewingReport] = useState<any>(null);
   const { toast } = useToast();
+  const [reportTemplates, setReportTemplates] = useState<ReportTemplate[]>([]);
 
   useEffect(() => {
-    fetchReports();
+    fetchAll();
   }, []);
 
-  const fetchReports = async () => {
+  const fetchAll = async () => {
+    setLoading(true);
     try {
-      // For now, we'll use mock data since there's no specific API endpoint for reports list
-      // In a real implementation, this would be replaced with an API call
-      const mockReports: Report[] = [
-        {
-          id: '1',
-          name: 'Monthly Revenue Report',
-          description: 'Comprehensive revenue analysis for June 2024',
-          type: 'financial',
-          status: 'completed',
-          createdAt: '2024-06-15T10:30:00Z',
-          generatedAt: '2024-06-15T10:35:00Z',
-          createdBy: 'John Smith',
-          size: '2.4 MB',
-          downloadUrl: '/reports/monthly-revenue-june-2024.pdf',
-          parameters: {
-            dateRange: '30d',
-            filters: ['all-salons', 'all-regions'],
-            format: 'pdf'
-          }
-        },
-        {
-          id: '2',
-          name: 'Salon Performance Dashboard',
-          description: 'Q2 2024 salon performance metrics and analytics',
-          type: 'salon',
-          status: 'completed',
-          createdAt: '2024-06-14T14:20:00Z',
-          generatedAt: '2024-06-14T14:28:00Z',
-          createdBy: 'Sarah Johnson',
-          size: '5.1 MB',
-          downloadUrl: '/reports/salon-performance-q2-2024.xlsx',
-          parameters: {
-            dateRange: '90d',
-            filters: ['active-salons', 'premium-tier'],
-            format: 'excel'
-          }
-        },
-        {
-          id: '3',
-          name: 'User Acquisition Report',
-          description: 'New user acquisition and onboarding analysis',
-          type: 'user',
-          status: 'generating',
-          createdAt: '2024-06-15T16:45:00Z',
-          createdBy: 'Mike Davis',
-          parameters: {
-            dateRange: '7d',
-            filters: ['new-users', 'all-channels'],
-            format: 'csv'
-          }
-        },
-        {
-          id: '4',
-          name: 'Weekly Operations Summary',
-          description: 'Platform operational metrics and system health',
-          type: 'operational',
-          status: 'scheduled',
-          createdAt: '2024-06-15T09:00:00Z',
-          createdBy: 'System Scheduler',
-          parameters: {
-            dateRange: '7d',
-            filters: ['system-metrics', 'performance-data'],
-            format: 'pdf'
-          }
-        },
-        {
-          id: '5',
-          name: 'Custom Analytics Report',
-          description: 'Custom report for marketing team analysis',
-          type: 'custom',
-          status: 'failed',
-          createdAt: '2024-06-15T12:15:00Z',
-          createdBy: 'Lisa Thompson',
-          parameters: {
-            dateRange: '60d',
-            filters: ['marketing-data', 'conversion-metrics'],
-            format: 'excel'
-          }
-        }
-      ];
-
-      setReports(mockReports);
+      const [templates, reports] = await Promise.all([
+        fetchReportTemplatesApi(),
+        fetchReportsApi(),
+      ]);
+      setReportTemplates(
+        templates.map((tpl: any) => ({
+          ...tpl,
+          icon: LucideIcons[tpl.icon] || LucideIcons.FileText,
+        }))
+      );
+      setReports(reports);
     } catch (error) {
-      console.error('Error fetching reports:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch reports. Please try again.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to fetch data', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReports = async () => {
+    setLoading(true);
+    try {
+      const reports = await fetchReportsApi();
+      setReports(reports);
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to fetch reports. Please try again.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -302,7 +185,6 @@ export default function ReportsPage() {
 
   const handleCreateReport = async () => {
     if (!selectedTemplate) return;
-
     try {
       const reportData = {
         templateId: selectedTemplate.id,
@@ -318,30 +200,8 @@ export default function ReportsPage() {
           schedule: reportForm.schedule,
         }
       };
-
-      // In a real app, you would make an API call here
-      const newReport: Report = {
-        id: Date.now().toString(),
-        name: reportData.name,
-        description: reportData.description,
-        type: reportData.type,
-        status: 'generating',
-        createdAt: new Date().toISOString(),
-        createdBy: 'Current User',
-        parameters: {
-          dateRange: reportData.parameters.dateRange,
-          filters: reportData.parameters.filters,
-          format: reportData.parameters.format
-        }
-      };
-
-      setReports(prev => [newReport, ...prev]);
-
-      toast({
-        title: 'Report created successfully',
-        description: `${reportData.name} is now being generated.`,
-      });
-
+      await createReportApi(reportData);
+      toast({ title: 'Report created successfully' });
       setCreateDialogOpen(false);
       setSelectedTemplate(null);
       setReportForm({
@@ -354,21 +214,9 @@ export default function ReportsPage() {
         filters: [],
         schedule: 'once',
       });
-
-      // Simulate report generation completion
-      setTimeout(() => {
-        setReports(prev => prev.map(report => 
-          report.id === newReport.id 
-            ? { ...report, status: 'completed', generatedAt: new Date().toISOString(), size: '3.2 MB' }
-            : report
-        ));
-      }, 3000);
+      fetchAll();
     } catch (error) {
-      toast({
-        title: 'Error creating report',
-        description: 'Please try again later.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error creating report', description: 'Please try again later.', variant: 'destructive' });
     }
   };
 
@@ -423,18 +271,26 @@ export default function ReportsPage() {
 
   const handleDeleteReport = async (reportId: string) => {
     try {
-      // In a real app, you would make an API call here
-      setReports(prev => prev.filter(report => report.id !== reportId));
-      toast({
-        title: 'Report deleted',
-        description: 'The report has been permanently removed.',
-      });
+      await deleteReportApi(reportId);
+      toast({ title: 'Report deleted' });
+      fetchAll();
     } catch (error) {
-      toast({
-        title: 'Error deleting report',
-        description: 'Please try again later.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error deleting report', description: 'Please try again later.', variant: 'destructive' });
+    }
+  };
+
+  const handleViewReport = async (reportId: string) => {
+    try {
+      const report = await fetchReportById(reportId);
+      if (report && report.parameters && report.sections) {
+        setViewingReport(report);
+      } else if (report && report.data) {
+        setViewingReport(report.data);
+      } else {
+        toast({ title: 'Error', description: 'No report data available', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to load report', variant: 'destructive' });
     }
   };
 
@@ -840,6 +696,7 @@ export default function ReportsPage() {
                           variant="ghost"
                           size="sm"
                           className="hover:bg-blue-50 hover:text-blue-600"
+                          onClick={() => handleViewReport(report.id)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>

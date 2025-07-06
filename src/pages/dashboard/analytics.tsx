@@ -52,6 +52,7 @@ import {
   ArrowDownRight
 } from 'lucide-react';
 import { fetchAnalytics } from '@/api/analytics';
+import * as XLSX from 'xlsx';
 
 interface AnalyticsData {
   overview: {
@@ -166,6 +167,38 @@ export default function AnalyticsPage() {
     return growth > 0 ? 'text-green-600' : 'text-red-600';
   };
 
+  const handleExportExcel = () => {
+    if (!analyticsData) return;
+    // Prepare data for export (overview, revenue, bookings, etc.)
+    const overviewSheet = XLSX.utils.json_to_sheet([
+      {
+        'Total Salons': analyticsData.overview.totalSalons,
+        'Active Salons': analyticsData.overview.activeSalons,
+        'Total Users': analyticsData.overview.totalUsers,
+        'Active Users': analyticsData.overview.activeUsers,
+        'Total Bookings': analyticsData.overview.totalBookings,
+        'Completed Bookings': analyticsData.overview.completedBookings,
+        'Total Revenue': analyticsData.overview.totalRevenue,
+        'Monthly Growth (%)': analyticsData.overview.monthlyGrowth,
+      }
+    ]);
+    const revenueSheet = XLSX.utils.json_to_sheet(analyticsData.revenue.data || []);
+    const bookingsSheet = XLSX.utils.json_to_sheet(analyticsData.bookings.data || []);
+    const userGrowthSheet = XLSX.utils.json_to_sheet(analyticsData.userGrowth.data || []);
+    const topServicesSheet = XLSX.utils.json_to_sheet(analyticsData.topServices || []);
+    const geoSheet = XLSX.utils.json_to_sheet(analyticsData.geographicData || []);
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, overviewSheet, 'Overview');
+    XLSX.utils.book_append_sheet(wb, revenueSheet, 'Revenue');
+    XLSX.utils.book_append_sheet(wb, bookingsSheet, 'Bookings');
+    XLSX.utils.book_append_sheet(wb, userGrowthSheet, 'User Growth');
+    XLSX.utils.book_append_sheet(wb, topServicesSheet, 'Top Services');
+    XLSX.utils.book_append_sheet(wb, geoSheet, 'Geographic');
+    // Export to file
+    XLSX.writeFile(wb, 'analytics_export.xlsx');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -209,7 +242,7 @@ export default function AnalyticsPage() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExportExcel}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>

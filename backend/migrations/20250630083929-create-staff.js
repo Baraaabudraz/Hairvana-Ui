@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('staff', {
+    await queryInterface.createTable('staffs', {
       id: {
         allowNull: false,
         primaryKey: true,
@@ -91,12 +91,12 @@ module.exports = {
     });
     
     // Add indexes for better performance
-    await queryInterface.addIndex('staff', ['salon_id']);
-    await queryInterface.addIndex('staff', ['email']);
-    await queryInterface.addIndex('staff', ['role']);
-    await queryInterface.addIndex('staff', ['status']);
+    await queryInterface.addIndex('staffs', ['salon_id']);
+    await queryInterface.addIndex('staffs', ['email']);
+    await queryInterface.addIndex('staffs', ['role']);
+    await queryInterface.addIndex('staffs', ['status']);
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('staff');
+    await queryInterface.dropTable('staffs');
   }
 }; 

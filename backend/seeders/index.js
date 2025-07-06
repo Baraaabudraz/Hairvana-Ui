@@ -8,9 +8,6 @@ async function seed() {
   try {
     console.log('🌱 Starting database seeding...');
     
-    // Clean all data first in proper order (child tables first)
-    await cleanDatabase();
-    
     // Seed in sequence to avoid race conditions
     await seedUsers();
     await seedSalons();
@@ -26,42 +23,16 @@ async function seed() {
   }
 }
 
-// Clean database in proper order (child tables first)
-async function cleanDatabase() {
-  console.log('🧹 Cleaning database...');
-  
-  try {
-    // Delete in order of dependencies (child tables first)
-    await db.AppointmentService.destroy({ where: {}, force: true });
-    await db.Payment.destroy({ where: {}, force: true });
-    await db.Appointment.destroy({ where: {}, force: true });
-    await db.Service.destroy({ where: {}, force: true });
-    await db.Staff.destroy({ where: {}, force: true });
-    await db.Subscription.destroy({ where: {}, force: true });
-    await db.BillingHistory.destroy({ where: {}, force: true });
-    await db.BillingSettings.destroy({ where: {}, force: true });
-    await db.Report.destroy({ where: {}, force: true });
-    await db.Notification.destroy({ where: {}, force: true });
-    await db.UserSettings.destroy({ where: {}, force: true });
-    await db.Salon.destroy({ where: {}, force: true });
-    await db.SubscriptionPlan.destroy({ where: {}, force: true });
-    await db.NotificationTemplate.destroy({ where: {}, force: true });
-    await db.Customer.destroy({ where: {}, force: true });
-    await db.SalonOwner.destroy({ where: {}, force: true });
-    await db.User.destroy({ where: {}, force: true });
-    
-    console.log('✅ Database cleaned successfully');
-  } catch (error) {
-    console.error('Error cleaning database:', error);
-    throw error;
-  }
-}
-
 // Seed users
 async function seedUsers() {
   console.log('Seeding users...');
   
   try {
+    // Clean slate - delete existing data in proper order
+    await db.Customer.destroy({ where: {} });
+    await db.SalonOwner.destroy({ where: {} });
+    await db.User.destroy({ where: {} });
+    
     // Hash password for all users
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash('admin123', salt);
@@ -278,6 +249,8 @@ async function seedSalons() {
 async function seedSubscriptionPlans() {
   console.log('Seeding subscription plans...');
   try {
+    // Clean slate - delete existing plans
+    await db.SubscriptionPlan.destroy({ where: {} });
     // Plans matching the frontend
     const plans = [
       {
@@ -375,6 +348,9 @@ async function seedSubscriptions() {
   console.log('Seeding subscriptions...');
   
   try {
+    // Clean slate - delete existing subscriptions
+    await db.Subscription.destroy({ where: {} });
+    
     // Get salons and plans
     const salons = await db.Salon.findAll({ attributes: ['id'] });
     const plans = await db.SubscriptionPlan.findAll({ attributes: ['id'] });
@@ -404,6 +380,7 @@ async function seedSubscriptions() {
 async function seedNotificationTemplates() {
   console.log('Seeding notification templates...');
   try {
+    await db.NotificationTemplate.destroy({ where: {} });
     const templates = [
       {
         name: 'Welcome Email',

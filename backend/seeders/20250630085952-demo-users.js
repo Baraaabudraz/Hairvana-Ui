@@ -3,6 +3,20 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Cleanup: delete demo user_settings and users first
+    await queryInterface.bulkDelete('user_settings', {
+      user_id: [
+        '00000000-0000-0000-0000-000000000001',
+        '00000000-0000-0000-0000-000000000002'
+      ]
+    }, {});
+    await queryInterface.bulkDelete('users', {
+      id: [
+        '00000000-0000-0000-0000-000000000001',
+        '00000000-0000-0000-0000-000000000002'
+      ]
+    }, {});
+
     // Create super admin user
     await queryInterface.bulkInsert('users', [{
       id: '00000000-0000-0000-0000-000000000001',
@@ -15,6 +29,17 @@ module.exports = {
       avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
       permissions: ['full_access'],
       password_hash: '$2a$10$XHCm0tGpT0Yw1XcCRHZM8.WW8Zq4kvVnJHtHxHeFpHl.jnJjFIzLa', // hashed 'admin123'
+      created_at: new Date(),
+      updated_at: new Date()
+    }], {});
+    // Create super admin user_settings
+    await queryInterface.bulkInsert('user_settings', [{
+      id: Sequelize.literal('gen_random_uuid()'),
+      user_id: '00000000-0000-0000-0000-000000000001',
+      department: 'Administration',
+      timezone: 'America/New_York',
+      language: 'en',
+      bio: 'Super admin of the platform',
       created_at: new Date(),
       updated_at: new Date()
     }], {});
@@ -31,6 +56,17 @@ module.exports = {
       avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
       permissions: ['manage_salons', 'manage_users', 'view_analytics', 'manage_subscriptions'],
       password_hash: '$2a$10$XHCm0tGpT0Yw1XcCRHZM8.WW8Zq4kvVnJHtHxHeFpHl.jnJjFIzLa', // hashed 'admin123'
+      created_at: new Date(),
+      updated_at: new Date()
+    }], {});
+    // Create admin user_settings
+    await queryInterface.bulkInsert('user_settings', [{
+      id: Sequelize.literal('gen_random_uuid()'),
+      user_id: '00000000-0000-0000-0000-000000000002',
+      department: 'Management',
+      timezone: 'America/Chicago',
+      language: 'en',
+      bio: 'Admin user for Hairvana',
       created_at: new Date(),
       updated_at: new Date()
     }], {});

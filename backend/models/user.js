@@ -26,6 +26,18 @@ module.exports = (sequelize, DataTypes) => {
       //   foreignKey: 'user_id',
       //   as: 'subscriptions'
       // });
+      User.hasOne(models.UserSettings, {
+        foreignKey: 'user_id',
+        as: 'userSettings'
+      });
+      User.hasMany(models.Report, {
+        foreignKey: 'user_id',
+        as: 'reports'
+      });
+      User.hasMany(models.Appointment, {
+        foreignKey: 'user_id',
+        as: 'appointments'
+      });
     }
   }
   User.init({
@@ -69,6 +81,10 @@ module.exports = (sequelize, DataTypes) => {
     last_login: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW
+    },
+    preferences: {
+      type: DataTypes.JSONB,
+      allowNull: true
     }
   }, {
     sequelize,

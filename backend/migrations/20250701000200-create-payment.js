@@ -13,7 +13,7 @@ module.exports = {
         allowNull: false
       },
       appointment_id: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
         allowNull: false
       },
       amount: {
@@ -31,16 +31,16 @@ module.exports = {
       transaction_id: Sequelize.STRING,
 
       payment_date: {
-        type: DataTypes.DATE,
+        type: Sequelize.DATE,
         allowNull: true
       },
       refund_amount: {
-        type: DataTypes.DECIMAL(10, 2),
+        type: Sequelize.DECIMAL(10, 2),
         allowNull: true,
         defaultValue: 0
       },
       refund_reason: {
-        type: DataTypes.TEXT,
+        type: Sequelize.TEXT,
         allowNull: true
       },
       created_at: {

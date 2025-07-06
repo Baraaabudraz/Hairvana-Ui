@@ -34,9 +34,29 @@ import {
   Mail,
   Phone
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction
+} from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
 import { format } from 'date-fns';
-import { fetchSubscriptionById } from '@/api/subscriptions';
+import { fetchSubscriptionById, updateSubscription, cancelSubscription, fetchSubscriptionPlans, updatePaymentMethod } from '@/api/subscriptions';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface PaymentMethod {
   type: string;
@@ -53,8 +73,11 @@ interface BillingHistory {
   status: string;
   description: string;
   invoiceNumber?: string;
+  invoice_number?: string;
   taxAmount?: number;
   subtotal?: number;
+  tax_amount?: number;
+  total?: number,
 }
 
 interface Usage {
@@ -83,6 +106,23 @@ interface Subscription {
   usage: Usage;
   paymentMethod: PaymentMethod | null;
   billingHistory: BillingHistory[];
+  salonPhone?: string;
+  salonEmail?: string;
+}
+
+interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  yearlyPrice: number;
+  description: string;
+  features: string[];
+  limits: {
+    bookings: number | 'unlimited';
+    staff: number | 'unlimited';
+    locations: number | 'unlimited';
+  };
+  popular: boolean;
 }
 
 const statusColors = {
@@ -117,6 +157,32 @@ export default function SubscriptionDetailsPage() {
   const { toast } = useToast();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState<string | null>(null);
+  const [selectedNewPlan, setSelectedNewPlan] = useState<Plan | null>(null);
+  const [editBillingDialogOpen, setEditBillingDialogOpen] = useState(false);
+  const [newPaymentMethod, setNewPaymentMethod] = useState({
+    cardNumber: '',
+    expiryMonth: '',
+    expiryYear: '',
+    cvv: '',
+    cardholderName: '',
+  });
+  const [generateInvoiceDialogOpen, setGenerateInvoiceDialogOpen] = useState(false);
+  const [newInvoice, setNewInvoice] = useState({
+    amount: '',
+    description: '',
+    taxAmount: '',
+    status: 'paid',
+    notes: '',
+    date: '',
+  });
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -141,14 +207,48 @@ export default function SubscriptionDetailsPage() {
     }
   }, [params.id, toast]);
 
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        setPlansLoading(true);
+        setPlansError(null);
+        const data = await fetchSubscriptionPlans();
+        setPlans(data);
+      } catch (error: any) {
+        setPlansError('Failed to load plans');
+        toast({
+          title: 'Error',
+          description: 'Failed to load subscription plans. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setPlansLoading(false);
+      }
+    };
+    loadPlans();
+  }, [toast]);
+
   const generateInvoiceHTML = (invoice: BillingHistory) => {
-    return `
-      <!DOCTYPE html>
+    // Fallbacks for subscription fields to avoid 'undefined' in invoice
+    const salonName = subscription?.salonName || '';
+    const ownerName = subscription?.ownerName || '';
+    const ownerEmail = subscription?.ownerEmail || '';
+    const salonPhone = subscription?.salonPhone || '';
+    const salonEmail = subscription?.salonEmail || '';
+    const plan = subscription?.plan || '';
+    const billingCycle = subscription?.billingCycle || '';
+    const paymentMethodBrand = subscription?.paymentMethod?.brand || '';
+    const paymentMethodLast4 = subscription?.paymentMethod?.last4 || '';
+    const paymentMethodExpiryMonth = subscription?.paymentMethod?.expiryMonth || '';
+    const paymentMethodExpiryYear = subscription?.paymentMethod?.expiryYear || '';
+
+    // Return a string, not JSX
+    return `<!DOCTYPE html>
       <html lang="en">
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Invoice ${invoice.invoiceNumber}</title>
+          <title>Invoice ${invoice.invoiceNumber || invoice.invoice_number || ''}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { 
@@ -305,17 +405,18 @@ export default function SubscriptionDetailsPage() {
             <div class="invoice-details">
               <div class="bill-to">
                 <h3>Bill To</h3>
-                <p><strong>${subscription?.salonName}</strong></p>
-                <p>${subscription?.ownerName}</p>
-                <p>${subscription?.ownerEmail}</p>
-                <p>Salon ID: ${subscription?.salonId}</p>
+                <p><strong>${salonName}</strong></p>
+                <p>${ownerName}</p>
+                ${salonEmail ? `<p>Email: ${salonEmail}</p>` : ''}
+                ${salonPhone ? `<p>Phone: ${salonPhone}</p>` : ''}
+                ${ownerEmail && ownerEmail !== salonEmail ? `<p>Owner Email: ${ownerEmail}</p>` : ''}
               </div>
               <div class="invoice-meta">
                 <h3>Invoice Details</h3>
-                <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
-                <p><strong>Date:</strong> ${format(new Date(invoice.date), 'MMMM dd, yyyy')}</p>
-                <p><strong>Due Date:</strong> ${format(new Date(invoice.date), 'MMMM dd, yyyy')}</p>
-                <p><strong>Billing Period:</strong> ${format(new Date(invoice.date), 'MMM dd')} - ${format(new Date(new Date(invoice.date).getTime() + 30 * 24 * 60 * 60 * 1000), 'MMM dd, yyyy')}</p>
+                <p><strong>Invoice #:</strong> ${invoice.invoiceNumber || invoice.invoice_number || ''}</p>
+                <p><strong>Date:</strong> ${invoice.date ? format(new Date(invoice.date), 'MMMM dd, yyyy') : ''}</p>
+                <p><strong>Due Date:</strong> ${invoice.date ? format(new Date(invoice.date), 'MMMM dd, yyyy') : ''}</p>
+                <p><strong>Billing Period:</strong> ${invoice.date ? format(new Date(invoice.date), 'MMM dd') : ''} - ${invoice.date ? format(new Date(new Date(invoice.date).getTime() + 30 * 24 * 60 * 60 * 1000), 'MMM dd, yyyy') : ''}</p>
               </div>
             </div>
 
@@ -332,12 +433,16 @@ export default function SubscriptionDetailsPage() {
               <tbody>
                 <tr>
                   <td>
-                    <strong>${invoice.description}</strong><br>
+                    <strong>${invoice.description || ''}</strong><br>
                     <small>Subscription service for salon management platform</small>
                   </td>
-                  <td>${subscription?.plan} Plan</td>
-                  <td>${subscription?.billingCycle}</td>
-                  <td>$${invoice.subtotal?.toFixed(2) || (invoice.amount - (invoice.taxAmount || 0)).toFixed(2)}</td>
+                  <td>${plan} Plan</td>
+                  <td>${billingCycle}</td>
+                  <td>$${
+                    invoice.subtotal !== undefined
+                      ? Number(invoice.subtotal).toFixed(2)
+                      : (Number(invoice.amount ?? 0).toFixed(2))
+                  }</td>
                 </tr>
               </tbody>
             </table>
@@ -345,9 +450,9 @@ export default function SubscriptionDetailsPage() {
             <!-- Payment Information -->
             <div class="payment-info">
               <h4>Payment Information</h4>
-              <p><strong>Payment Method:</strong> ${subscription?.paymentMethod?.brand} ending in ${subscription?.paymentMethod?.last4}</p>
-              <p><strong>Transaction ID:</strong> txn_${invoice.id}</p>
-              <p><strong>Payment Date:</strong> ${format(new Date(invoice.date), 'MMMM dd, yyyy')}</p>
+              <p><strong>Payment Method:</strong> ${paymentMethodBrand} ending in ${paymentMethodLast4}</p>
+              <p><strong>Transaction ID:</strong> txn_${invoice.id || ''}</p>
+              <p><strong>Payment Date:</strong> ${invoice.date ? format(new Date(invoice.date), 'MMMM dd, yyyy') : ''}</p>
             </div>
 
             <!-- Totals -->
@@ -355,15 +460,25 @@ export default function SubscriptionDetailsPage() {
               <table class="totals-table">
                 <tr>
                   <td>Subtotal:</td>
-                  <td>$${invoice.subtotal?.toFixed(2) || (invoice.amount - (invoice.taxAmount || 0)).toFixed(2)}</td>
+                  <td>$${
+                    invoice.subtotal !== undefined
+                      ? Number(invoice.subtotal).toFixed(2)
+                      : (Number(invoice.amount ?? 0) - Number(invoice.taxAmount ?? invoice.tax_amount ?? 0)).toFixed(2)
+                  }</td>
                 </tr>
                 <tr>
-                  <td>Tax (8%):</td>
-                  <td>$${invoice.taxAmount?.toFixed(2) || '0.00'}</td>
+                  <td>Tax:</td>
+                  <td>$${
+                    invoice.taxAmount !== undefined
+                      ? Number(invoice.taxAmount).toFixed(2)
+                      : invoice.tax_amount !== undefined
+                        ? Number(invoice.tax_amount).toFixed(2)
+                        : '0.00'
+                  }</td>
                 </tr>
                 <tr>
                   <td><strong>Total Amount:</strong></td>
-                  <td><strong>$${invoice.amount.toFixed(2)}</strong></td>
+                  <td><strong>$${Number(invoice.total ?? 0).toFixed(2)}</strong></td>
                 </tr>
               </table>
             </div>
@@ -390,8 +505,7 @@ export default function SubscriptionDetailsPage() {
             }
           </script>
         </body>
-      </html>
-    `;
+      </html>`;
   };
 
   const handlePrintInvoice = (invoice: BillingHistory) => {
@@ -415,14 +529,14 @@ export default function SubscriptionDetailsPage() {
     // Create a temporary link and trigger download
     const link = document.createElement('a');
     link.href = url;
-    link.download = `invoice-${invoice.invoiceNumber}.html`;
+    link.download = `invoice-${invoice.invoiceNumber || invoice.invoice_number}.html`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
     // Show success message
-    alert(`Invoice ${invoice.invoiceNumber} downloaded successfully!`);
+    alert(`Invoice ${invoice.invoiceNumber || invoice.invoice_number} downloaded successfully!`);
   };
 
   const handleViewInvoice = (invoice: BillingHistory) => {
@@ -442,13 +556,13 @@ export default function SubscriptionDetailsPage() {
   };
 
   const handleEmailInvoice = (invoice: BillingHistory) => {
-    const subject = `Invoice ${invoice.invoiceNumber} - ${subscription?.salonName}`;
+    const subject = `Invoice ${invoice.invoiceNumber || invoice.invoice_number} - ${subscription?.salonName}`;
     const body = `Dear ${subscription?.ownerName},
 
-Please find attached your invoice ${invoice.invoiceNumber} for ${subscription?.salonName}.
+Please find attached your invoice ${invoice.invoiceNumber || invoice.invoice_number} for ${subscription?.salonName}.
 
 Invoice Details:
-- Amount: $${invoice.amount.toFixed(2)}
+- Amount: $${Number(invoice.amount).toFixed(2)}
 - Date: ${format(new Date(invoice.date), 'MMMM dd, yyyy')}
 - Status: ${invoice.status.toUpperCase()}
 
@@ -459,6 +573,226 @@ Hairvana Team`;
 
     const mailtoLink = `mailto:${subscription?.ownerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(mailtoLink);
+  };
+
+  // Dialog openers
+  const openCancelDialog = () => setCancelDialogOpen(true);
+  const openUpgradeDialog = () => setUpgradeDialogOpen(true);
+  const openDowngradeDialog = () => setDowngradeDialogOpen(true);
+  const openEditBillingDialog = () => setEditBillingDialogOpen(true);
+  const openGenerateInvoiceDialog = () => {
+    setFormErrors({});
+    setNewInvoice(prev => ({
+      ...prev,
+      amount: subscription?.amount ? String(subscription.amount) : '',
+    }));
+    setGenerateInvoiceDialogOpen(true);
+  };
+
+  // Confirm actions
+  const confirmCancel = async () => {
+    if (!subscription) return;
+    try {
+      await cancelSubscription(subscription.id);
+      setSubscription({ ...subscription, status: 'cancelled' });
+      toast({
+        title: 'Subscription cancelled',
+        description: 'The subscription has been cancelled successfully.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to cancel subscription. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCancelDialogOpen(false);
+    }
+  };
+
+  const handleUpgradePlan = async () => {
+    if (!subscription || !selectedNewPlan) return;
+    try {
+      await updateSubscription(subscription.id, {
+        plan_id: selectedNewPlan.id,
+        amount: selectedNewPlan.price
+      });
+      setSubscription(prev => prev ? {
+        ...prev,
+        plan: selectedNewPlan.name as Subscription['plan'],
+        amount: selectedNewPlan.price,
+        usage: {
+          ...prev.usage,
+          bookingsLimit: selectedNewPlan.limits.bookings,
+          staffLimit: selectedNewPlan.limits.staff,
+          locationsLimit: selectedNewPlan.limits.locations
+        }
+      } : prev);
+      toast({
+        title: 'Plan upgraded successfully',
+        description: `${subscription.salonName} has been upgraded to ${selectedNewPlan.name} plan.`,
+      });
+      setUpgradeDialogOpen(false);
+      setSelectedNewPlan(null);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to upgrade plan. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDowngradePlan = async () => {
+    if (!subscription || !selectedNewPlan) return;
+    try {
+      await updateSubscription(subscription.id, {
+        plan_id: selectedNewPlan.id,
+        amount: selectedNewPlan.price
+      });
+      setSubscription(prev => prev ? {
+        ...prev,
+        plan: selectedNewPlan.name as Subscription['plan'],
+        amount: selectedNewPlan.price,
+        usage: {
+          ...prev.usage,
+          bookingsLimit: selectedNewPlan.limits.bookings,
+          staffLimit: selectedNewPlan.limits.staff,
+          locationsLimit: selectedNewPlan.limits.locations
+        }
+      } : prev);
+      toast({
+        title: 'Plan downgraded successfully',
+        description: `${subscription.salonName} has been downgraded to ${selectedNewPlan.name} plan.`,
+      });
+      setDowngradeDialogOpen(false);
+      setSelectedNewPlan(null);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to downgrade plan. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUpdatePaymentMethod = async () => {
+    if (!subscription) return;
+    try {
+      const paymentData = {
+        type: 'card',
+        last4: newPaymentMethod.cardNumber.slice(-4),
+        brand: 'Visa', // In real app, detect from card number
+        expiryMonth: parseInt(newPaymentMethod.expiryMonth),
+        expiryYear: parseInt(newPaymentMethod.expiryYear)
+      };
+      await updatePaymentMethod(subscription.id, paymentData);
+      setSubscription({ ...subscription, paymentMethod: paymentData });
+      toast({
+        title: 'Payment method updated',
+        description: 'The payment method has been updated successfully.',
+      });
+      setEditBillingDialogOpen(false);
+      setNewPaymentMethod({
+        cardNumber: '',
+        expiryMonth: '',
+        expiryYear: '',
+        cvv: '',
+        cardholderName: '',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update payment method. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const validateInvoice = () => {
+    const errors: {[key: string]: string} = {};
+    if (!newInvoice.amount || isNaN(Number(newInvoice.amount)) || Number(newInvoice.amount) <= 0) {
+      errors.amount = 'Amount must be a positive number';
+    }
+    if (!newInvoice.description) {
+      errors.description = 'Description is required';
+    }
+    if (newInvoice.taxAmount && (isNaN(Number(newInvoice.taxAmount)) || Number(newInvoice.taxAmount) < 0)) {
+      errors.taxAmount = 'Tax must be a non-negative number';
+    }
+    if (newInvoice.taxAmount && Number(newInvoice.taxAmount) > Number(newInvoice.amount)) {
+      errors.taxAmount = 'Tax cannot exceed amount';
+    }
+    return errors;
+  };
+
+  const handleGenerateInvoice = async () => {
+    const errors = validateInvoice();
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+    if (!subscription) return;
+    setGeneratingInvoice(true);
+    try {
+      const invoice_number = `INV-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`;
+      const res = await fetch('/api/billing-histories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription_id: subscription.id,
+          date: newInvoice.date ? new Date(newInvoice.date) : new Date(),
+          amount: newInvoice.amount,
+          status: newInvoice.status,
+          description: newInvoice.description,
+          invoice_number,
+          tax_amount: newInvoice.taxAmount,
+          notes: newInvoice.notes
+        })
+      });
+      if (!res.ok) throw new Error('Failed to create invoice');
+      const created = await res.json();
+      // Map backend snake_case fields to camelCase for frontend use
+      const mappedInvoice = {
+        ...created,
+        amount: Number(created.amount),
+        taxAmount: created.taxAmount !== undefined ? created.taxAmount : created.tax_amount,
+        subtotal: created.subtotal,
+        total: created.total !== undefined ? created.total : (created.total_amount !== undefined ? created.total_amount : (Number(created.amount) + Number(created.taxAmount !== undefined ? created.taxAmount : created.tax_amount || 0))),
+        invoiceNumber: created.invoiceNumber !== undefined ? created.invoiceNumber : created.invoice_number,
+      };
+      setSubscription(prev => prev ? {
+        ...prev,
+        billingHistory: [mappedInvoice, ...prev.billingHistory]
+      } : prev);
+      toast({
+        title: 'Invoice generated!',
+        description: `Invoice for $${Number(newInvoice.amount).toFixed(2)} created successfully.`,
+        variant: 'default',
+      });
+      setTimeout(() => {
+        setGenerateInvoiceDialogOpen(false);
+        setNewInvoice({ amount: '', description: '', taxAmount: '', status: 'paid', notes: '', date: '' });
+      }, 1200);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to generate invoice. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingInvoice(false);
+    }
+  };
+
+  // Plan helpers
+  const getAvailableUpgrades = (currentPlan: string) => {
+    const planOrder = ['Basic', 'Standard', 'Premium'];
+    const currentIndex = planOrder.indexOf(currentPlan);
+    return plans.filter(plan => planOrder.indexOf(plan.name) > currentIndex);
+  };
+  const getAvailableDowngrades = (currentPlan: string) => {
+    const planOrder = ['Basic', 'Standard', 'Premium'];
+    const currentIndex = planOrder.indexOf(currentPlan);
+    return plans.filter(plan => planOrder.indexOf(plan.name) < currentIndex);
   };
 
   if (loading) {
@@ -523,6 +857,10 @@ Hairvana Team`;
             <Edit className="h-4 w-4 mr-2" />
             Edit Subscription
           </Button>
+          <Button variant="outline" onClick={openGenerateInvoiceDialog}>
+            <FileText className="h-4 w-4 mr-2" />
+            Generate Invoice
+          </Button>
         </div>
       </div>
 
@@ -568,15 +906,15 @@ Hairvana Team`;
             <div className="flex gap-2">
               {subscription.status === 'active' && (
                 <>
-                  <Button variant="outline" className="text-blue-600 hover:text-blue-700">
+                  <Button variant="outline" className="text-blue-600 hover:text-blue-700" onClick={openUpgradeDialog}>
                     <ArrowUpCircle className="h-4 w-4 mr-2" />
                     Upgrade Plan
                   </Button>
-                  <Button variant="outline" className="text-orange-600 hover:text-orange-700">
+                  <Button variant="outline" className="text-orange-600 hover:text-orange-700" onClick={openDowngradeDialog}>
                     <ArrowDownCircle className="h-4 w-4 mr-2" />
                     Downgrade Plan
                   </Button>
-                  <Button variant="outline" className="text-red-600 hover:text-red-700">
+                  <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={openCancelDialog}>
                     <XCircle className="h-4 w-4 mr-2" />
                     Cancel Subscription
                   </Button>
@@ -705,7 +1043,7 @@ Hairvana Team`;
               </div>
             )}
             <div className="pt-4">
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={openEditBillingDialog}>
                 <Edit className="h-4 w-4 mr-2" />
                 Update Payment Method
               </Button>
@@ -775,18 +1113,18 @@ Hairvana Team`;
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-600">
-                      {format(new Date(invoice.date), 'MMM dd, yyyy')} • Invoice #{invoice.invoiceNumber}
+                      {format(new Date(invoice.date), 'MMM dd, yyyy')} • Invoice #{invoice.invoiceNumber || invoice.invoice_number || ''}
                     </p>
                     {invoice.taxAmount && (
                       <p className="text-xs text-gray-500">
-                        Subtotal: ${invoice.subtotal?.toFixed(2)} + Tax: ${invoice.taxAmount.toFixed(2)}
+                        Subtotal: ${invoice.subtotal ? Number(invoice.subtotal).toFixed(2) : '0.00'} + Tax: ${invoice.taxAmount ? Number(invoice.taxAmount).toFixed(2) : '0.00'}
                       </p>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="font-semibold text-gray-900">${invoice.amount.toFixed(2)}</p>
+                    <p className="font-semibold text-gray-900">${Number(invoice.total ?? 0).toFixed(2)}</p>
                     <p className="text-xs text-gray-500">Total Amount</p>
                   </div>
                   <div className="flex gap-1">
@@ -847,13 +1185,13 @@ Hairvana Team`;
               </div>
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <p className="text-2xl font-bold text-blue-600">
-                  ${subscription.billingHistory.reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}
+                  ${subscription.billingHistory.reduce((sum, inv) => sum + Number(inv.total), 0).toFixed(2)}
                 </p>
                 <p className="text-sm text-gray-600">Total Billed</p>
               </div>
               <div className="text-center p-4 bg-purple-50 rounded-lg">
                 <p className="text-2xl font-bold text-purple-600">
-                  ${(subscription.billingHistory.reduce((sum, inv) => sum + (inv.taxAmount || 0), 0)).toFixed(2)}
+                  ${(subscription.billingHistory.reduce((sum, inv) => sum + Number(inv.tax_amount || 0), 0)).toFixed(2)}
                 </p>
                 <p className="text-sm text-gray-600">Total Tax</p>
               </div>
@@ -906,6 +1244,377 @@ Hairvana Team`;
           </CardContent>
         </Card>
       )}
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Subscription</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel the subscription for "{subscription?.salonName}"? 
+              This action will immediately revoke access to premium features and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="mt-4">
+            <p className="text-sm text-gray-600 mb-2">The salon will lose access to:</p>
+            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+              <li>Advanced booking features</li>
+              <li>Analytics and reporting</li>
+              <li>Priority support</li>
+              <li>Custom branding options</li>
+            </ul>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmCancel}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Cancel Subscription
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Upgrade Plan Dialog */}
+      <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Upgrade Subscription Plan</DialogTitle>
+            <DialogDescription>
+              Choose a higher tier plan for "{subscription?.salonName}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Current Plan:</strong> {subscription?.plan} - ${subscription?.amount}/month
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {subscription && getAvailableUpgrades(subscription.plan).map((plan) => {
+                const PlanIcon = planIcons[plan.name as keyof typeof planIcons];
+                const isSelected = selectedNewPlan?.id === plan.id;
+                return (
+                  <div
+                    key={plan.id}
+                    onClick={() => setSelectedNewPlan(plan)}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      isSelected ? 'border-purple-200 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`p-2 rounded-lg bg-gradient-to-r ${
+                        plan.name === 'Standard' ? 'from-blue-600 to-blue-700' : 'from-purple-600 to-purple-700'
+                      }`}>
+                        {PlanIcon ? <PlanIcon className="h-5 w-5 text-white" /> : <span className="h-5 w-5">?</span>}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900">{plan.name}</h3>
+                        <p className="text-lg font-semibold text-gray-900">${plan.price}/month</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{plan.description}</p>
+                    <ul className="space-y-1">
+                      {plan.features.slice(0, 4).map((feature, index) => (
+                        <li key={index} className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <span className="text-xs text-gray-700">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+            {subscription && getAvailableUpgrades(subscription.plan).length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <Crown className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>Already on the highest plan</p>
+                <p className="text-sm">This subscription is already on the Premium plan.</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpgradePlan}
+              disabled={!selectedNewPlan}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <ArrowUpCircle className="h-4 w-4 mr-2" />
+              Upgrade Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Downgrade Plan Dialog */}
+      <Dialog open={downgradeDialogOpen} onOpenChange={setDowngradeDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Downgrade Subscription Plan</DialogTitle>
+            <DialogDescription>
+              Choose a lower tier plan for "{subscription?.salonName}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-yellow-50 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Current Plan:</strong> {subscription?.plan} - ${subscription?.amount}/month
+              </p>
+              <p className="text-xs text-yellow-700 mt-1">
+                Downgrading will reduce available features and limits.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {subscription && getAvailableDowngrades(subscription.plan).map((plan) => {
+                const PlanIcon = planIcons[plan.name as keyof typeof planIcons];
+                const isSelected = selectedNewPlan?.id === plan.id;
+                return (
+                  <div
+                    key={plan.id}
+                    onClick={() => setSelectedNewPlan(plan)}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      isSelected ? 'border-orange-200 bg-orange-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`p-2 rounded-lg bg-gradient-to-r ${
+                        plan.name === 'Basic' ? 'from-gray-600 to-gray-700' : 'from-blue-600 to-blue-700'
+                      }`}>
+                        {PlanIcon ? <PlanIcon className="h-5 w-5 text-white" /> : <span className="h-5 w-5">?</span>}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900">{plan.name}</h3>
+                        <p className="text-lg font-semibold text-gray-900">${plan.price}/month</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{plan.description}</p>
+                    <ul className="space-y-1">
+                      {plan.features.slice(0, 4).map((feature, index) => (
+                        <li key={index} className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <span className="text-xs text-gray-700">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+            {subscription && getAvailableDowngrades(subscription.plan).length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <Zap className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>Already on the lowest plan</p>
+                <p className="text-sm">This subscription is already on the Basic plan.</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDowngradeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleDowngradePlan}
+              disabled={!selectedNewPlan}
+              className="bg-orange-600 hover:bg-orange-700 text-black font-semibold"
+            >
+              <ArrowDownCircle className="h-4 w-4 mr-2" />
+              Downgrade Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Billing Dialog */}
+      <Dialog open={editBillingDialogOpen} onOpenChange={setEditBillingDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Payment Method</DialogTitle>
+            <DialogDescription>
+              Update the payment method for "{subscription?.salonName}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {subscription?.paymentMethod && (
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-800">
+                  <strong>Current:</strong> {subscription.paymentMethod.brand} ending in {subscription.paymentMethod.last4}
+                </p>
+                <p className="text-xs text-gray-600">
+                  Expires {subscription.paymentMethod.expiryMonth}/{subscription.paymentMethod.expiryYear}
+                </p>
+              </div>
+            )}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="cardholderName">Cardholder Name</Label>
+                <Input
+                  id="cardholderName"
+                  placeholder="John Doe"
+                  value={newPaymentMethod.cardholderName}
+                  onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cardholderName: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cardNumber">Card Number</Label>
+                <Input
+                  id="cardNumber"
+                  placeholder="1234 5678 9012 3456"
+                  value={newPaymentMethod.cardNumber}
+                  onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cardNumber: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="expiryMonth">Month</Label>
+                  <Input
+                    id="expiryMonth"
+                    placeholder="MM"
+                    value={newPaymentMethod.expiryMonth}
+                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, expiryMonth: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expiryYear">Year</Label>
+                  <Input
+                    id="expiryYear"
+                    placeholder="YYYY"
+                    value={newPaymentMethod.expiryYear}
+                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, expiryYear: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cvv">CVV</Label>
+                  <Input
+                    id="cvv"
+                    placeholder="123"
+                    value={newPaymentMethod.cvv}
+                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cvv: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditBillingDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdatePaymentMethod}
+              disabled={!newPaymentMethod.cardNumber || !newPaymentMethod.cardholderName}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <CreditCard className="h-4 w-4 mr-2" />
+              Update Payment Method
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generate Invoice Dialog */}
+      <Dialog open={generateInvoiceDialogOpen} onOpenChange={setGenerateInvoiceDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generate Invoice</DialogTitle>
+            <DialogDescription>
+              Create a new invoice for "{subscription?.salonName}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="Amount"
+                value={newInvoice.amount}
+                onChange={e => setNewInvoice(prev => ({ ...prev, amount: e.target.value }))}
+                className={formErrors.amount ? 'border-red-500' : ''}
+              />
+              {formErrors.amount && <p className="text-red-500 text-xs">{formErrors.amount}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                placeholder="Description"
+                value={newInvoice.description}
+                onChange={e => setNewInvoice(prev => ({ ...prev, description: e.target.value }))}
+                className={formErrors.description ? 'border-red-500' : ''}
+              />
+              {formErrors.description && <p className="text-red-500 text-xs">{formErrors.description}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="taxAmount">Tax Amount</Label>
+              <Input
+                id="taxAmount"
+                type="number"
+                placeholder="Tax Amount"
+                value={newInvoice.taxAmount}
+                onChange={e => setNewInvoice(prev => ({ ...prev, taxAmount: e.target.value }))}
+                className={formErrors.taxAmount ? 'border-red-500' : ''}
+              />
+              {formErrors.taxAmount && <p className="text-red-500 text-xs">{formErrors.taxAmount}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <textarea
+                id="notes"
+                placeholder="Additional notes (optional)"
+                value={newInvoice.notes}
+                onChange={e => setNewInvoice(prev => ({ ...prev, notes: e.target.value }))}
+                className="w-full border rounded px-2 py-1 min-h-[60px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date">Invoice Date</Label>
+              <Input
+                id="date"
+                type="date"
+                value={newInvoice.date}
+                onChange={e => setNewInvoice(prev => ({ ...prev, date: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <select
+                id="status"
+                className="w-full border rounded px-2 py-1"
+                value={newInvoice.status}
+                onChange={e => setNewInvoice(prev => ({ ...prev, status: e.target.value }))}
+              >
+                <option value="paid">Paid</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+                <option value="refunded">Refunded</option>
+              </select>
+            </div>
+            {/* Live preview of totals */}
+            <div className="text-right text-sm mt-2">
+              <span>Subtotal: ${Number(newInvoice.amount || 0).toFixed(2)}</span><br/>
+              <span>Tax: ${Number(newInvoice.taxAmount || 0).toFixed(2)}</span><br/>
+              <span className="font-bold">Total: ${(Number(newInvoice.amount || 0) + Number(newInvoice.taxAmount || 0)).toFixed(2)}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGenerateInvoiceDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleGenerateInvoice}
+              disabled={generatingInvoice || Object.keys(formErrors).length > 0 || !newInvoice.amount || !newInvoice.description}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              {generatingInvoice ? 'Generating...' : 'Generate Invoice'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

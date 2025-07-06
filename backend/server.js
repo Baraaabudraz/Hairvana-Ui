@@ -29,16 +29,51 @@ const appointmentRoutesApi = require('./routes/Api/appointment');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// CORS configuration
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
 // Middleware
-app.use(cors());
-app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cors(corsOptions));
+app.use(morgan('combined'));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Add this before your routes
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store');
   next();
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    version: require('./package.json').version
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Hairvana Backend API',
+    version: require('./package.json').version,
+    environment: process.env.NODE_ENV || 'development',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      users: '/api/users',
+      salons: '/api/salons',
+      appointments: '/api/appointments',
+      mobile: '/api/mobile'
+    }
+  });
 });
 
 // Routes
@@ -64,19 +99,61 @@ app.use('/api/mobile/salons', salonRoutesApi);
 app.use('/api/mobile/hairstyles', hairstyleRoutes);
 app.use('/api/mobile', appointmentRoutesApi);
 
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    message: 'Endpoint not found',
+    path: req.originalUrl,
+    method: req.method
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Error:', err);
   
   // Handle validation errors
   if (err.name === 'ValidationError') {
-    return res.status(422).json({ errors: err.errors });
+    return res.status(422).json({ 
+      message: 'Validation Error',
+      errors: err.errors 
+    });
   }
   
+  // Handle Sequelize errors
+  if (err.name === 'SequelizeValidationError') {
+    return res.status(422).json({
+      message: 'Database Validation Error',
+      errors: err.errors.map(e => ({
+        field: e.path,
+        message: e.message
+      }))
+    });
+  }
+  
+  // Handle JWT errors
+  if (err.name === 'JsonWebTokenError') {
+    return res.status(401).json({
+      message: 'Invalid token'
+    });
+  }
+  
+  // Handle other errors
   res.status(500).json({
     message: 'Internal Server Error',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  process.exit(0);
 });
 
 // Start server and authenticate Sequelize
@@ -86,6 +163,7 @@ sequelize.authenticate()
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
     });
   })
   .catch((err) => {

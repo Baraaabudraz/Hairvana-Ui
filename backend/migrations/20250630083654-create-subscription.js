@@ -183,19 +183,6 @@ module.exports = {
       }
     });
 
-    // Create triggers for updated_at
-    await queryInterface.sequelize.query(`
-      CREATE TRIGGER update_subscription_plans_updated_at
-        BEFORE UPDATE ON subscription_plans
-        FOR EACH ROW
-        EXECUTE PROCEDURE update_updated_at_column();
-
-      CREATE TRIGGER update_subscriptions_updated_at
-        BEFORE UPDATE ON subscriptions
-        FOR EACH ROW
-        EXECUTE PROCEDURE update_updated_at_column();
-    `);
-
     // Insert default subscription plans
     await queryInterface.bulkInsert('subscription_plans', [
       {

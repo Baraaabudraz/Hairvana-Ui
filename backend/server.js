@@ -1,7 +1,3 @@
-if (typeof(PhusionPassenger) !== 'undefined') {
-    PhusionPassenger.configure({ autoInstall: false });
-}
-
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
@@ -29,20 +25,27 @@ const salonRoutesApi = require('./routes/Api/salon');
 const hairstyleRoutes = require('./routes/Api/hairstyle');
 const appointmentRoutesApi = require('./routes/Api/appointment');
 
+// Initialize Express app
 const app = express();
+// const PORT = process.env.PORT || 5000;
 
-// Root route as in the Passenger example
-app.get('/backend', function(req, res){
-    var body = 'Hello World';
-    res.setHeader('Content-Type', 'text/plain');
-    res.setHeader('Content-Length', body.length);
-    res.end(body);
+if (typeof(PhusionPassenger) !== 'undefined') {
+  PhusionPassenger.configure({ autoInstall: false });
+}
+
+app.use(express.json());
+
+// Example route
+app.get('/', (req, res) => {
+  res.send('Hairvana app running with Passenger 🎉');
+});
+app.get('/backend', (req, res) => {
+  res.send('Hairvana app running with Passenger 🎉');
 });
 
 // Middleware
 app.use(cors());
 app.use(morgan('dev'));
-app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Add this before your routes
@@ -77,6 +80,7 @@ app.use('/backend/api/mobile', appointmentRoutesApi);
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
+  // Handle validation errors
   if (err.name === 'ValidationError') {
     return res.status(422).json({ errors: err.errors });
   }
@@ -93,8 +97,10 @@ sequelize.authenticate()
     if (typeof(PhusionPassenger) !== 'undefined') {
       app.listen('passenger');
     } else {
-      app.listen(5000, () => {
-        console.log('App is running on http://localhost:5000');
+      const PORT = process.env.PORT || 5000;
+      app.listen(PORT, () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+        console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       });
     }
   })

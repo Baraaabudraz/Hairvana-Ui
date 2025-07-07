@@ -27,7 +27,17 @@ const appointmentRoutesApi = require('./routes/Api/appointment');
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 5000;
+
+if (typeof(PhusionPassenger) !== 'undefined') {
+  PhusionPassenger.configure({ autoInstall: false });
+}
+
+app.use(express.json());
+
+// Example route
+app.get('/', (req, res) => {
+  res.send('Hairvana app running with Passenger 🎉');
+});
 
 // Middleware
 app.use(cors());
@@ -83,10 +93,15 @@ app.use((err, req, res, next) => {
 sequelize.authenticate()
   .then(() => {
     console.log('✅ Database connection established successfully');
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    });
+    if (typeof(PhusionPassenger) !== 'undefined') {
+      app.listen('passenger');
+    } else {
+      const PORT = process.env.PORT || 5000;
+      app.listen(PORT, () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+        console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      });
+    }
   })
   .catch((err) => {
     console.error('❌ Unable to connect to the database:', err);

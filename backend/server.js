@@ -1,3 +1,7 @@
+if (typeof(PhusionPassenger) !== 'undefined') {
+    PhusionPassenger.configure({ autoInstall: false });
+}
+
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
@@ -25,18 +29,14 @@ const salonRoutesApi = require('./routes/Api/salon');
 const hairstyleRoutes = require('./routes/Api/hairstyle');
 const appointmentRoutesApi = require('./routes/Api/appointment');
 
-// Initialize Express app
 const app = express();
 
-if (typeof(PhusionPassenger) !== 'undefined') {
-  PhusionPassenger.configure({ autoInstall: false });
-}
-
-app.use(express.json());
-
-// Example route
-app.get('/backend', (req, res) => {
-  res.send('Hairvana app running with Passenger 🎉');
+// Root route as in the Passenger example
+app.get('/backend', function(req, res){
+    var body = 'Hello World';
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Length', body.length);
+    res.end(body);
 });
 
 // Middleware
@@ -77,12 +77,9 @@ app.use('/backend/api/mobile', appointmentRoutesApi);
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  
-  // Handle validation errors
   if (err.name === 'ValidationError') {
     return res.status(422).json({ errors: err.errors });
   }
-  
   res.status(500).json({
     message: 'Internal Server Error',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -96,10 +93,8 @@ sequelize.authenticate()
     if (typeof(PhusionPassenger) !== 'undefined') {
       app.listen('passenger');
     } else {
-      const PORT = process.env.PORT || 5000;
-      app.listen(PORT, () => {
-        console.log(`🚀 Server running on port ${PORT}`);
-        console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      app.listen(5000, () => {
+        console.log('App is running on http://localhost:5000');
       });
     }
   })

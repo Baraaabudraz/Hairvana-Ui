@@ -36,6 +36,7 @@ const BillingSettings = require('./billing_settings');
 const ReportTemplate = require('./report_template')(sequelize);
 const Report = require('./report');
 const Hairstyle = require('./hairstyle');
+const SecuritySettings = require('./security_settings');
 
 // Initialize models in dependency order
 const models = {
@@ -57,7 +58,8 @@ const models = {
   BillingSettings: BillingSettings(sequelize, Sequelize.DataTypes),
   ReportTemplate: ReportTemplate,
   Report: Report(sequelize, Sequelize.DataTypes),
-  Hairstyle: Hairstyle(sequelize, Sequelize.DataTypes)
+  Hairstyle: Hairstyle(sequelize, Sequelize.DataTypes),
+  SecuritySettings: SecuritySettings(sequelize, Sequelize.DataTypes)
 };
 
 // Initialize associations
@@ -96,7 +98,8 @@ async function syncOrdered(options = {}) {
       'user_settings',
       'billing_histories',
       'billing_settings',
-      'reports'
+      'reports',
+      'security_settings'
     ];
     
     for (const tableName of tableOrder) {

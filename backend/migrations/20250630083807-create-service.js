@@ -65,22 +65,9 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
-
-    // Create trigger for updated_at
-    await queryInterface.sequelize.query(`
-      CREATE TRIGGER update_services_updated_at
-        BEFORE UPDATE ON services
-        FOR EACH ROW
-        EXECUTE PROCEDURE update_updated_at_column();
-    `);
   },
 
   async down(queryInterface, Sequelize) {
-    // Drop trigger first
-    await queryInterface.sequelize.query(`
-      DROP TRIGGER IF EXISTS update_services_updated_at ON services;
-    `);
-    
     // Drop the table
     await queryInterface.dropTable('services');
   }

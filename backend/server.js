@@ -97,11 +97,11 @@ sequelize.authenticate()
     if (typeof(PhusionPassenger) !== 'undefined') {
       app.listen('passenger');
     } else {
-      const PORT = process.env.PORT || 5000;
-      app.listen(PORT, () => {
-        console.log(`🚀 Server running on port ${PORT}`);
-        console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      });
+      if (typeof(PhusionPassenger) != 'undefined') {
+        app.listen('passenger');
+    } else {
+        app.listen(5000);
+    }
     }
   })
   .catch((err) => {

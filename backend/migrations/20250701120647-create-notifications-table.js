@@ -6,9 +6,8 @@ module.exports = {
     await queryInterface.createTable('notifications', {
       id: {
         type: Sequelize.UUID,
-        defaultValue: Sequelize.literal('uuid_generate_v4()'),
+        allowNull: false,
         primaryKey: true,
-        allowNull: false
       },
       user_id: {
         type: Sequelize.UUID,

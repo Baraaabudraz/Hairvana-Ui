@@ -5,8 +5,8 @@ module.exports = {
     await queryInterface.createTable('salons', {
       id: {
         type: Sequelize.UUID,
-        defaultValue: Sequelize.literal('gen_random_uuid()'),
-        primaryKey: true
+        allowNull: false,
+        primaryKey: true,
       },
       name: {
         type: Sequelize.TEXT,

@@ -2,6 +2,8 @@
 const {
   Model
 } = require('sequelize');
+const { v4: uuidv4 } = require('uuid');
+
 module.exports = (sequelize, DataTypes) => {
   class Subscription extends Model {
     /**
@@ -23,8 +25,9 @@ module.exports = (sequelize, DataTypes) => {
   Subscription.init({
     id: {
       type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      defaultValue: () => uuidv4(),
+      primaryKey: true,
+      allowNull: false,
     },
     salon_id: {
       type: DataTypes.UUID,

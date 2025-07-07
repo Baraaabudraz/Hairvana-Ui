@@ -5,9 +5,8 @@ module.exports = {
     await queryInterface.createTable('report_templates', {
       id: {
         type: Sequelize.UUID,
-        defaultValue: Sequelize.literal('uuid_generate_v4()'),
-        primaryKey: true,
         allowNull: false,
+        primaryKey: true,
       },
       name: {
         type: Sequelize.STRING,

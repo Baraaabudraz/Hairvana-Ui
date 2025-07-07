@@ -1,5 +1,7 @@
 'use strict';
 const { Model } = require('sequelize');
+const { v4: uuidv4 } = require('uuid');
+
 module.exports = (sequelize, DataTypes) => {
   class NotificationTemplate extends Model {
     static associate(models) {
@@ -9,8 +11,9 @@ module.exports = (sequelize, DataTypes) => {
   NotificationTemplate.init({
     id: {
       type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      defaultValue: () => uuidv4(),
+      primaryKey: true,
+      allowNull: false,
     },
     name: DataTypes.STRING,
     description: DataTypes.STRING,

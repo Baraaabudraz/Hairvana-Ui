@@ -5,9 +5,8 @@ module.exports = {
     await queryInterface.createTable('billing_histories', {
       id: {
         type: Sequelize.UUID,
-        defaultValue: Sequelize.literal('gen_random_uuid()'),
+        allowNull: false,
         primaryKey: true,
-        allowNull: false
       },
       subscription_id: {
         type: Sequelize.UUID,

@@ -60,14 +60,6 @@ module.exports = {
       }
     });
 
-    // Create triggers for updated_at
-    await queryInterface.sequelize.query(`
-      CREATE TRIGGER update_notification_templates_updated_at
-        BEFORE UPDATE ON notification_templates
-        FOR EACH ROW
-        EXECUTE PROCEDURE update_updated_at_column();
-    `);
-
     // Seed notification templates
     await queryInterface.bulkInsert('notification_templates', [
       {

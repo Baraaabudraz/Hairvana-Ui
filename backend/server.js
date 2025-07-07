@@ -5,82 +5,54 @@ const cors = require('cors');
 const morgan = require('morgan');
 const { sequelize } = require('./lib/supabase');
 
-// Import routes
-const userRoutes = require('./routes/users');
-const salonRoutes = require('./routes/salons');
-const subscriptionRoutes = require('./routes/subscriptions');
-const serviceRoutes = require('./routes/services');
-const staffRoutes = require('./routes/staff');
-const appointmentRoutes = require('./routes/appointments');
-const analyticsRoutes = require('./routes/analytics');
-const authRoutes = require('./routes/auth');
-const notificationRoutes = require('./routes/notifications');
-const settingsRoutes = require('./routes/settings');
-const dashboardRoutes = require('./routes/dashboard');
-const reportTemplatesRouter = require('./routes/reportTemplates');
-const reportsRouter = require('./routes/reports');
-const mobileAuthRoutes = require('./routes/Api/mobileAuth');
-const mobileUserRoutes = require('./routes/Api/mobileUser');
-const salonRoutesApi = require('./routes/Api/salon');
-const hairstyleRoutes = require('./routes/Api/hairstyle');
-const appointmentRoutesApi = require('./routes/Api/appointment');
-
-// Initialize Express app
-const app = express();
-// const PORT = process.env.PORT || 5000;
-
+// Passenger setup
 if (typeof(PhusionPassenger) !== 'undefined') {
   PhusionPassenger.configure({ autoInstall: false });
 }
 
-app.use(express.json());
-
-// Example route
-app.get('/', (req, res) => {
-  res.send('Hairvana app running with Passenger 🎉');
-});
-app.get('/backend', (req, res) => {
-  res.send('Hairvana app running with Passenger 🎉');
-});
+// Initialize Express app
+const app = express();
 
 // Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(morgan('dev'));
-app.use(express.urlencoded({ extended: true }));
-
-// Add this before your routes
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store');
   next();
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/salons', salonRoutes);
-app.use('/api/subscriptions', subscriptionRoutes);
-app.use('/api/services', serviceRoutes);
-app.use('/api/staff', staffRoutes);
-app.use('/api/appointments', appointmentRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/settings', settingsRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+// Example routes
+app.get('/', (req, res) => res.send('Hairvana app running with Passenger 🎉'));
+app.get('/backend', (req, res) => res.send('Hairvana app running with Passenger 🎉'));
+
+// API Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/salons', require('./routes/salons'));
+app.use('/api/subscriptions', require('./routes/subscriptions'));
+app.use('/api/services', require('./routes/services'));
+app.use('/api/staff', require('./routes/staff'));
+app.use('/api/appointments', require('./routes/appointments'));
+app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/settings', require('./routes/settings'));
+app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/billing-histories', require('./routes/billingHistories'));
-app.use('/api/report-templates', reportTemplatesRouter);
-app.use('/api/reports', reportsRouter);
+app.use('/api/report-templates', require('./routes/reportTemplates'));
+app.use('/api/reports', require('./routes/reports'));
 
-// Mobile API routes
-app.use('/backend/api/mobile/auth', mobileAuthRoutes);
-app.use('/backend/api/mobile/user', mobileUserRoutes);
-app.use('/backend/api/mobile/salons', salonRoutesApi);
-app.use('/backend/api/mobile/hairstyles', hairstyleRoutes);
-app.use('/backend/api/mobile', appointmentRoutesApi);
+// Mobile API Routes
+app.use('/backend/api/mobile/auth', require('./routes/Api/mobileAuth'));
+app.use('/backend/api/mobile/user', require('./routes/Api/mobileUser'));
+app.use('/backend/api/mobile/salons', require('./routes/Api/salon'));
+app.use('/backend/api/mobile/hairstyles', require('./routes/Api/hairstyle'));
+app.use('/backend/api/mobile', require('./routes/Api/appointment'));
 
-// Error handling middleware
+// Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  // Handle validation errors
   if (err.name === 'ValidationError') {
     return res.status(422).json({ errors: err.errors });
   }
@@ -90,18 +62,21 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server and authenticate Sequelize
+// Start server
+if (typeof(PhusionPassenger) !== 'undefined') {
+  app.listen('passenger'); // ✅ Let Passenger handle the port
+} else {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
+
+// Connect to database
 sequelize.authenticate()
   .then(() => {
     console.log('✅ Database connection established successfully');
-    if (typeof(PhusionPassenger) !== 'undefined') {
-      app.listen('passenger');
-    } else {
-      app.listen(5000, () => {
-        console.log('🚀 Server running on port 5000');
-        console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      });
-    }
   })
   .catch((err) => {
     console.error('❌ Unable to connect to the database:', err);

@@ -95,68 +95,8 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
-
-    // Create trigger for updated_at
-    await queryInterface.sequelize.query(`
-      CREATE TRIGGER update_salons_updated_at
-        BEFORE UPDATE ON salons
-        FOR EACH ROW
-        EXECUTE PROCEDURE update_updated_at_column();
-    `);
-
-    // Create function and trigger to update salon_owner stats
-    await queryInterface.sequelize.query(`
-      CREATE OR REPLACE FUNCTION update_salon_owner_stats()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        -- Update salon_owners table with new stats
-        IF TG_OP = 'INSERT' THEN
-          UPDATE salon_owners
-          SET 
-            total_salons = total_salons + 1,
-            total_revenue = total_revenue + COALESCE(NEW.revenue, 0),
-            total_bookings = total_bookings + COALESCE(NEW.bookings, 0),
-            updated_at = now()
-          WHERE user_id = NEW.owner_id;
-        ELSIF TG_OP = 'UPDATE' THEN
-          -- Only update if revenue or bookings changed
-          IF OLD.revenue != NEW.revenue OR OLD.bookings != NEW.bookings THEN
-            UPDATE salon_owners
-            SET 
-              total_revenue = total_revenue - COALESCE(OLD.revenue, 0) + COALESCE(NEW.revenue, 0),
-              total_bookings = total_bookings - COALESCE(OLD.bookings, 0) + COALESCE(NEW.bookings, 0),
-              updated_at = now()
-            WHERE user_id = NEW.owner_id;
-          END IF;
-        ELSIF TG_OP = 'DELETE' THEN
-          UPDATE salon_owners
-          SET 
-            total_salons = total_salons - 1,
-            total_revenue = total_revenue - COALESCE(OLD.revenue, 0),
-            total_bookings = total_bookings - COALESCE(OLD.bookings, 0),
-            updated_at = now()
-          WHERE user_id = OLD.owner_id;
-        END IF;
-        
-        RETURN NULL;
-      END;
-      $$ LANGUAGE plpgsql;
-
-      CREATE TRIGGER salon_stats_trigger
-      AFTER INSERT OR UPDATE OR DELETE ON salons
-      FOR EACH ROW
-      EXECUTE FUNCTION update_salon_owner_stats();
-    `);
   },
   async down(queryInterface, Sequelize) {
-    // Drop triggers and functions first
-    await queryInterface.sequelize.query(`
-      DROP TRIGGER IF EXISTS salon_stats_trigger ON salons;
-      DROP FUNCTION IF EXISTS update_salon_owner_stats();
-      DROP TRIGGER IF EXISTS update_salons_updated_at ON salons;
-    `);
-
-    // Drop the table
     await queryInterface.dropTable('salons');
   }
 };

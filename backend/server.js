@@ -97,13 +97,10 @@ sequelize.authenticate()
     if (typeof(PhusionPassenger) !== 'undefined') {
       app.listen('passenger');
     } else {
-      if (typeof(PhusionPassenger) != 'undefined') {
-    app.listen('passenger');
-} else {
-    app.listen(5000);
-    console.log(`🚀 Server running on port`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-}
+      app.listen(5000, () => {
+        console.log('🚀 Server running on port 5000');
+        console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      });
     }
   })
   .catch((err) => {

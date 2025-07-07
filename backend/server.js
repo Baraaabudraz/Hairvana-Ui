@@ -35,7 +35,7 @@ if (typeof(PhusionPassenger) !== 'undefined') {
 app.use(express.json());
 
 // Example route
-app.get('/', (req, res) => {
+app.get('/backend', (req, res) => {
   res.send('Hairvana app running with Passenger 🎉');
 });
 

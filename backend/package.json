@@ -16,7 +16,8 @@
     "migrate:undo:all": "npx sequelize-cli db:migrate:undo:all",
     "seed": "node seeders/seed.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "npm:cache:clean": "npm cache clean --force"
+    "npm:cache:clean": "npm cache clean --force",
+    "kill-port-5000": "for /f \"tokens=5\" %a in ('netstat -ano ^| findstr :5000 ^| findstr LISTENING') do taskkill /PID %a /F"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.38.4",

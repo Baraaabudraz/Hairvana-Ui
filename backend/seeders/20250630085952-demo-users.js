@@ -1,5 +1,7 @@
 'use strict';
 
+const { v4: uuidv4 } = require('uuid');
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
@@ -34,7 +36,7 @@ module.exports = {
     }], {});
     // Create super admin user_settings
     await queryInterface.bulkInsert('user_settings', [{
-      id: Sequelize.literal('gen_random_uuid()'),
+      id: uuidv4(),
       user_id: '00000000-0000-0000-0000-000000000001',
       department: 'Administration',
       timezone: 'America/New_York',
@@ -61,7 +63,7 @@ module.exports = {
     }], {});
     // Create admin user_settings
     await queryInterface.bulkInsert('user_settings', [{
-      id: Sequelize.literal('gen_random_uuid()'),
+      id: uuidv4(),
       user_id: '00000000-0000-0000-0000-000000000002',
       department: 'Management',
       timezone: 'America/Chicago',
@@ -73,7 +75,7 @@ module.exports = {
 
     // Create platform settings
     await queryInterface.bulkInsert('platform_settings', [{
-      id: Sequelize.literal('gen_random_uuid()'),
+      id: uuidv4(),
       site_name: 'Hairvana',
       site_description: 'Professional Salon Management Platform',
       primary_color: '#8b5cf6',
@@ -84,7 +86,7 @@ module.exports = {
 
     // Create integration settings
     await queryInterface.bulkInsert('integration_settings', [{
-      id: Sequelize.literal('gen_random_uuid()'),
+      id: uuidv4(),
       email_provider: 'sendgrid',
       sms_provider: 'twilio',
       payment_gateway: 'stripe',

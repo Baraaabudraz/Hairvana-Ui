@@ -3,17 +3,6 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Create the update_updated_at_column function
-    await queryInterface.sequelize.query(`
-      CREATE OR REPLACE FUNCTION update_updated_at_column()
-      RETURNS TRIGGER AS $$
-      BEGIN
-         NEW.updated_at = now();
-         RETURN NEW;
-      END;
-      $$ language 'plpgsql';
-    `);
-
     // Create users table
     await queryInterface.createTable('users', {
       id: {
@@ -143,24 +132,6 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
-
-    // Create triggers for updated_at
-    await queryInterface.sequelize.query(`
-      CREATE TRIGGER update_users_updated_at
-        BEFORE UPDATE ON users
-        FOR EACH ROW
-        EXECUTE PROCEDURE update_updated_at_column();
-
-      CREATE TRIGGER update_salon_owners_updated_at
-        BEFORE UPDATE ON salon_owners
-        FOR EACH ROW
-        EXECUTE PROCEDURE update_updated_at_column();
-
-      CREATE TRIGGER update_customers_updated_at
-        BEFORE UPDATE ON customers
-        FOR EACH ROW
-        EXECUTE PROCEDURE update_updated_at_column();
-    `);
   },
 
   async down(queryInterface, Sequelize) {
@@ -168,10 +139,5 @@ module.exports = {
     await queryInterface.dropTable('customers');
     await queryInterface.dropTable('salon_owners');
     await queryInterface.dropTable('users');
-    
-    // Drop the update_updated_at_column function
-    await queryInterface.sequelize.query(`
-      DROP FUNCTION IF EXISTS update_updated_at_column CASCADE;
-    `);
   }
 };

@@ -28,6 +28,13 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'salon_id',
         as: 'appointments'
       });
+      Salon.hasMany(models.Hairstyle, { foreignKey: 'salon_id', as: 'hairstyles' });
+      Salon.belongsToMany(models.Service, {
+        through: 'salon_services',
+        foreignKey: 'salon_id',
+        otherKey: 'service_id',
+        as: 'services'
+      });
     }
   }
   Salon.init({
@@ -76,10 +83,6 @@ module.exports = (sequelize, DataTypes) => {
     rating: {
       type: DataTypes.DECIMAL(2, 1),
       defaultValue: 0
-    },
-    services: {
-      type: DataTypes.ARRAY(DataTypes.TEXT),
-      defaultValue: []
     },
     hours: {
       type: DataTypes.JSONB,

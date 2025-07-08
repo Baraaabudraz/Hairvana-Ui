@@ -52,7 +52,7 @@ module.exports = {
         defaultValue: 60
       },
       status: {
-        type: Sequelize.ENUM('pending', 'confirmed', 'cancelled', 'completed', 'no_show'),
+        type: Sequelize.ENUM('pending', 'booked', 'cancelled', 'completed'),
         allowNull: false,
         defaultValue: 'pending'
       },

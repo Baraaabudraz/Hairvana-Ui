@@ -50,9 +50,6 @@ module.exports = {
         type: Sequelize.DECIMAL(3, 1),
         defaultValue: 0
       },
-      services: {
-        type: Sequelize.ARRAY(Sequelize.TEXT)
-      },
       hours: {
         type: Sequelize.JSONB
       },

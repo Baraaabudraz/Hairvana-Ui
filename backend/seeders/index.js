@@ -17,6 +17,8 @@ async function seed() {
     await seedServices();
     await seedHairstyles();
     await seedSalonServices();
+    await seedStaff();
+  
     
     console.log('✅ Database seeding completed successfully!');
     process.exit(0);
@@ -441,6 +443,12 @@ async function seedHairstyles() {
 async function seedSalonServices() {
   console.log('Seeding salon_services...');
   const seeder = require('./20250707000400-demo-salon-services.js');
+  await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
+}
+
+async function seedStaff() {
+  console.log('Seeding staff...');
+  const seeder = require('./20250707000500-demo-staff.js');
   await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
 }
 

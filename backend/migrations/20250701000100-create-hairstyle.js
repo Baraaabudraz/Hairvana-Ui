@@ -24,7 +24,9 @@ module.exports = {
         references: {
           model: 'salons',
           key: 'id'
-        }
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
       },
       created_at: {
         allowNull: false,

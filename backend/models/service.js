@@ -12,10 +12,12 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // Service belongs to a Salon (many-to-one)
-      Service.belongsTo(models.Salon, {
-        foreignKey: 'salon_id',
-        as: 'salon'
+      // Service belongs to many Salons (many-to-many)
+      Service.belongsToMany(models.Salon, {
+        through: 'salon_services',
+        foreignKey: 'service_id',
+        otherKey: 'salon_id',
+        as: 'salons'
       });
       
       // Service belongs to many Appointments (many-to-many)
@@ -46,25 +48,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false
     },
-    salon_id: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      references: {
-        model: 'salons',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'CASCADE'
-    },
     duration: {
       type: DataTypes.INTEGER, // in minutes
       allowNull: false,
       defaultValue: 60
-    },
-    category: {
-      type: DataTypes.ENUM('haircut', 'coloring', 'styling', 'treatment', 'spa', 'other'),
-      allowNull: false,
-      defaultValue: 'other'
     },
     status: {
       type: DataTypes.ENUM('active', 'inactive', 'discontinued'),

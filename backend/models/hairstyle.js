@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 module.exports = (sequelize, DataTypes) => {
   class Hairstyle extends Model {
     static associate(models) {
-      // define association here if needed
+      Hairstyle.belongsTo(models.Salon, { foreignKey: 'salon_id', as: 'salon' });
     }
   }
   Hairstyle.init({
@@ -25,7 +25,15 @@ module.exports = (sequelize, DataTypes) => {
     ar_model_url: DataTypes.STRING,
     gender: DataTypes.STRING,
     length: DataTypes.STRING,
-    color: DataTypes.STRING
+    color: DataTypes.STRING,
+    salon_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'salons',
+        key: 'id'
+      }
+    }
   }, {
     sequelize,
     modelName: 'Hairstyle',

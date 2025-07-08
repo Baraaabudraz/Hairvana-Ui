@@ -14,6 +14,9 @@ async function seed() {
     await seedSubscriptionPlans();
     await seedSubscriptions();
     await seedNotificationTemplates();
+    await seedServices();
+    await seedHairstyles();
+    await seedSalonServices();
     
     console.log('✅ Database seeding completed successfully!');
     process.exit(0);
@@ -200,7 +203,6 @@ async function seedSalons() {
         revenue: 12450,
         bookings: 156,
         rating: 4.9,
-        services: ['Haircut', 'Hair Color', 'Hair Styling', 'Hair Treatment', 'Beard Trim', 'Eyebrow Threading'],
         hours: {
           monday: '9:00 AM - 8:00 PM',
           tuesday: '9:00 AM - 8:00 PM',
@@ -224,7 +226,6 @@ async function seedSalons() {
         revenue: 8750,
         bookings: 98,
         rating: 4.7,
-        services: ['Haircut', 'Beard Trim', 'Hair Styling', 'Shave'],
         hours: {
           monday: '10:00 AM - 7:00 PM',
           tuesday: '10:00 AM - 7:00 PM',
@@ -422,6 +423,25 @@ async function seedNotificationTemplates() {
     console.error('Error seeding notification templates:', error);
     throw error;
   }
+}
+
+// Add the new seeders
+async function seedServices() {
+  console.log('Seeding services...');
+  const seeder = require('./20250707000200-demo-services.js');
+  await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
+}
+
+async function seedHairstyles() {
+  console.log('Seeding hairstyles...');
+  const seeder = require('./20250707000300-demo-hairstyles.js');
+  await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
+}
+
+async function seedSalonServices() {
+  console.log('Seeding salon_services...');
+  const seeder = require('./20250707000400-demo-salon-services.js');
+  await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
 }
 
 // Run seeder if called directly

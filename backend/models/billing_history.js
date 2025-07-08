@@ -49,7 +49,11 @@ module.exports = (sequelize, DataTypes) => {
     subtotal: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true
-    }
+    },
+    total: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true
+    },
   }, {
     sequelize,
     modelName: 'BillingHistory',

@@ -42,6 +42,7 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/billing-histories', require('./routes/billingHistories'));
 app.use('/api/report-templates', require('./routes/reportTemplates'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/payments', require('./routes/payments'));
 
 // Mobile API Routes
 app.use('/backend/api/mobile/auth', require('./routes/Api/mobileAuth'));
@@ -49,6 +50,10 @@ app.use('/backend/api/mobile/user', require('./routes/Api/mobileUser'));
 app.use('/backend/api/mobile/salons', require('./routes/Api/salon'));
 app.use('/backend/api/mobile/hairstyles', require('./routes/Api/hairstyle'));
 app.use('/backend/api/mobile', require('./routes/Api/appointment'));
+app.use('/backend/api/mobile/payments', require('./routes/Api/payment'));
+app.use('/backend/api/mobile/notifications', require('./routes/Api/notifications'));
+app.use('/backend/api/mobile/staff', require('./routes/Api/staff'));
+
 
 // Error handler
 app.use((err, req, res, next) => {

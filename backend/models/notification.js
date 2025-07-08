@@ -1,7 +1,9 @@
 'use strict';
+const { User } = require('lucide-react');
 const {
   Model
 } = require('sequelize');
+const { FOREIGNKEYS } = require('sequelize/lib/query-types');
 module.exports = (sequelize, DataTypes) => {
   class Notification extends Model {
     /**
@@ -11,6 +13,11 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+        // Notification belongs to a User (many-to-one)
+      Notification.belongsTo(models.User,{
+        foreignKey:'user_id',
+        as:'user'
+      });
     }
   }
   Notification.init({

@@ -1,5 +1,4 @@
 'use strict';
-const { User } = require('lucide-react');
 const {
   Model
 } = require('sequelize');

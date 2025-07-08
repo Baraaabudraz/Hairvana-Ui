@@ -10,15 +10,6 @@ module.exports = {
         allowNull: false,
         primaryKey: true,
       },
-      salon_id: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: {
-          model: 'salons',
-          key: 'id'
-        },
-        onDelete: 'CASCADE'
-      },
       name: {
         type: Sequelize.TEXT,
         allowNull: false
@@ -34,11 +25,6 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: false,
         defaultValue: 60
-      },
-      category: {
-        type: Sequelize.ENUM('haircut', 'coloring', 'styling', 'treatment', 'spa', 'other'),
-        allowNull: false,
-        defaultValue: 'other'
       },
       status: {
         type: Sequelize.ENUM('active', 'inactive', 'discontinued'),

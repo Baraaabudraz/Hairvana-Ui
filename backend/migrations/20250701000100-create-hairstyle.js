@@ -18,6 +18,14 @@ module.exports = {
       gender: Sequelize.STRING,
       length: Sequelize.STRING,
       color: Sequelize.STRING,
+      salon_id: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        references: {
+          model: 'salons',
+          key: 'id'
+        }
+      },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
@@ -31,6 +39,8 @@ module.exports = {
     });
   },
   down: async (queryInterface, Sequelize) => {
+    // Remove the salon_id column if it exists before dropping the table
+    await queryInterface.removeColumn('hairstyles', 'salon_id').catch(() => {});
     await queryInterface.dropTable('hairstyles');
   }
 }; 

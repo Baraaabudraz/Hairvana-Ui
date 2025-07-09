@@ -82,7 +82,7 @@ const checkAvailabilityValidation = [
     .isUUID()
     .withMessage('Service ID must be a valid UUID'),
   
-  query('date')
+  query('start_at')
     .notEmpty()
     .withMessage('Date is required')
     .isISO8601()
@@ -107,35 +107,32 @@ const bookAppointmentValidation = [
     .withMessage('Salon ID is required')
     .isUUID()
     .withMessage('Salon ID must be a valid UUID'),
-  
-  body('date')
+
+  body('start_at')
     .notEmpty()
     .withMessage('Date is required')
     .isISO8601()
     .withMessage('Date must be in ISO8601 format'),
-  
-  body('time')
-    .notEmpty()
-    .withMessage('Time is required')
-    .matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    .withMessage('Time must be in HH:MM format'),
-  
-  body('service_id')
-    .optional()
+
+  body('service_ids')
+    .isArray({ min: 1 })
+    .withMessage('At least one service must be selected'),
+  body('service_ids.*')
     .isUUID()
-    .withMessage('Service ID must be a valid UUID'),
-  
+    .withMessage('Each service ID must be a valid UUID'),
+
   body('staff_id')
-    .optional()
+    .notEmpty()
+    .withMessage('Staff ID is required')
     .isUUID()
     .withMessage('Staff ID must be a valid UUID'),
-  
+
   body('notes')
     .optional()
     .trim()
     .isLength({ max: 500 })
     .withMessage('Notes must not exceed 500 characters'),
-  
+
   body('price')
     .optional()
     .isFloat({ min: 0 })

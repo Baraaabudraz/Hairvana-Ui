@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const { Sequelize } = require('sequelize');
 const config = require('../config/config.json');
 const db = require('../models');
+const { v4: uuidv4 } = require('uuid');
 
 // Main seeder function
 async function seed() {
@@ -169,6 +170,23 @@ async function seedUsers() {
       await db.Customer.bulkCreate(customers);
     }
     
+    // After inserting users, create user_settings for each user
+    const userSettings = users.map(user => ({
+      id: String(uuidv4()), // ensure id is a string
+      user_id: user.id,
+      department: user.role === 'super_admin' ? 'Administration'
+                : user.role === 'admin' ? 'Management'
+                : user.role === 'salon' ? 'Salon'
+                : 'Customer',
+      timezone: 'America/New_York',
+      language: 'en',
+      bio: `${user.name} - ${user.role}`,
+      created_at: new Date(),
+      updated_at: new Date()
+    }));
+
+    await db.UserSettings.bulkCreate(userSettings);
+    console.log(`Seeded ${users.length} user settings successfully.`);
     console.log(`Seeded ${users.length} users successfully.`);
   } catch (error) {
     console.error('Error seeding users:', error);

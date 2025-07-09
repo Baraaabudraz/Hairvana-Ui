@@ -9,6 +9,9 @@ router.use(protect);
 // GET all payments for the authenticated user
 router.get('/', mobilePaymentController.getUserPayments);
 
+// GET /history — User’s payment history
+router.get('/history', mobilePaymentController.getUserPaymentHistory);
+
 // GET a payment by ID (only if it belongs to the user)
 router.get('/:id', mobilePaymentController.getUserPaymentById);
 
@@ -17,8 +20,5 @@ router.post('/', mobilePaymentController.createUserPayment);
 
 // POST /checkout — Initiate payment for an appointment
 router.post('/checkout', mobilePaymentController.checkoutPayment);
-
-// GET /history — User’s payment history
-router.get('/history', mobilePaymentController.getUserPaymentHistory);
 
 module.exports = router; 

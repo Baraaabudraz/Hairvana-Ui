@@ -1,5 +1,5 @@
 'use strict';
-const { Appointment, Salon, User } = require('../../models');
+const { Appointment, Salon, Staff, Service, AppointmentService } = require('../../models');
 const { Op } = require('sequelize');
 
 exports.getAvailability = async (req, res) => {
@@ -67,45 +67,114 @@ exports.getAvailability = async (req, res) => {
 
 exports.bookAppointment = async (req, res) => {
   try {
-    const { salon_id, service_id, staff_id, date, time, notes, price } = req.body;
+    const { salon_id, staff_id, start_at, notes, service_ids } = req.body;
+
+    //  التحقق من الموظف والصالون
+    const staff = await Staff.findOne({ where: { id: staff_id, salon_id } });
+    if (!staff) return res.status(400).json({ error: 'Invalid staff or salon' });
+
+    //  التحقق من الخدمات
+    if (!Array.isArray(service_ids) || service_ids.length === 0) {
+      return res.status(400).json({ error: 'At least one service must be selected' });
+    }
+
+    const services = await Service.findAll({ where: { id: service_ids } });
+    if (services.length !== service_ids.length) {
+      return res.status(400).json({ error: 'One or more services are invalid' });
+    }
+
+    //  حساب المدة والسعر
+    const totalDuration = services.reduce((sum, s) => sum + s.duration, 0); // بالدقائق
+    const totalPrice = services.reduce((sum, s) => sum + parseFloat(s.price), 0);
+
+    //  حساب end_at تلقائيًا
+    const startTime = new Date(start_at);
+    const endTime = new Date(startTime.getTime() + totalDuration * 60000); // + دقائق
+
+    //  التحقق من تضارب المواعيد
+    const hasConflict = await Appointment.findOne({
+      where: {
+        staff_id,
+        status: { [Op.in]: ['pending', 'booked'] },
+        [Op.or]: [
+          {
+            start_at: {
+              [Op.between]: [startTime, endTime]
+            }
+          },
+          {
+            end_at: {
+              [Op.between]: [startTime, endTime]
+            }
+          },
+          {
+            [Op.and]: [
+              { start_at: { [Op.lte]: startTime } },
+              { end_at: { [Op.gte]: endTime } }
+            ]
+          }
+        ]
+      }
+    });
+
+    if (hasConflict) {
+      return res.status(409).json({ error: 'This staff member already has an appointment during the selected time.' });
+    }
+
+    //  إنشاء الموعد
     const appointment = await Appointment.create({
       user_id: req.user.id,
       salon_id,
-      service_id,
       staff_id,
-      date,
-      time,
+      start_at: startTime,
+      end_at: endTime,
       status: 'booked',
       notes,
-      price
+      total_price: totalPrice,
+      duration: totalDuration
     });
 
-    // Format date as MM/DD/YYYY
-    const dateObj = new Date(appointment.date);
-    const formattedDate = dateObj.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-
-    // Format time as hh:mm am/pm
-    function formatTime(t) {
-      let [hour, minute] = t.split(':');
-      hour = parseInt(hour, 10);
-      const ampm = hour >= 12 ? 'pm' : 'am';
-      hour = hour % 12;
-      if (hour === 0) hour = 12;
-      return `${hour.toString().padStart(2, '0')}:${minute} ${ampm}`;
+    //  ربط الخدمات
+    for (const service of services) {
+      await AppointmentService.create({
+        appointment_id: appointment.id,
+        service_id: service.id,
+        price: service.price
+      });
     }
-    const formattedTime = formatTime(appointment.time);
 
-    return res.status(201).json({ 
-      success: true, 
+    //  تنسيق التاريخ
+    const formattedDate = startTime.toLocaleDateString('en-US', {
+      month: '2-digit', day: '2-digit', year: 'numeric'
+    });
+
+    const formattedTime = startTime.toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit'
+    });
+
+    //  الإرجاع
+    return res.status(201).json({
+      success: true,
       appointment: {
         ...appointment.toJSON(),
         formattedDate,
-        formattedTime
+        formattedTime,
+        services: services.map(s => ({
+          id: s.id,
+          name: s.name,
+          price: s.price,
+          duration: s.duration
+        }))
       }
     });
+
   } catch (err) {
     console.error('Book appointment error:', err);
-    return res.status(500).json({ error: 'Failed to book appointment', message: err.message, stack: err.stack });
+    return res.status(500).json({
+      error: 'Failed to book appointment',
+      message: err.message,
+      stack: err.stack
+    });
   }
 };
 

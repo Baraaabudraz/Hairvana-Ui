@@ -1,5 +1,5 @@
 // At the top of the file, import models
-const { User, UserSettings, BillingSettings } = require('../models');
+const { User, UserSettings, BillingSettings, IntegrationSettings } = require('../models');
 // TODO: Import or define Sequelize models for the following tables if/when they exist:
 // SecuritySettings, NotificationPreferences, BackupSettings, PlatformSettings, IntegrationSettings
 
@@ -178,12 +178,28 @@ exports.updatePlatformSettings = async (req, res, next) => {
 
 // Get integration settings (admin only)
 exports.getIntegrationSettings = async (req, res, next) => {
-  // TODO: Implement with Sequelize model for integration_settings
-  return res.status(501).json({ error: 'Not implemented: getIntegrationSettings (Sequelize model missing)' });
+  try {
+    const settings = await IntegrationSettings.findOne();
+    if (!settings) {
+      return res.status(404).json({ error: 'Integration settings not found' });
+    }
+    res.json(settings);
+  } catch (error) {
+    next(error);
+  }
 };
 
 // Update integration settings (admin only)
 exports.updateIntegrationSettings = async (req, res, next) => {
-  // TODO: Implement with Sequelize model for integration_settings
-  return res.status(501).json({ error: 'Not implemented: updateIntegrationSettings (Sequelize model missing)' });
+  try {
+    let settings = await IntegrationSettings.findOne();
+    if (!settings) {
+      settings = await IntegrationSettings.create(req.body);
+    } else {
+      await settings.update(req.body);
+    }
+    res.json({ message: 'Integration settings updated', settings });
+  } catch (error) {
+    next(error);
+  }
 };

@@ -82,12 +82,12 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
     },
-    date: {
+    start_at: {
       type: DataTypes.DATE,
       allowNull: false
     },
-    time: {
-      type: DataTypes.STRING,
+    end_at: {
+      type: DataTypes.DATE,
       allowNull: false
     },
     status: {

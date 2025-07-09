@@ -42,20 +42,25 @@ exports.checkoutPayment = async (req, res, next) => {
     // Validate appointment
     const appointment = await Appointment.findOne({ where: { id: appointment_id, user_id: userId } });
     if (!appointment) return res.status(404).json({ message: 'Appointment not found or not yours' });
+    if (["cancelled", "completed"].includes(appointment.status)) {
+      return res.status(400).json({ message: 'Cannot pay for a cancelled or completed appointment' });
+    }
 
-    // Check if already paid
-    const existingPayment = await Payment.findOne({ where: { appointment_id } });
-    if (existingPayment) return res.status(400).json({ message: 'Payment already exists for this appointment' });
-
-    // Create payment (simulate payment gateway logic here)
-    const payment = await Payment.create({
-      user_id: userId,
-      appointment_id,
-      amount: appointment.total_price,
-      method,
-      status: 'paid', // or 'pending' if integrating with a real gateway
-      payment_date: new Date()
+    // Prevent duplicate payments (atomic)
+    const [payment, created] = await Payment.findOrCreate({
+      where: { appointment_id },
+      defaults: {
+        user_id: userId,
+        appointment_id,
+        amount: appointment.total_price,
+        method,
+        status: 'pending', // or 'paid' if instant
+        payment_date: new Date()
+      }
     });
+    if (!created) {
+      return res.status(400).json({ message: 'Payment already exists for this appointment' });
+    }
 
     res.status(201).json(payment);
   } catch (error) {

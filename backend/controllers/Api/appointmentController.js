@@ -79,7 +79,30 @@ exports.bookAppointment = async (req, res) => {
       notes,
       price
     });
-    return res.status(201).json({ success: true, appointment });
+
+    // Format date as MM/DD/YYYY
+    const dateObj = new Date(appointment.date);
+    const formattedDate = dateObj.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+
+    // Format time as hh:mm am/pm
+    function formatTime(t) {
+      let [hour, minute] = t.split(':');
+      hour = parseInt(hour, 10);
+      const ampm = hour >= 12 ? 'pm' : 'am';
+      hour = hour % 12;
+      if (hour === 0) hour = 12;
+      return `${hour.toString().padStart(2, '0')}:${minute} ${ampm}`;
+    }
+    const formattedTime = formatTime(appointment.time);
+
+    return res.status(201).json({ 
+      success: true, 
+      appointment: {
+        ...appointment.toJSON(),
+        formattedDate,
+        formattedTime
+      }
+    });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to book appointment' });
   }

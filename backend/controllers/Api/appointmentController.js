@@ -104,7 +104,8 @@ exports.bookAppointment = async (req, res) => {
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to book appointment' });
+    console.error('Book appointment error:', err);
+    return res.status(500).json({ error: 'Failed to book appointment', message: err.message, stack: err.stack });
   }
 };
 

@@ -38,12 +38,12 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      date: {
+      start_at: {
         type: Sequelize.DATE,
         allowNull: false
       },
-      time: {
-        type: Sequelize.STRING,
+      end_at: {
+        type: Sequelize.DATE,
         allowNull: false
       },
       duration: {

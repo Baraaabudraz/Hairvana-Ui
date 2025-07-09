@@ -4,9 +4,8 @@ module.exports = {
     await queryInterface.createTable('appointment_services', {
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.UUID
       },
       appointment_id: {
         type: Sequelize.UUID,

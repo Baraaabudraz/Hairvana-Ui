@@ -167,6 +167,9 @@ interface IntegrationSettings {
     events: string[];
     active: boolean;
   }>;
+  stripe_enabled: boolean;
+  email_enabled: boolean;
+  sms_enabled: boolean;
 }
 
 interface BillingSettings {
@@ -403,7 +406,26 @@ export default function SettingsPage() {
       if (activeSection === 'integrations') {
         try {
           const data = await fetchIntegrationSettings();
-          setIntegrationSettings(data);
+          if (!data) {
+            // If no data, initialize with defaults
+            setIntegrationSettings({
+              emailProvider: 'sendgrid',
+              emailApiKey: '',
+              smsProvider: 'twilio',
+              smsApiKey: '',
+              paymentGateway: 'stripe',
+              paymentApiKey: '',
+              analyticsProvider: 'google',
+              analyticsTrackingId: '',
+              socialLogins: { google: true, facebook: false, apple: false },
+              webhooks: [],
+              stripe_enabled: true,
+              email_enabled: true,
+              sms_enabled: true,
+            });
+          } else {
+            setIntegrationSettings(data);
+          }
         } catch (error) {
           console.error('Error loading integration settings:', error);
         }
@@ -477,7 +499,22 @@ export default function SettingsPage() {
           break;
         case 'Integrations':
           if (integrationSettings) {
-            await updateIntegrationSettings(integrationSettings);
+            const payload = {
+              email_provider: integrationSettings.emailProvider,
+              email_api_key: integrationSettings.emailApiKey,
+              sms_provider: integrationSettings.smsProvider,
+              sms_api_key: integrationSettings.smsApiKey,
+              payment_gateway: integrationSettings.paymentGateway,
+              payment_api_key: integrationSettings.paymentApiKey,
+              analytics_provider: integrationSettings.analyticsProvider,
+              analytics_tracking_id: integrationSettings.analyticsTrackingId,
+              social_logins: integrationSettings.socialLogins,
+              webhooks: integrationSettings.webhooks,
+              stripe_enabled: integrationSettings.stripe_enabled,
+              email_enabled: integrationSettings.email_enabled,
+              sms_enabled: integrationSettings.sms_enabled,
+            };
+            await updateIntegrationSettings(payload);
           }
           break;
       }
@@ -1546,7 +1583,7 @@ export default function SettingsPage() {
                 <Label htmlFor="emailProvider">Provider</Label>
                 <Select 
                   value={integrationSettings?.emailProvider || 'sendgrid'} 
-                  onValueChange={(value) => setIntegrationSettings(prev => prev ? { ...prev, emailProvider: value } : null)}
+                  onValueChange={value => setIntegrationSettings(prev => prev ? { ...prev, emailProvider: value } : prev)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1577,7 +1614,7 @@ export default function SettingsPage() {
                 <Label htmlFor="smsProvider">Provider</Label>
                 <Select 
                   value={integrationSettings?.smsProvider || 'twilio'} 
-                  onValueChange={(value) => setIntegrationSettings(prev => prev ? { ...prev, smsProvider: value } : null)}
+                  onValueChange={value => setIntegrationSettings(prev => prev ? { ...prev, smsProvider: value } : prev)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1607,7 +1644,7 @@ export default function SettingsPage() {
                 <Label htmlFor="paymentGateway">Provider</Label>
                 <Select 
                   value={integrationSettings?.paymentGateway || 'stripe'} 
-                  onValueChange={(value) => setIntegrationSettings(prev => prev ? { ...prev, paymentGateway: value } : null)}
+                  onValueChange={value => setIntegrationSettings(prev => prev ? { ...prev, paymentGateway: value } : prev)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1637,7 +1674,7 @@ export default function SettingsPage() {
                 <Label htmlFor="analyticsProvider">Provider</Label>
                 <Select 
                   value={integrationSettings?.analyticsProvider || 'google'} 
-                  onValueChange={(value) => setIntegrationSettings(prev => prev ? { ...prev, analyticsProvider: value } : null)}
+                  onValueChange={value => setIntegrationSettings(prev => prev ? { ...prev, analyticsProvider: value } : prev)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1656,6 +1693,41 @@ export default function SettingsPage() {
                   placeholder="Enter tracking ID"
                   value={integrationSettings?.analyticsTrackingId || ''}
                   onChange={(e) => setIntegrationSettings(prev => prev ? { ...prev, analyticsTrackingId: e.target.value } : null)}
+                />
+              </div>
+            </div>
+
+            {/* Feature Toggles */}
+            <div className="space-y-4">
+              <h4 className="font-semibold">Feature Toggles</h4>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="stripeEnabled">Enable Stripe Payments</Label>
+                <input
+                  id="stripeEnabled"
+                  type="checkbox"
+                  checked={integrationSettings?.stripe_enabled ?? true}
+                  onChange={e => setIntegrationSettings(prev => prev ? { ...prev, stripe_enabled: e.target.checked } : prev)}
+                  className="rounded"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="emailEnabled">Enable Email</Label>
+                <input
+                  id="emailEnabled"
+                  type="checkbox"
+                  checked={integrationSettings?.email_enabled ?? true}
+                  onChange={e => setIntegrationSettings(prev => prev ? { ...prev, email_enabled: e.target.checked } : prev)}
+                  className="rounded"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="smsEnabled">Enable SMS</Label>
+                <input
+                  id="smsEnabled"
+                  type="checkbox"
+                  checked={integrationSettings?.sms_enabled ?? true}
+                  onChange={e => setIntegrationSettings(prev => prev ? { ...prev, sms_enabled: e.target.checked } : prev)}
+                  className="rounded"
                 />
               </div>
             </div>

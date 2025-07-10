@@ -32,7 +32,7 @@ export async function fetchSubscriptions(params: SubscriptionParams = {}) {
       queryParams.append('includePlans', 'true');
     }
     
-    return await apiFetch(`/backend/api/subscriptions?${queryParams.toString()}`);
+    return await apiFetch(`/subscriptions?${queryParams.toString()}`);
   } catch (error) {
     console.error('Error fetching subscriptions:', error);
     throw error;
@@ -41,7 +41,7 @@ export async function fetchSubscriptions(params: SubscriptionParams = {}) {
 
 export async function fetchSubscriptionById(id: string) {
   try {
-    return await apiFetch(`/backend/api/subscriptions/${id}`);
+    return await apiFetch(`/subscriptions/${id}`);
   } catch (error) {
     console.error(`Error fetching subscription with ID ${id}:`, error);
     throw error;
@@ -50,7 +50,7 @@ export async function fetchSubscriptionById(id: string) {
 
 export async function createSubscription(subscriptionData: any) {
   try {
-    return await apiFetch('/backend/api/subscriptions', {
+    return await apiFetch('/subscriptions', {
       method: 'POST',
       body: JSON.stringify(subscriptionData),
     });
@@ -62,7 +62,7 @@ export async function createSubscription(subscriptionData: any) {
 
 export async function updateSubscription(id: string, subscriptionData: any) {
   try {
-    return await apiFetch(`/backend/api/subscriptions/${id}`, {
+    return await apiFetch(`/subscriptions/${id}`, {
       method: 'PUT',
       body: JSON.stringify(subscriptionData),
     });
@@ -74,7 +74,7 @@ export async function updateSubscription(id: string, subscriptionData: any) {
 
 export async function cancelSubscription(id: string) {
   try {
-    return await apiFetch(`/backend/api/subscriptions/${id}/cancel`, {
+    return await apiFetch(`/subscriptions/${id}/cancel`, {
       method: 'PATCH',
     });
   } catch (error) {
@@ -85,7 +85,7 @@ export async function cancelSubscription(id: string) {
 
 export async function syncBilling() {
   try {
-    return await apiFetch('/backend/api/subscriptions/sync', {
+    return await apiFetch('/subscriptions/sync', {
       method: 'POST',
     });
   } catch (error) {
@@ -96,7 +96,7 @@ export async function syncBilling() {
 
 export async function generateReport(id: string, reportData: any) {
   try {
-    return await apiFetch(`/backend/api/subscriptions/${id}/report`, {
+    return await apiFetch(`/subscriptions/${id}/report`, {
       method: 'POST',
       body: JSON.stringify(reportData),
     });
@@ -108,7 +108,7 @@ export async function generateReport(id: string, reportData: any) {
 
 export async function exportInvoices(id: string, format: string = 'csv') {
   try {
-    return await apiFetch(`/backend/api/subscriptions/${id}/export?format=${format}`);
+    return await apiFetch(`/subscriptions/${id}/export?format=${format}`);
   } catch (error) {
     console.error(`Error exporting invoices for subscription with ID ${id}:`, error);
     throw error;
@@ -117,7 +117,7 @@ export async function exportInvoices(id: string, format: string = 'csv') {
 
 export async function updatePaymentMethod(id: string, paymentData: any) {
   try {
-    return await apiFetch(`/backend/api/subscriptions/${id}/payment`, {
+    return await apiFetch(`/subscriptions/${id}/payment`, {
       method: 'PUT',
       body: JSON.stringify(paymentData),
     });
@@ -129,7 +129,7 @@ export async function updatePaymentMethod(id: string, paymentData: any) {
 
 export async function fetchSubscriptionPlans() {
   try {
-    return await apiFetch('/backend/api/subscriptions/plans');
+    return await apiFetch('/subscriptions/plans');
   } catch (error) {
     console.error('Error fetching subscription plans:', error);
     throw error;

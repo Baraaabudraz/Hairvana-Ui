@@ -24,6 +24,19 @@ module.exports = (sequelize) => {
     sms_api_key: {
       type: DataTypes.TEXT,
     },
+    // Add feature toggles
+    stripe_enabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+    email_enabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+    sms_enabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
     payment_gateway: {
       type: DataTypes.TEXT,
       defaultValue: 'stripe',

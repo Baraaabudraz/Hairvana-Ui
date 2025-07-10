@@ -1,7 +1,5 @@
-'use client';
-
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -365,7 +363,7 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
           <p className="text-gray-600">Manage all platform users: admins, salon owners, and customers</p>
         </div>
-        <Link href="/dashboard/users/new">
+        <Link to="/dashboard/users/new">
           <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
             <Plus className="h-4 w-4 mr-2" />
             Add New User
@@ -572,20 +570,20 @@ export default function UsersPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/users/${user.id}`} className="flex items-center w-full">
+                          <Link to={`/dashboard/users/${user.id}`} className="flex items-center w-full">
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/users/${user.id}/edit`} className="flex items-center w-full">
+                          <Link to={`/dashboard/users/${user.id}/edit`} className="flex items-center w-full">
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </Link>
                         </DropdownMenuItem>
                         {user.role === 'salon' && user.salons && user.salons.length > 0 && (
                           <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/salons?ownerId=${user.id}`} className="flex items-center w-full">
+                            <Link to={`/dashboard/salons?ownerId=${user.id}`} className="flex items-center w-full">
                               <Building2 className="mr-2 h-4 w-4" />
                               View Salons ({user.totalSalons})
                             </Link>

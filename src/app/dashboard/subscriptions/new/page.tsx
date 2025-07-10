@@ -1,7 +1,5 @@
-'use client';
-
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,7 +28,7 @@ import {
   Mail,
   Phone
 } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
 const subscriptionSchema = z.object({
   salonId: z.string().min(1, 'Please select a salon'),
@@ -164,7 +162,7 @@ const planColors = {
 };
 
 export default function CreateSubscriptionPage() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [salons, setSalons] = useState<Salon[]>([]);
@@ -281,7 +279,7 @@ export default function CreateSubscriptionPage() {
         description: `${selectedSalon?.name} has been subscribed to the ${selectedPlan?.name} plan.`,
       });
 
-      router.push(`/dashboard/subscriptions/${result.id}`);
+      navigate(`/dashboard/subscriptions/${result.id}`);
     } catch (error) {
       toast({
         title: 'Error creating subscription',
@@ -296,7 +294,7 @@ export default function CreateSubscriptionPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/subscriptions">
+        <Link to="/dashboard/subscriptions">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -656,7 +654,7 @@ export default function CreateSubscriptionPage() {
 
         {/* Submit */}
         <div className="flex justify-end gap-4">
-          <Link href="/dashboard/subscriptions">
+          <Link to="/dashboard/subscriptions">
             <Button variant="outline" type="button">
               Cancel
             </Button>

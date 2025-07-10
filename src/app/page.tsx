@@ -1,22 +1,20 @@
-'use client';
-
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth-store';
 
 export default function HomePage() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { user, isLoading } = useAuthStore();
 
   useEffect(() => {
     if (!isLoading) {
       if (user) {
-        router.replace('/dashboard');
+        navigate('/dashboard', { replace: true });
       } else {
-        router.replace('/auth/login');
+        navigate('/auth/login', { replace: true });
       }
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, navigate]);
 
   if (isLoading) {
     return (

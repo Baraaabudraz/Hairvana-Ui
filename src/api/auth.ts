@@ -2,7 +2,7 @@ import { apiFetch } from '@/lib/api';
 
 export async function loginUser(email: string, password: string) {
   try {
-    const data = await apiFetch('/api/auth/login', {
+    const data = await apiFetch('/backend/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });

@@ -1,5 +1,6 @@
 const { Appointment, Salon, Service, Staff, User, Payment } = require('../models');
 const { Op } = require('sequelize');
+const { serializeAppointment } = require('../serializers/appointmentSerializer');
 
 // Get all appointments
 exports.getAllAppointments = async (req, res, next) => {
@@ -34,6 +35,7 @@ exports.getAppointmentById = async (req, res, next) => {
     const { id } = req.params;
     const appointment = await Appointment.findOne({
       where: { id },
+
       include: [
         { model: Salon, as: 'salon', attributes: ['id', 'name', 'location', 'address', 'phone', 'email', 'images'] },
         { model: Service, as: 'services', attributes: ['id', 'name', 'price', 'duration', 'description'] },
@@ -45,7 +47,7 @@ exports.getAppointmentById = async (req, res, next) => {
     if (!appointment) {
       return res.status(404).json({ message: 'Appointment not found' });
     }
-    res.json(appointment);
+    res.json(serializeAppointment(appointment));
   } catch (error) {
     next(error);
   }

@@ -1,7 +1,5 @@
-'use client';
-
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -461,7 +459,7 @@ export default function SubscriptionsPage() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Sync Billing
           </Button>
-          <Link href="/dashboard/subscriptions/new">
+          <Link to="/dashboard/subscriptions/new">
             <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
               <Plus className="h-4 w-4 mr-2" />
               Create Subscription
@@ -753,13 +751,13 @@ export default function SubscriptionsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/subscriptions/${subscription.id}`} className="flex items-center w-full">
+                          <Link to={`/dashboard/subscriptions/${subscription.id}`} className="flex items-center w-full">
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/salons/${subscription.salonId}`} className="flex items-center w-full">
+                          <Link to={`/dashboard/salons/${subscription.salonId}`} className="flex items-center w-full">
                             <Building2 className="mr-2 h-4 w-4" />
                             View Salon
                           </Link>
@@ -768,20 +766,14 @@ export default function SubscriptionsPage() {
                           <>
                             <DropdownMenuItem 
                               className="cursor-pointer"
-                              onSelect={(e) => {
-                                e.preventDefault();
-                                openUpgradeDialog(subscription);
-                              }}
+                              onClick={() => openUpgradeDialog(subscription)}
                             >
                               <ArrowUpCircle className="mr-2 h-4 w-4" />
                               Upgrade Plan
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="cursor-pointer"
-                              onSelect={(e) => {
-                                e.preventDefault();
-                                openDowngradeDialog(subscription);
-                              }}
+                              onClick={() => openDowngradeDialog(subscription)}
                             >
                               <ArrowDownCircle className="mr-2 h-4 w-4" />
                               Downgrade Plan
@@ -790,10 +782,7 @@ export default function SubscriptionsPage() {
                         )}
                         <DropdownMenuItem 
                           className="cursor-pointer"
-                          onSelect={(e) => {
-                            e.preventDefault();
-                            openEditBillingDialog(subscription);
-                          }}
+                          onClick={() => openEditBillingDialog(subscription)}
                         >
                           <Edit className="mr-2 h-4 w-4" />
                           Edit Billing
@@ -801,10 +790,7 @@ export default function SubscriptionsPage() {
                         {subscription.status === 'active' && (
                           <DropdownMenuItem 
                             className="text-red-600 cursor-pointer"
-                            onSelect={(e) => {
-                              e.preventDefault();
-                              openCancelDialog(subscription);
-                            }}
+                            onClick={() => openCancelDialog(subscription)}
                           >
                             <XCircle className="mr-2 h-4 w-4" />
                             Cancel Subscription

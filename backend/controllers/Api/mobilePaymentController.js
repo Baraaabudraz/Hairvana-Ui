@@ -1,4 +1,5 @@
 const { Payment, Appointment } = require('../../models');
+const Stripe = require('stripe');
 
 exports.getUserPayments = async (req, res, next) => {
   try {
@@ -37,7 +38,18 @@ exports.createUserPayment = async (req, res, next) => {
 exports.checkoutPayment = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { appointment_id, method } = req.body;
+    const { appointment_id ,method } = req.body;
+
+    // Fetch integration settings and check feature toggle
+    const { IntegrationSettings } = require('../../models');
+    const settings = await IntegrationSettings.findOne({ order: [['updated_at', 'DESC']] });
+    if (!settings || settings.stripe_enabled === false) {
+      return res.status(503).json({ message: 'Payments are currently disabled by the admin.' });
+    }
+    if (!settings.payment_api_key) {
+      return res.status(500).json({ message: 'Stripe API key is not configured.' });
+    }
+    const stripe = Stripe(settings.payment_api_key);
 
     // Validate appointment
     const appointment = await Appointment.findOne({ where: { id: appointment_id, user_id: userId } });
@@ -47,14 +59,14 @@ exports.checkoutPayment = async (req, res, next) => {
     }
 
     // Prevent duplicate payments (atomic)
-    const [payment, created] = await Payment.findOrCreate({
+    const [existingPayment, created] = await Payment.findOrCreate({
       where: { appointment_id },
       defaults: {
         user_id: userId,
         appointment_id,
         amount: appointment.total_price,
         method,
-        status: 'pending', // or 'paid' if instant
+        status: 'pending',
         payment_date: new Date()
       }
     });
@@ -62,7 +74,23 @@ exports.checkoutPayment = async (req, res, next) => {
       return res.status(400).json({ message: 'Payment already exists for this appointment' });
     }
 
-    res.status(201).json(payment);
+    // Create a PaymentIntent with Stripe
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(Number(appointment.total_price) * 100), // cents
+      currency: 'usd',
+      metadata: {
+        appointment_id: appointment.id,
+        user_id: userId
+      }
+    });
+
+    // Update the payment record with the Stripe transaction ID
+    existingPayment.transaction_id = paymentIntent.id;
+    await existingPayment.save();
+
+    res.status(201).json({
+      stripeClientSecret: paymentIntent.client_secret
+    });
   } catch (error) {
     next(error);
   }

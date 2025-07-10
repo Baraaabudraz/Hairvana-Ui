@@ -1,7 +1,5 @@
-'use client';
-
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,7 +20,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter();
+  const navigate = useNavigate();
   const { login, isLoading } = useAuthStore();
   const { toast } = useToast();
 
@@ -41,7 +39,7 @@ export default function LoginPage() {
         title: 'Login successful',
         description: 'Welcome to Hairvana Admin Dashboard',
       });
-      router.push('/dashboard');
+      navigate('/dashboard');
     } catch (error) {
       toast({
         title: 'Login failed',

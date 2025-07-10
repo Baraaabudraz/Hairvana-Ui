@@ -1,7 +1,5 @@
-'use client';
-
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +33,7 @@ import {
   Heart,
   Eye
 } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { format, isValid, formatDistanceToNow } from 'date-fns';
 
 interface Salon {
@@ -120,7 +118,7 @@ function formatDistanceSafely(dateString: string | null | undefined, fallback: s
 
 export default function UserDetailsPage() {
   const params = useParams();
-  const router = useRouter();
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -275,7 +273,7 @@ export default function UserDetailsPage() {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900">User not found</h2>
           <p className="text-gray-600 mt-2">The user you're looking for doesn't exist.</p>
-          <Link href="/dashboard/users">
+          <Link to="/dashboard/users">
             <Button className="mt-4">Back to Users</Button>
           </Link>
         </div>
@@ -310,7 +308,7 @@ export default function UserDetailsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/users">
+          <Link to="/dashboard/users">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -321,7 +319,7 @@ export default function UserDetailsPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/dashboard/users/${user.id}/edit`}>
+          <Link to={`/dashboard/users/${user.id}/edit`}>
             <Button variant="outline">
               <Edit className="h-4 w-4 mr-2" />
               Edit
@@ -592,7 +590,7 @@ export default function UserDetailsPage() {
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-900">${salon.revenue.toLocaleString()}</p>
                       <p className="text-xs text-gray-500">{salon.bookingsCount} bookings</p>
-                      <Link href={`/dashboard/salons/${salon.id}`}>
+                      <Link to={`/dashboard/salons/${salon.id}`}>
                         <Button variant="outline" size="sm" className="mt-2">
                           <Eye className="h-3 w-3 mr-1" />
                           View
@@ -605,7 +603,7 @@ export default function UserDetailsPage() {
               
               {user.salons && user.salons.length > 0 && (
                 <div className="mt-4 pt-4 border-t">
-                  <Link href={`/dashboard/salons?ownerId=${user.id}`}>
+                  <Link to={`/dashboard/salons?ownerId=${user.id}`}>
                     <Button variant="outline" className="w-full">
                       <Building2 className="h-4 w-4 mr-2" />
                       View All Salons ({user.totalSalons})

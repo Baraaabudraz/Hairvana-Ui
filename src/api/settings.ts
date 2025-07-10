@@ -39,7 +39,7 @@ export interface ProfileSettings {
 
 export async function fetchUserSettings() {
   try {
-    return await apiFetch('/backend/api/settings');
+    return await apiFetch('/settings');
   } catch (error) {
     console.error('Error fetching user settings:', error);
     throw error;
@@ -48,7 +48,7 @@ export async function fetchUserSettings() {
 
 export async function updateProfileSettings(profileData: any) {
   try {
-    return await apiFetch('/backend/api/settings/profile', {
+    return await apiFetch('/settings/profile', {
       method: 'PUT',
       body: JSON.stringify(profileData),
     });
@@ -60,7 +60,7 @@ export async function updateProfileSettings(profileData: any) {
 
 export async function updateSecuritySettings(securityData: any) {
   try {
-    return await apiFetch('/backend/api/settings/security', {
+    return await apiFetch('/settings/security', {
       method: 'PUT',
       body: JSON.stringify(securityData),
     });
@@ -72,7 +72,7 @@ export async function updateSecuritySettings(securityData: any) {
 
 export async function updateNotificationPreferences(notificationData: any) {
   try {
-    return await apiFetch('/backend/api/settings/notifications', {
+    return await apiFetch('/settings/notifications', {
       method: 'PUT',
       body: JSON.stringify(notificationData),
     });
@@ -84,7 +84,7 @@ export async function updateNotificationPreferences(notificationData: any) {
 
 export async function updateBillingSettings(billingData: any) {
   try {
-    return await apiFetch('/backend/api/settings/billing', {
+    return await apiFetch('/settings/billing', {
       method: 'PUT',
       body: JSON.stringify(billingData),
     });
@@ -96,7 +96,7 @@ export async function updateBillingSettings(billingData: any) {
 
 export async function updateBackupSettings(backupData: any) {
   try {
-    return await apiFetch('/backend/api/settings/backup', {
+    return await apiFetch('/settings/backup', {
       method: 'PUT',
       body: JSON.stringify(backupData),
     });
@@ -108,7 +108,7 @@ export async function updateBackupSettings(backupData: any) {
 
 export async function fetchPlatformSettings() {
   try {
-    return await apiFetch('/backend/api/settings/platform');
+    return await apiFetch('/settings/platform');
   } catch (error) {
     console.error('Error fetching platform settings:', error);
     throw error;
@@ -117,7 +117,7 @@ export async function fetchPlatformSettings() {
 
 export async function updatePlatformSettings(platformData: any) {
   try {
-    return await apiFetch('/backend/api/settings/platform', {
+    return await apiFetch('/settings/platform', {
       method: 'PUT',
       body: JSON.stringify(platformData),
     });
@@ -129,7 +129,7 @@ export async function updatePlatformSettings(platformData: any) {
 
 export async function fetchIntegrationSettings() {
   try {
-    return await apiFetch('/backend/api/settings/integrations');
+    return await apiFetch('/settings/integrations');
   } catch (error) {
     console.error('Error fetching integration settings:', error);
     throw error;
@@ -138,7 +138,7 @@ export async function fetchIntegrationSettings() {
 
 export async function updateIntegrationSettings(integrationData: any) {
   try {
-    return await apiFetch('/backend/api/settings/integrations', {
+    return await apiFetch('/settings/integrations', {
       method: 'PUT',
       body: JSON.stringify(integrationData),
     });

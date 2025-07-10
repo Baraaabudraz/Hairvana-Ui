@@ -1,7 +1,5 @@
-'use client';
-
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,7 +34,7 @@ import {
   Mail,
   Phone
 } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 
 interface PaymentMethod {
@@ -114,7 +112,7 @@ const billingStatusColors = {
 
 export default function SubscriptionDetailsPage() {
   const params = useParams();
-  const router = useRouter();
+  const navigate = useNavigate();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -482,7 +480,7 @@ Hairvana Team`;
     return (
       <div className="flex flex-col justify-center items-center h-96">
         <span className="text-lg text-red-500 mb-2">{error}</span>
-        <Button onClick={() => router.back()}>Go Back</Button>
+        <Button onClick={() => navigate(-1)}>Go Back</Button>
       </div>
     );
   }
@@ -491,7 +489,7 @@ Hairvana Team`;
     return (
       <div className="flex flex-col justify-center items-center h-96">
         <span className="text-lg text-gray-500 mb-2">Subscription not found.</span>
-        <Button onClick={() => router.back()}>Go Back</Button>
+        <Button onClick={() => navigate(-1)}>Go Back</Button>
       </div>
     );
   }
@@ -517,7 +515,7 @@ Hairvana Team`;
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/subscriptions">
+          <Link to="/dashboard/subscriptions">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>

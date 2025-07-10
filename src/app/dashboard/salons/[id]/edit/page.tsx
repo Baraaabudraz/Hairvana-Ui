@@ -1,7 +1,5 @@
-'use client';
-
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Upload, X, Plus, Save } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
 const salonSchema = z.object({
   name: z.string().min(2, 'Salon name must be at least 2 characters'),
@@ -67,7 +65,7 @@ interface Salon {
 
 export default function EditSalonPage() {
   const params = useParams();
-  const router = useRouter();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -237,7 +235,7 @@ export default function EditSalonPage() {
         description: 'The salon information has been updated.',
       });
 
-      router.push(`/dashboard/salons/${params.id}`);
+      navigate(`/dashboard/salons/${params.id}`);
     } catch (error) {
       toast({
         title: 'Error updating salon',
@@ -260,7 +258,7 @@ export default function EditSalonPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href={`/dashboard/salons/${params.id}`}>
+        <Link to={`/dashboard/salons/${params.id}`}>
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -639,7 +637,7 @@ export default function EditSalonPage() {
 
         {/* Submit */}
         <div className="flex justify-end gap-4">
-          <Link href={`/dashboard/salons/${params.id}`}>
+          <Link to={`/dashboard/salons/${params.id}`}>
             <Button variant="outline" type="button">
               Cancel
             </Button>

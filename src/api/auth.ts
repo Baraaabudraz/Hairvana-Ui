@@ -2,7 +2,7 @@ import { apiFetch } from '@/lib/api';
 
 export async function loginUser(email: string, password: string) {
   try {
-    const data = await apiFetch('/backend/api/auth/login', {
+    const data = await apiFetch('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
@@ -27,7 +27,7 @@ export async function registerUser(userData: {
   phone?: string;
 }) {
   try {
-    const data = await apiFetch('/backend/api/auth/register', {
+    const data = await apiFetch('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -46,7 +46,7 @@ export async function registerUser(userData: {
 
 export async function logoutUser() {
   try {
-    await apiFetch('/backend/api/auth/logout', {
+    await apiFetch('/auth/logout', {
       method: 'POST',
     });
     
@@ -60,7 +60,7 @@ export async function logoutUser() {
 
 export async function getCurrentUser() {
   try {
-    return await apiFetch('/backend/api/auth/me');
+    return await apiFetch('/auth/me');
   } catch (error) {
     console.error('Get current user error:', error);
     return null;
@@ -69,7 +69,7 @@ export async function getCurrentUser() {
 
 export async function updatePassword(userId: string, currentPassword: string, newPassword: string) {
   try {
-    return await apiFetch('/backend/api/auth/change-password', {
+    return await apiFetch('/auth/change-password', {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
     });

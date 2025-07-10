@@ -1,3 +1,5 @@
+const BASE_API_URL = '/backend/api';
+
 export async function apiFetch(url: string, options?: RequestInit) {
   const token = localStorage.getItem('token');
   const headers = {
@@ -6,7 +8,10 @@ export async function apiFetch(url: string, options?: RequestInit) {
     ...options?.headers,
   };
 
-  const response = await fetch(url, {
+  // Prepend BASE_API_URL if url is relative (doesn't start with http)
+  const fullUrl = url.startsWith('http') ? url : (url.startsWith(BASE_API_URL) ? url : `${BASE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`);
+
+  const response = await fetch(fullUrl, {
     ...options,
     headers,
   });

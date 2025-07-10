@@ -1,7 +1,5 @@
-'use client';
-
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Upload, X, Plus } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
 const salonSchema = z.object({
   name: z.string().min(2, 'Salon name must be at least 2 characters'),
@@ -43,7 +41,7 @@ const serviceCategories = [
 ];
 
 export default function AddNewSalonPage() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -143,7 +141,7 @@ export default function AddNewSalonPage() {
         description: 'The salon has been submitted for review and approval.',
       });
 
-      router.push('/dashboard/salons');
+      navigate('/dashboard/salons');
     } catch (error) {
       toast({
         title: 'Error creating salon',
@@ -158,7 +156,7 @@ export default function AddNewSalonPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/salons">
+        <Link to="/dashboard/salons">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -537,7 +535,7 @@ export default function AddNewSalonPage() {
 
         {/* Submit */}
         <div className="flex justify-end gap-4">
-          <Link href="/dashboard/salons">
+          <Link to="/dashboard/salons">
             <Button variant="outline" type="button">
               Cancel
             </Button>

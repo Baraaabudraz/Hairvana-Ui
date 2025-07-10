@@ -152,7 +152,7 @@ export default function ReportsPage() {
       setReportTemplates(
         templates.map((tpl: any) => ({
           ...tpl,
-          icon: LucideIcons[tpl.icon] || LucideIcons.FileText,
+          icon: LucideIcons[tpl.icon as keyof typeof LucideIcons] || LucideIcons.FileText,
         }))
       );
       setReports(reports);

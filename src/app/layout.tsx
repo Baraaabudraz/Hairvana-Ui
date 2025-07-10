@@ -1,9 +1,8 @@
-import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/toaster";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Hairvana Admin Dashboard",
   description: "Admin dashboard for managing Hairvana platform",
 };

@@ -222,7 +222,7 @@ export default function SubscriptionsPage() {
       }
       
       if (planFilter !== 'all') {
-        params.plan = planFilter;
+        (params as any).plan = planFilter;
       }
       
       if (searchTerm) {

@@ -199,16 +199,16 @@ export default function NotificationsPage() {
       
       // Set status and dates based on schedule type
       if (scheduleType === 'now') {
-        apiData.status = 'sent';
-        apiData.sentAt = new Date().toISOString();
+        (apiData as any).status = 'sent';
+        (apiData as any).sentAt = new Date().toISOString();
       } else if (scheduleType === 'later') {
-        apiData.status = 'scheduled';
-        apiData.scheduledAt = notificationData.scheduledAt;
+        (apiData as any).status = 'scheduled';
+        (apiData as any).scheduledAt = notificationData.scheduledAt;
       } else {
-        apiData.status = 'draft';
+        (apiData as any).status = 'draft';
       }
 
-      const newNotification = await createNotification(apiData);
+      const newNotification = await createNotification(apiData as any);
       setNotifications(prev => [newNotification, ...prev]);
 
       toast({
@@ -334,7 +334,7 @@ export default function NotificationsPage() {
                     <h3 className="text-lg font-semibold">Choose a Template</h3>
                     <Button
                       variant="outline"
-                      onClick={() => setSelectedTemplate({ id: 'custom', name: 'Custom', description: '', type: 'info', category: 'custom', subject: '', content: '', channels: [], variables: [], popular: false })}
+                      onClick={() => setSelectedTemplate({ id: 'custom', name: 'Custom', description: '', type: 'info', category: 'custom' as any, subject: '', content: '', channels: [], variables: [], popular: false })}
                     >
                       Create Custom
                     </Button>
@@ -771,7 +771,9 @@ export default function NotificationsPage() {
                           {notification.channels.map(channel => {
                             const ChannelIcon = channelIcons[channel];
                             return (
-                              <ChannelIcon key={channel} className="h-3 w-3" title={channel} />
+                              <span title={channel} key={channel}>
+                                <ChannelIcon className="h-3 w-3" />
+                              </span>
                             );
                           })}
                         </div>

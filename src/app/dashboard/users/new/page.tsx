@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -184,6 +184,8 @@ export default function AddNewUserPage() {
       default: return 'from-gray-600 to-gray-700';
     }
   };
+
+  const salonErrors = errors as FieldErrors<any>; // Replace 'any' with your actual SalonUserForm type if available
 
   return (
     <div className="space-y-6">
@@ -427,8 +429,8 @@ export default function AddNewUserPage() {
                     placeholder="Enter salon name"
                     {...register('salonName')}
                   />
-                  {selectedRole === 'salon' && errors.salonName && (
-                    <p className="text-sm text-red-500">{errors.salonName.message}</p>
+                  {selectedRole === 'salon' && salonErrors.salonName && (
+                    <p className="text-sm text-red-500">{typeof salonErrors.salonName.message === 'string' ? salonErrors.salonName.message : ''}</p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -438,8 +440,8 @@ export default function AddNewUserPage() {
                     placeholder="BL123456789"
                     {...register('businessLicense')}
                   />
-                  {selectedRole === 'salon' && errors.businessLicense && (
-                    <p className="text-sm text-red-500">{errors.businessLicense.message}</p>
+                  {selectedRole === 'salon' && salonErrors.businessLicense && (
+                    <p className="text-sm text-red-500">{typeof salonErrors.businessLicense.message === 'string' ? salonErrors.businessLicense.message : ''}</p>
                   )}
                 </div>
               </div>
@@ -451,8 +453,8 @@ export default function AddNewUserPage() {
                   placeholder="123 Main Street, City, State, ZIP"
                   {...register('salonAddress')}
                 />
-                {selectedRole === 'salon' && errors.salonAddress && (
-                  <p className="text-sm text-red-500">{errors.salonAddress.message}</p>
+                {selectedRole === 'salon' && salonErrors.salonAddress && (
+                  <p className="text-sm text-red-500">{typeof salonErrors.salonAddress.message === 'string' ? salonErrors.salonAddress.message : ''}</p>
                 )}
               </div>
 
@@ -474,8 +476,8 @@ export default function AddNewUserPage() {
                     </button>
                   ))}
                 </div>
-                {selectedRole === 'salon' && errors.subscription && (
-                  <p className="text-sm text-red-500">{errors.subscription.message}</p>
+                {selectedRole === 'salon' && salonErrors.subscription && (
+                  <p className="text-sm text-red-500">{typeof salonErrors.subscription.message === 'string' ? salonErrors.subscription.message : ''}</p>
                 )}
               </div>
             </CardContent>

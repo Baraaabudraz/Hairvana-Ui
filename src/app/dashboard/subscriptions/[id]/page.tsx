@@ -669,7 +669,7 @@ Hairvana Team`;
             ) : (
               <p className="text-sm text-gray-600">
                 {subscription.usage && subscription.usage.locationsLimit && subscription.usage.locations !== undefined
-                  ? subscription.usage.locationsLimit - subscription.usage.locations
+                  ? typeof subscription.usage.locationsLimit === 'number' ? subscription.usage.locationsLimit - subscription.usage.locations : 0
                   : '-'} remaining
               </p>
             )}

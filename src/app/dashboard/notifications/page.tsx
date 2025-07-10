@@ -97,7 +97,7 @@ interface NotificationTemplate {
   name: string;
   description: string;
   type: 'info' | 'success' | 'warning' | 'error' | 'announcement' | 'promotion';
-  category: 'system' | 'marketing' | 'transactional' | 'operational';
+  category: 'system' | 'marketing' | 'transactional' | 'operational' | 'custom';
   subject: string;
   content: string;
   channels: ('email' | 'push' | 'in-app' | 'sms')[];
@@ -961,7 +961,7 @@ export default function NotificationsPage() {
                           {notification.channels.map(channel => {
                             const ChannelIcon = channelIcons[channel];
                             return (
-                              <ChannelIcon key={channel} className="h-3 w-3" title={channel} />
+                              <span title={channel}><ChannelIcon key={channel} className="h-3 w-3" /></span>
                             );
                           })}
                         </div>

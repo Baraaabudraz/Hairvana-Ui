@@ -1,7 +1,5 @@
-'use client';
-
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +25,7 @@ import {
   CreditCard,
   FileText
 } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
 interface Salon {
   id: string;
@@ -68,7 +66,7 @@ const subscriptionColors = {
 
 export default function SalonDetailsPage() {
   const params = useParams();
-  const router = useRouter();
+  const navigate = useNavigate();
   const [salon, setSalon] = useState<Salon | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -140,7 +138,7 @@ export default function SalonDetailsPage() {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900">Salon not found</h2>
           <p className="text-gray-600 mt-2">The salon you're looking for doesn't exist.</p>
-          <Link href="/dashboard/salons">
+          <Link to="/dashboard/salons">
             <Button className="mt-4">Back to Salons</Button>
           </Link>
         </div>
@@ -153,7 +151,7 @@ export default function SalonDetailsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/salons">
+          <Link to="/dashboard/salons">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -164,7 +162,7 @@ export default function SalonDetailsPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/dashboard/salons/${salon.id}/edit`}>
+          <Link to={`/dashboard/salons/${salon.id}/edit`}>
             <Button variant="outline">
               <Edit className="h-4 w-4 mr-2" />
               Edit

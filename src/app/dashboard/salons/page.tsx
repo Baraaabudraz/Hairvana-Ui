@@ -1,7 +1,5 @@
-'use client';
-
 import { useState } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -270,7 +268,7 @@ export default function SalonsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Salon Management</h1>
           <p className="text-gray-600">Manage registered salons and their subscriptions</p>
         </div>
-        <Link href="/dashboard/salons/new">
+        <Link to="/dashboard/salons/new">
           <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
             <Plus className="h-4 w-4 mr-2" />
             Add New Salon
@@ -370,13 +368,13 @@ export default function SalonsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
-                        <Link href={`/dashboard/salons/${salon.id}`} className="flex items-center w-full">
+                        <Link to={`/dashboard/salons/${salon.id}`} className="flex items-center w-full">
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href={`/dashboard/salons/${salon.id}/edit`} className="flex items-center w-full">
+                        <Link to={`/dashboard/salons/${salon.id}/edit`} className="flex items-center w-full">
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </Link>
@@ -385,7 +383,7 @@ export default function SalonsPage() {
                         <>
                           <DropdownMenuItem 
                             className="text-green-600 cursor-pointer"
-                            onSelect={(e) => {
+                            onClick={(e) => {
                               e.preventDefault();
                               openApproveDialog(salon);
                             }}
@@ -395,7 +393,7 @@ export default function SalonsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-red-600 cursor-pointer"
-                            onSelect={(e) => {
+                            onClick={(e) => {
                               e.preventDefault();
                               openRejectDialog(salon);
                             }}
@@ -408,7 +406,7 @@ export default function SalonsPage() {
                       {salon.status === 'active' && (
                         <DropdownMenuItem 
                           className="text-red-600 cursor-pointer"
-                          onSelect={(e) => {
+                          onClick={(e) => {
                             e.preventDefault();
                             openSuspendDialog(salon);
                           }}
@@ -420,7 +418,7 @@ export default function SalonsPage() {
                       {salon.status === 'suspended' && (
                         <DropdownMenuItem 
                           className="text-green-600 cursor-pointer"
-                          onSelect={(e) => {
+                          onClick={(e) => {
                             e.preventDefault();
                             openReactivateDialog(salon);
                           }}
@@ -431,7 +429,7 @@ export default function SalonsPage() {
                       )}
                       <DropdownMenuItem 
                         className="text-red-600 cursor-pointer"
-                        onSelect={(e) => {
+                        onClick={(e) => {
                           e.preventDefault();
                           openDeleteDialog(salon);
                         }}

@@ -427,7 +427,7 @@ export default function AddNewUserPage() {
                     placeholder="Enter salon name"
                     {...register('salonName')}
                   />
-                  {errors.salonName && (
+                  {selectedRole === 'salon' && errors.salonName && (
                     <p className="text-sm text-red-500">{errors.salonName.message}</p>
                   )}
                 </div>
@@ -438,7 +438,7 @@ export default function AddNewUserPage() {
                     placeholder="BL123456789"
                     {...register('businessLicense')}
                   />
-                  {errors.businessLicense && (
+                  {selectedRole === 'salon' && errors.businessLicense && (
                     <p className="text-sm text-red-500">{errors.businessLicense.message}</p>
                   )}
                 </div>
@@ -451,7 +451,7 @@ export default function AddNewUserPage() {
                   placeholder="123 Main Street, City, State, ZIP"
                   {...register('salonAddress')}
                 />
-                {errors.salonAddress && (
+                {selectedRole === 'salon' && errors.salonAddress && (
                   <p className="text-sm text-red-500">{errors.salonAddress.message}</p>
                 )}
               </div>
@@ -474,7 +474,7 @@ export default function AddNewUserPage() {
                     </button>
                   ))}
                 </div>
-                {errors.subscription && (
+                {selectedRole === 'salon' && errors.subscription && (
                   <p className="text-sm text-red-500">{errors.subscription.message}</p>
                 )}
               </div>

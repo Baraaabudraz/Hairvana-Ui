@@ -120,7 +120,7 @@ export function TopSalons() {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-semibold text-gray-900">${typeof salon.revenue === 'number' ? salon.revenue.toLocaleString() : salon.revenue}</p>
+                <p className="text-sm font-semibold text-gray-900">{typeof salon.revenue === 'number' ? salon.revenue.toLocaleString() : salon.revenue}</p>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="text-xs">
                     {salon.bookings} bookings

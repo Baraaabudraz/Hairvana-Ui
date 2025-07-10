@@ -28,23 +28,23 @@ app.get('/', (req, res) => res.send('Hairvana app running with Passenger 🎉'))
 app.get('/backend', (req, res) => res.send('Hairvana app running with Passenger 🎉'));
 
 // API Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/salons', require('./routes/salons'));
-app.use('/api/subscriptions', require('./routes/subscriptions'));
-app.use('/api/services', require('./routes/services'));
-app.use('/api/staff', require('./routes/staff'));
-app.use('/api/appointments', require('./routes/appointments'));
-app.use('/api/analytics', require('./routes/analytics'));
-app.use('/api/notifications', require('./routes/notifications'));
-app.use('/api/settings', require('./routes/settings'));
-app.use('/api/dashboard', require('./routes/dashboard'));
-app.use('/api/billing-histories', require('./routes/billingHistories'));
-app.use('/api/report-templates', require('./routes/reportTemplates'));
-app.use('/api/reports', require('./routes/reports'));
-app.use('/api/payments', require('./routes/payments'));
+app.use('/backend/api/auth', require('./routes/auth'));
+app.use('/backend/api/users', require('./routes/users'));
+app.use('/backend/api/salons', require('./routes/salons'));
+app.use('/backend/api/subscriptions', require('./routes/subscriptions'));
+app.use('/backend/api/services', require('./routes/services'));
+app.use('/backend/api/staff', require('./routes/staff'));
+app.use('/backend/api/appointments', require('./routes/appointments'));
+app.use('/backend/api/analytics', require('./routes/analytics'));
+app.use('/backend/api/notifications', require('./routes/notifications'));
+app.use('/backend/api/settings', require('./routes/settings'));
+app.use('/backend/api/dashboard', require('./routes/dashboard'));
+app.use('/backend/api/billing-histories', require('./routes/billingHistories'));
+app.use('/backend/api/report-templates', require('./routes/reportTemplates'));
+app.use('/backend/api/reports', require('./routes/reports'));
+app.use('/backend/api/payments', require('./routes/payments'));
 
-// Mobile API Routes
+// Mobile API Rodutes
 app.use('/backend/api/mobile/auth', require('./routes/Api/mobileAuth'));
 app.use('/backend/api/mobile/user', require('./routes/Api/mobileUser'));
 app.use('/backend/api/mobile/salons', require('./routes/Api/salon'));

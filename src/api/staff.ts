@@ -7,7 +7,7 @@ export async function fetchStaff(params: { salonId?: string; serviceId?: string 
     if (params.salonId) queryParams.append('salonId', params.salonId);
     if (params.serviceId) queryParams.append('serviceId', params.serviceId);
     
-    return await apiFetch(`/api/staff?${queryParams.toString()}`);
+    return await apiFetch(`/backend/api/staff?${queryParams.toString()}`);
   } catch (error) {
     console.error('Error fetching staff:', error);
     throw error;
@@ -16,7 +16,7 @@ export async function fetchStaff(params: { salonId?: string; serviceId?: string 
 
 export async function fetchStaffById(id: string) {
   try {
-    return await apiFetch(`/api/staff/${id}`);
+    return await apiFetch(`/backend/api/staff/${id}`);
   } catch (error) {
     console.error(`Error fetching staff member with ID ${id}:`, error);
     throw error;
@@ -25,7 +25,7 @@ export async function fetchStaffById(id: string) {
 
 export async function createStaff(staffData: any) {
   try {
-    return await apiFetch('/api/staff', {
+    return await apiFetch('/backend/api/staff', {
       method: 'POST',
       body: JSON.stringify(staffData),
     });
@@ -37,7 +37,7 @@ export async function createStaff(staffData: any) {
 
 export async function updateStaff(id: string, staffData: any) {
   try {
-    return await apiFetch(`/api/staff/${id}`, {
+    return await apiFetch(`/backend/api/staff/${id}`, {
       method: 'PUT',
       body: JSON.stringify(staffData),
     });
@@ -49,7 +49,7 @@ export async function updateStaff(id: string, staffData: any) {
 
 export async function deleteStaff(id: string) {
   try {
-    return await apiFetch(`/api/staff/${id}`, {
+    return await apiFetch(`/backend/api/staff/${id}`, {
       method: 'DELETE',
     });
   } catch (error) {
@@ -60,7 +60,7 @@ export async function deleteStaff(id: string) {
 
 export async function assignServiceToStaff(staffId: string, serviceId: string) {
   try {
-    return await apiFetch(`/api/staff/${staffId}/services`, {
+    return await apiFetch(`/backend/api/staff/${staffId}/services`, {
       method: 'POST',
       body: JSON.stringify({ serviceId }),
     });
@@ -72,7 +72,7 @@ export async function assignServiceToStaff(staffId: string, serviceId: string) {
 
 export async function removeServiceFromStaff(staffId: string, serviceId: string) {
   try {
-    return await apiFetch(`/api/staff/${staffId}/services/${serviceId}`, {
+    return await apiFetch(`/backend/api/staff/${staffId}/services/${serviceId}`, {
       method: 'DELETE',
     });
   } catch (error) {

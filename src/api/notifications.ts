@@ -53,7 +53,7 @@ export async function fetchNotifications(params: {
     if (params.status && params.status !== 'all') queryParams.append('status', params.status);
     if (params.search) queryParams.append('search', params.search);
     
-    return await apiFetch(`/api/notifications?${queryParams.toString()}`);
+    return await apiFetch(`/backend/api/notifications?${queryParams.toString()}`);
   } catch (error) {
     console.error('Error fetching notifications:', error);
     throw error;
@@ -62,7 +62,7 @@ export async function fetchNotifications(params: {
 
 export async function createNotification(notificationData: Omit<Notification, 'id' | 'createdAt'>) {
   try {
-    return await apiFetch('/api/notifications', {
+    return await apiFetch('/backend/api/notifications', {
       method: 'POST',
       body: JSON.stringify(notificationData),
     });
@@ -74,7 +74,7 @@ export async function createNotification(notificationData: Omit<Notification, 'i
 
 export async function deleteNotification(id: string) {
   try {
-    return await apiFetch(`/api/notifications/${id}`, {
+    return await apiFetch(`/backend/api/notifications/${id}`, {
       method: 'DELETE',
     });
   } catch (error) {
@@ -85,7 +85,7 @@ export async function deleteNotification(id: string) {
 
 export async function sendNotification(id: string) {
   try {
-    return await apiFetch(`/api/notifications/${id}/send`, {
+    return await apiFetch(`/backend/api/notifications/${id}/send`, {
       method: 'POST',
     });
   } catch (error) {
@@ -96,7 +96,7 @@ export async function sendNotification(id: string) {
 
 export async function fetchNotificationTemplates() {
   try {
-    return await apiFetch('/api/notifications/templates');
+    return await apiFetch('/backend/api/notifications/templates');
   } catch (error) {
     console.error('Error fetching notification templates:', error);
     throw error;

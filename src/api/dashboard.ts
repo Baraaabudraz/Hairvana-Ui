@@ -13,7 +13,7 @@ export interface DashboardStats {
 
 export async function fetchDashboardStats() {
   try {
-    return await apiFetch('/api/dashboard/stats');
+    return await apiFetch('/backend/api/dashboard/stats');
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
     throw error;

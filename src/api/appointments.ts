@@ -16,7 +16,7 @@ export async function fetchAppointments(params: {
     if (params.from) queryParams.append('from', params.from);
     if (params.to) queryParams.append('to', params.to);
     
-    return await apiFetch(`/api/appointments?${queryParams.toString()}`);
+    return await apiFetch(`/backend/api/appointments?${queryParams.toString()}`);
   } catch (error) {
     console.error('Error fetching appointments:', error);
     throw error;
@@ -25,7 +25,7 @@ export async function fetchAppointments(params: {
 
 export async function fetchAppointmentById(id: string) {
   try {
-    return await apiFetch(`/api/appointments/${id}`);
+    return await apiFetch(`/backend/api/appointments/${id}`);
   } catch (error) {
     console.error(`Error fetching appointment with ID ${id}:`, error);
     throw error;
@@ -34,7 +34,7 @@ export async function fetchAppointmentById(id: string) {
 
 export async function createAppointment(appointmentData: any) {
   try {
-    return await apiFetch('/api/appointments', {
+    return await apiFetch('/backend/api/appointments', {
       method: 'POST',
       body: JSON.stringify(appointmentData),
     });
@@ -46,7 +46,7 @@ export async function createAppointment(appointmentData: any) {
 
 export async function updateAppointment(id: string, appointmentData: any) {
   try {
-    return await apiFetch(`/api/appointments/${id}`, {
+    return await apiFetch(`/backend/api/appointments/${id}`, {
       method: 'PUT',
       body: JSON.stringify(appointmentData),
     });
@@ -58,7 +58,7 @@ export async function updateAppointment(id: string, appointmentData: any) {
 
 export async function cancelAppointment(id: string) {
   try {
-    return await apiFetch(`/api/appointments/${id}/cancel`, {
+    return await apiFetch(`/backend/api/appointments/${id}/cancel`, {
       method: 'PATCH',
     });
   } catch (error) {
@@ -80,7 +80,7 @@ export async function checkAvailability(params: {
     queryParams.append('serviceId', params.serviceId);
     queryParams.append('date', params.date);
     
-    return await apiFetch(`/api/appointments/availability?${queryParams.toString()}`);
+    return await apiFetch(`/backend/api/appointments/availability?${queryParams.toString()}`);
   } catch (error) {
     console.error('Error checking availability:', error);
     throw error;

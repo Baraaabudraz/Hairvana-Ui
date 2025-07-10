@@ -7,7 +7,7 @@ export async function fetchServices(params: { salonId?: string; category?: strin
     if (params.salonId) queryParams.append('salonId', params.salonId);
     if (params.category) queryParams.append('category', params.category);
     
-    return await apiFetch(`/api/services?${queryParams.toString()}`);
+    return await apiFetch(`/backend/api/services?${queryParams.toString()}`);
   } catch (error) {
     console.error('Error fetching services:', error);
     throw error;
@@ -16,7 +16,7 @@ export async function fetchServices(params: { salonId?: string; category?: strin
 
 export async function fetchServiceById(id: string) {
   try {
-    return await apiFetch(`/api/services/${id}`);
+    return await apiFetch(`/backend/api/services/${id}`);
   } catch (error) {
     console.error(`Error fetching service with ID ${id}:`, error);
     throw error;
@@ -25,7 +25,7 @@ export async function fetchServiceById(id: string) {
 
 export async function createService(serviceData: any) {
   try {
-    return await apiFetch('/api/services', {
+    return await apiFetch('/backend/api/services', {
       method: 'POST',
       body: JSON.stringify(serviceData),
     });
@@ -37,7 +37,7 @@ export async function createService(serviceData: any) {
 
 export async function updateService(id: string, serviceData: any) {
   try {
-    return await apiFetch(`/api/services/${id}`, {
+    return await apiFetch(`/backend/api/services/${id}`, {
       method: 'PUT',
       body: JSON.stringify(serviceData),
     });
@@ -49,7 +49,7 @@ export async function updateService(id: string, serviceData: any) {
 
 export async function deleteService(id: string) {
   try {
-    return await apiFetch(`/api/services/${id}`, {
+    return await apiFetch(`/backend/api/services/${id}`, {
       method: 'DELETE',
     });
   } catch (error) {
@@ -60,7 +60,7 @@ export async function deleteService(id: string) {
 
 export async function fetchServiceCategories() {
   try {
-    return await apiFetch('/api/services/categories');
+    return await apiFetch('/backend/api/services/categories');
   } catch (error) {
     console.error('Error fetching service categories:', error);
     throw error;

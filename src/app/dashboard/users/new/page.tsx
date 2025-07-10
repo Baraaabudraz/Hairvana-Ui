@@ -1,7 +1,5 @@
-'use client';
-
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Upload, X, Plus, Save, Users, Building2, Shield, Crown } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
 const baseUserSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -71,7 +69,7 @@ const permissionDescriptions: Record<string, string> = {
 };
 
 export default function AddNewUserPage() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'admin' | 'super_admin' | 'salon' | 'user'>('user');
@@ -155,7 +153,7 @@ export default function AddNewUserPage() {
         description: `${data.name} has been added to the platform.`,
       });
 
-      router.push('/dashboard/users');
+      navigate('/dashboard/users');
     } catch (error) {
       toast({
         title: 'Error creating user',
@@ -190,7 +188,7 @@ export default function AddNewUserPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/users">
+        <Link to="/dashboard/users">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -486,7 +484,7 @@ export default function AddNewUserPage() {
 
         {/* Submit */}
         <div className="flex justify-end gap-4">
-          <Link href="/dashboard/users">
+          <Link to="/dashboard/users">
             <Button variant="outline" type="button">
               Cancel
             </Button>

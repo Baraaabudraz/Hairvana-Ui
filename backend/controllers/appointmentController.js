@@ -23,7 +23,7 @@ exports.getAllAppointments = async (req, res, next) => {
         { model: Payment, as: 'payment', attributes: ['id', 'amount', 'method', 'status', 'transaction_id'] }
       ]
     });
-    res.json(appointments);
+    res.json(appointments.map(serializeAppointment));
   } catch (error) {
     next(error);
   }
@@ -83,7 +83,18 @@ exports.createAppointment = async (req, res, next) => {
       ...appointmentData,
       duration: service.duration
     });
-    res.status(201).json(newAppointment);
+    // Fetch with includes for serializer
+    const created = await Appointment.findOne({
+      where: { id: newAppointment.id },
+      include: [
+        { model: Salon, as: 'salon', attributes: ['id', 'name', 'location', 'address', 'phone', 'email', 'images'] },
+        { model: Service, as: 'services', attributes: ['id', 'name', 'price', 'duration', 'description'] },
+        { model: Staff, as: 'staff', attributes: ['id', 'name', 'avatar', 'bio'] },
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'avatar'] },
+        { model: Payment, as: 'payment', attributes: ['id', 'amount', 'method', 'status', 'transaction_id'] }
+      ]
+    });
+    res.status(201).json(serializeAppointment(created));
   } catch (error) {
     next(error);
   }
@@ -101,7 +112,18 @@ exports.updateAppointment = async (req, res, next) => {
     if (!updatedAppointment) {
       return res.status(404).json({ message: 'Appointment not found' });
     }
-    res.json(updatedAppointment);
+    // Fetch with includes for serializer
+    const updated = await Appointment.findOne({
+      where: { id },
+      include: [
+        { model: Salon, as: 'salon', attributes: ['id', 'name', 'location', 'address', 'phone', 'email', 'images'] },
+        { model: Service, as: 'services', attributes: ['id', 'name', 'price', 'duration', 'description'] },
+        { model: Staff, as: 'staff', attributes: ['id', 'name', 'avatar', 'bio'] },
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'avatar'] },
+        { model: Payment, as: 'payment', attributes: ['id', 'amount', 'method', 'status', 'transaction_id'] }
+      ]
+    });
+    res.json(serializeAppointment(updated));
   } catch (error) {
     next(error);
   }
@@ -118,7 +140,18 @@ exports.cancelAppointment = async (req, res, next) => {
     if (!updatedAppointment) {
       return res.status(404).json({ message: 'Appointment not found' });
     }
-    res.json(updatedAppointment);
+    // Fetch with includes for serializer
+    const cancelled = await Appointment.findOne({
+      where: { id },
+      include: [
+        { model: Salon, as: 'salon', attributes: ['id', 'name', 'location', 'address', 'phone', 'email', 'images'] },
+        { model: Service, as: 'services', attributes: ['id', 'name', 'price', 'duration', 'description'] },
+        { model: Staff, as: 'staff', attributes: ['id', 'name', 'avatar', 'bio'] },
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'avatar'] },
+        { model: Payment, as: 'payment', attributes: ['id', 'amount', 'method', 'status', 'transaction_id'] }
+      ]
+    });
+    res.json(serializeAppointment(cancelled));
   } catch (error) {
     next(error);
   }

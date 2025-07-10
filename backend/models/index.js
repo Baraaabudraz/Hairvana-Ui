@@ -37,6 +37,7 @@ const ReportTemplate = require('./report_template')(sequelize);
 const Report = require('./report');
 const Hairstyle = require('./hairstyle');
 const SecuritySettings = require('./security_settings');
+const IntegrationSettings = require('./integration_settings')(sequelize);
 
 // Initialize models in dependency order
 const models = {
@@ -59,7 +60,8 @@ const models = {
   ReportTemplate: ReportTemplate,
   Report: Report(sequelize, Sequelize.DataTypes),
   Hairstyle: Hairstyle(sequelize, Sequelize.DataTypes),
-  SecuritySettings: SecuritySettings(sequelize, Sequelize.DataTypes)
+  SecuritySettings: SecuritySettings(sequelize, Sequelize.DataTypes),
+  IntegrationSettings: IntegrationSettings
 };
 
 // Initialize associations

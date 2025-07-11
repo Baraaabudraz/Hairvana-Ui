@@ -25,6 +25,15 @@ exports.getAllNotifications = async (req, res, next) => {
 exports.createNotification = async (req, res, next) => {
   try {
     const notificationData = req.body;
+    // Remove id if present at top level
+    if ('id' in notificationData) {
+      delete notificationData.id;
+    }
+    // Remove id if present in template
+    if (notificationData.template && typeof notificationData.template === 'object' && 'id' in notificationData.template) {
+      delete notificationData.template.id;
+    }
+    notificationData.user_id = req.user.userId || req.user.id;
     notificationData.createdBy = req.user.name || req.user.email;
     notificationData.createdAt = new Date();
     if (notificationData.scheduleType === 'now') {

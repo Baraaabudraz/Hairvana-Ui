@@ -8,6 +8,7 @@ const protect = (req, res, next) => {
   if (!token) return res.status(401).json({ error: 'Invalid token format' });
   jwt.verify(token, config.jwtSecret || process.env.JWT_SECRET, (err, decoded) => {
     if (err) return res.status(401).json({ error: 'Invalid token' });
+    console.log('Decoded JWT:', decoded); // Debug log
     req.user = decoded;
     next();
   });

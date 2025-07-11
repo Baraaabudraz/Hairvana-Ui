@@ -33,7 +33,7 @@ module.exports = {
         allowNull: false
       },
       method: {
-        type: Sequelize.ENUM('visa', 'crypto', 'cash'),
+        type: Sequelize.ENUM('visa', 'crypto'),
         allowNull: false
       },
       status: {

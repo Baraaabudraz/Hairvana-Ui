@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { User, SalonOwner, Customer, Salon } = require('../models');
+const { serializeUser } = require('../serializers/userSerializer');
 
 // Get all users
 exports.getAllUsers = async (req, res, next) => {
@@ -31,7 +32,7 @@ exports.getAllUsers = async (req, res, next) => {
         { model: Salon, as: 'salons' }
       ]
     });
-    users = users.map(u => u.toJSON());
+    users = users.map(serializeUser);
     // Calculate stats
     const stats = {
       total: users.length,
@@ -62,7 +63,7 @@ exports.getUserById = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json(user.toJSON());
+    res.json(serializeUser(user));
   } catch (error) {
     next(error);
   }
@@ -114,7 +115,7 @@ exports.createUser = async (req, res, next) => {
         favorite_services: []
       });
     }
-    res.status(201).json(newUser.toJSON());
+    res.status(201).json(serializeUser(newUser));
   } catch (error) {
     next(error);
   }
@@ -140,7 +141,7 @@ exports.updateUser = async (req, res, next) => {
       if (!updatedUser) {
         return res.status(404).json({ message: 'User not found' });
       }
-      res.json(updatedUser.toJSON());
+      res.json(serializeUser(updatedUser));
     } catch (err) {
       console.error('Sequelize update error:', err);
       // If it's a Sequelize validation error, return the message
@@ -182,7 +183,7 @@ exports.updateUserStatus = async (req, res, next) => {
       return res.status(404).json({ message: 'User not found' });
     }
     const updatedUser = await User.findOne({ where: { id } });
-    res.json(updatedUser.toJSON());
+    res.json(serializeUser(updatedUser));
   } catch (error) {
     next(error);
   }

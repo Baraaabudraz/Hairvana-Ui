@@ -1,5 +1,6 @@
 const { Service } = require('../models');
 const { Op } = require('sequelize');
+const { serializeService } = require('../serializers/serviceSerializer');
 
 // Get all services
 exports.getAllServices = async (req, res, next) => {
@@ -9,7 +10,7 @@ exports.getAllServices = async (req, res, next) => {
     if (salonId) where.salon_id = salonId;
     if (category) where.category = category;
     const services = await Service.findAll({ where });
-    res.json(services);
+    res.json(services.map(serializeService));
   } catch (error) {
     next(error);
   }
@@ -23,7 +24,7 @@ exports.getServiceById = async (req, res, next) => {
     if (!service) {
       return res.status(404).json({ message: 'Service not found' });
     }
-    res.json(service);
+    res.json(serializeService(service));
   } catch (error) {
     next(error);
   }
@@ -34,7 +35,7 @@ exports.createService = async (req, res, next) => {
   try {
     const serviceData = req.body;
     const newService = await Service.create(serviceData);
-    res.status(201).json(newService);
+    res.status(201).json(serializeService(newService));
   } catch (error) {
     next(error);
   }
@@ -52,7 +53,7 @@ exports.updateService = async (req, res, next) => {
     if (!updatedService) {
       return res.status(404).json({ message: 'Service not found' });
     }
-    res.json(updatedService);
+    res.json(serializeService(updatedService));
   } catch (error) {
     next(error);
   }

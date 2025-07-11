@@ -179,7 +179,7 @@ export default function NotificationsPage() {
     }
   };
 
-  const filteredNotifications = notifications.filter(notification => {
+  const filteredNotifications = (notifications || []).filter(notification => {
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          notification.message.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'all' || notification.type === typeFilter;
@@ -195,8 +195,7 @@ export default function NotificationsPage() {
       };
 
       // Remove scheduleType as it's not part of the API model
-      const { scheduleType, ...apiData } = notificationData;
-      
+      const { id, scheduleType, ...apiData } = notificationData;
       // Set status and dates based on schedule type
       if (scheduleType === 'now') {
         (apiData as any).status = 'sent';
@@ -207,7 +206,7 @@ export default function NotificationsPage() {
       } else {
         (apiData as any).status = 'draft';
       }
-
+      (apiData as any).scheduleType = scheduleType;
       const newNotification = await createNotification(apiData as any);
       setNotifications(prev => [newNotification, ...prev]);
 
@@ -732,7 +731,7 @@ export default function NotificationsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredNotifications.map((notification) => {
+            {(filteredNotifications || []).filter((n): n is Notification => !!n && typeof n.id === 'string').map((notification) => {
               const TypeIcon = notificationTypes[notification.type].icon;
               return (
                 <div key={notification.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
@@ -768,7 +767,7 @@ export default function NotificationsPage() {
                         )}
                         <span>•</span>
                         <div className="flex gap-1">
-                          {notification.channels.map(channel => {
+                          {(notification.channels || []).map(channel => {
                             const ChannelIcon = channelIcons[channel];
                             return (
                               <span title={channel} key={channel}>
@@ -785,12 +784,14 @@ export default function NotificationsPage() {
                     {notification.status === 'sent' && (
                       <div className="text-center">
                         <p className="text-sm font-semibold text-gray-900">
-                          {notification.recipients.sent.toLocaleString()}
+                          {notification.recipients && notification.recipients.sent
+                            ? notification.recipients.sent.toLocaleString()
+                            : '0'}
                         </p>
                         <p className="text-xs text-gray-500">Sent</p>
                       </div>
                     )}
-                    {notification.status === 'sent' && notification.recipients.opened > 0 && (
+                    {notification.status === 'sent' && notification.recipients && notification.recipients.opened > 0 && (
                       <div className="text-center">
                         <p className="text-sm font-semibold text-green-600">
                           {getEngagementRate(notification)}%
@@ -798,7 +799,7 @@ export default function NotificationsPage() {
                         <p className="text-xs text-gray-500">Open Rate</p>
                       </div>
                     )}
-                    {notification.status === 'sent' && notification.recipients.clicked > 0 && (
+                    {notification.status === 'sent' && notification.recipients && notification.recipients.clicked > 0 && (
                       <div className="text-center">
                         <p className="text-sm font-semibold text-blue-600">
                           {getClickRate(notification)}%

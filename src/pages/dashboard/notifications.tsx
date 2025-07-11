@@ -195,7 +195,7 @@ export default function NotificationsPage() {
       };
 
       // Remove scheduleType as it's not part of the API model
-      const { id, scheduleType, ...apiData } = notificationData;
+      const { scheduleType, ...apiData } = notificationData;
       // Set status and dates based on schedule type
       if (scheduleType === 'now') {
         (apiData as any).status = 'sent';

@@ -1,5 +1,6 @@
 const { Salon, User, Service, Staff, Appointment } = require('../models');
 const { Op } = require('sequelize');
+const { serializeSalon } = require('../serializers/salonSerializer');
 
 // Get all salons
 exports.getAllSalons = async (req, res, next) => {
@@ -20,19 +21,8 @@ exports.getAllSalons = async (req, res, next) => {
       include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] }]
     });
     // Merge owner info
-    const processedSalons = salons.map(salon => {
-      const s = salon.toJSON();
-      if (s.owner) {
-        s.owner_name = s.owner_name || s.owner.name;
-        s.owner_email = s.owner_email || s.owner.email;
-        s.owner_phone = s.owner.phone;
-        s.owner_avatar = s.owner.avatar;
-        s.owner_role = s.owner.role;
-        delete s.owner;
-      }
-      return s;
-    });
-    res.json({ salons: processedSalons, total: salons.length });
+    const serializedSalons = salons.map(serializeSalon);
+    res.json({ salons: serializedSalons, total: salons.length });
   } catch (error) {
     next(error);
   }
@@ -58,7 +48,7 @@ exports.getSalonById = async (req, res, next) => {
       s.owner_role = s.owner.role;
       delete s.owner;
     }
-    res.json(s);
+    res.json(serializeSalon(salon));
   } catch (error) {
     next(error);
   }
@@ -69,7 +59,7 @@ exports.createSalon = async (req, res, next) => {
   try {
     const salonData = req.body;
     const newSalon = await Salon.create(salonData);
-    res.status(201).json(newSalon.toJSON());
+    res.status(201).json(serializeSalon(newSalon));
   } catch (error) {
     next(error);
   }
@@ -87,7 +77,7 @@ exports.updateSalon = async (req, res, next) => {
     if (!updatedSalon) {
       return res.status(404).json({ message: 'Salon not found' });
     }
-    res.json(updatedSalon.toJSON());
+    res.json(serializeSalon(updatedSalon));
   } catch (error) {
     next(error);
   }
@@ -122,7 +112,7 @@ exports.updateSalonStatus = async (req, res, next) => {
     if (!updatedSalon) {
       return res.status(404).json({ message: 'Salon not found' });
     }
-    res.json(updatedSalon.toJSON());
+    res.json(serializeSalon(updatedSalon));
   } catch (error) {
     next(error);
   }

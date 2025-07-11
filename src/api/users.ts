@@ -16,7 +16,7 @@ export async function fetchUsers(params: { role?: string; status?: string; searc
       queryParams.append('search', params.search);
     }
     
-    return await apiFetch(`/backend/api/users?${queryParams.toString()}`);
+    return await apiFetch(`/users?${queryParams.toString()}`);
   } catch (error) {
     console.error('Error fetching users:', error);
     throw error;
@@ -25,7 +25,7 @@ export async function fetchUsers(params: { role?: string; status?: string; searc
 
 export async function fetchUserById(id: string) {
   try {
-    return await apiFetch(`/backend/api/users/${id}`);
+    return await apiFetch(`/users/${id}`);
   } catch (error) {
     console.error(`Error fetching user with ID ${id}:`, error);
     throw error;
@@ -34,7 +34,7 @@ export async function fetchUserById(id: string) {
 
 export async function createUser(userData: any) {
   try {
-    return await apiFetch('/backend/api/users', {
+    return await apiFetch('/users', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -46,7 +46,7 @@ export async function createUser(userData: any) {
 
 export async function updateUser(id: string, userData: any) {
   try {
-    const response = await apiFetch(`/backend/api/users/${id}`, {
+    const response = await apiFetch(`/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(userData),
     });
@@ -67,7 +67,7 @@ export async function updateUser(id: string, userData: any) {
 
 export async function deleteUser(id: string) {
   try {
-    return await apiFetch(`/backend/api/users/${id}`, {
+    return await apiFetch(`/users/${id}`, {
       method: 'DELETE',
     });
   } catch (error) {
@@ -78,7 +78,7 @@ export async function deleteUser(id: string) {
 
 export async function updateUserStatus(id: string, status: 'active' | 'pending' | 'suspended') {
   try {
-    return await apiFetch(`/backend/api/users/${id}/status`, {
+    return await apiFetch(`/users/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     });

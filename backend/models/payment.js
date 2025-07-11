@@ -51,7 +51,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     method: {
-      type: DataTypes.ENUM('visa', 'crypto', 'cash'),
+      type: DataTypes.ENUM('visa', 'crypto'),
       allowNull: false
     },
     status: {

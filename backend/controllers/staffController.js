@@ -1,5 +1,6 @@
 const { Staff } = require('../models');
 const { Op } = require('sequelize');
+const { serializeStaff } = require('../serializers/staffSerializer');
 
 // Get all staff
 exports.getAllStaff = async (req, res, next) => {
@@ -9,7 +10,7 @@ exports.getAllStaff = async (req, res, next) => {
     if (salonId) where.salon_id = salonId;
     if (serviceId) where.services = { [Op.contains]: [serviceId] };
     const staff = await Staff.findAll({ where });
-    res.json(staff);
+    res.json(staff.map(serializeStaff));
   } catch (error) {
     next(error);
   }
@@ -23,7 +24,7 @@ exports.getStaffById = async (req, res, next) => {
     if (!staff) {
       return res.status(404).json({ message: 'Staff member not found' });
     }
-    res.json(staff);
+    res.json(serializeStaff(staff));
   } catch (error) {
     next(error);
   }
@@ -34,7 +35,7 @@ exports.createStaff = async (req, res, next) => {
   try {
     const staffData = req.body;
     const newStaff = await Staff.create(staffData);
-    res.status(201).json(newStaff);
+    res.status(201).json(serializeStaff(newStaff));
   } catch (error) {
     next(error);
   }
@@ -52,7 +53,7 @@ exports.updateStaff = async (req, res, next) => {
     if (!updatedStaff) {
       return res.status(404).json({ message: 'Staff member not found' });
     }
-    res.json(updatedStaff);
+    res.json(serializeStaff(updatedStaff));
   } catch (error) {
     next(error);
   }

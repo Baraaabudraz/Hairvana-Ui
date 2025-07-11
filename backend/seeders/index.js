@@ -15,6 +15,7 @@ async function seed() {
     await seedSubscriptionPlans();
     await seedSubscriptions();
     await seedNotificationTemplates();
+    await seedNotifications();
     await seedServices();
     await seedHairstyles();
     await seedSalonServices();
@@ -475,6 +476,12 @@ async function seedStaff() {
 async function seedIntegrationSettings() {
   console.log('Seeding integration settings...');
   const seeder = require('./20250709000100-demo-integration-settings.js');
+  await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
+}
+
+async function seedNotifications() {
+  console.log('Seeding notifications...');
+  const seeder = require('./20250709001000-demo-notifications.js');
   await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
 }
 

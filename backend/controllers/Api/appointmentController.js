@@ -1,11 +1,12 @@
 'use strict';
-const { Appointment, Salon, Staff, Service, AppointmentService } = require('../../models');
+const { Appointment, Salon, Staff, Service, AppointmentService, sequelize } = require('../../models');
 const { Op } = require('sequelize');
+const { serializeAppointment } = require('../../serializers/appointmentSerializer');
 
+// Get availability for a salon (using start_at/end_at fields)
 exports.getAvailability = async (req, res) => {
   try {
     const salonId = req.params.id;
-    // Fetch salon and its hours
     const salon = await Salon.findByPk(salonId);
     if (!salon) return res.status(404).json({ error: 'Salon not found' });
     const hours = salon.hours || {};
@@ -21,7 +22,7 @@ exports.getAvailability = async (req, res) => {
     const appointments = await Appointment.findAll({
       where: {
         salon_id: salonId,
-        date: { [Op.between]: [startDate, endDate] },
+        start_at: { [Op.between]: [startDate + 'T00:00:00.000Z', endDate + 'T23:59:59.999Z'] },
         status: 'booked'
       }
     });
@@ -51,11 +52,24 @@ exports.getAvailability = async (req, res) => {
       }
       const [start, end] = dayHours.split(' - ');
       const possibleSlots = generateSlots(start, end);
-      // Find booked times for this date
-      const booked = appointments.filter(a => a.date.toISOString().split('T')[0] === dateStr).map(a => a.time);
+      // For each slot, check if it overlaps with any appointment
+      const availableTimes = possibleSlots.filter(slotTime => {
+        // Build slot's start and end datetime
+        const [slotHour, slotMin] = slotTime.split(':');
+        const slotStart = new Date(dateStr + 'T' + slotHour + ':00:00.000Z');
+        // Assume slot is 1 hour (or use your business logic for slot duration)
+        const slotEnd = new Date(slotStart.getTime() + 60 * 60000);
+        // Check for overlap with any appointment
+        return !appointments.some(a => {
+          const aStart = new Date(a.start_at);
+          const aEnd = new Date(a.end_at);
+          // Overlap if slotStart < aEnd && slotEnd > aStart
+          return slotStart < aEnd && slotEnd > aStart;
+        });
+      });
       return {
         date: dateStr,
-        times: possibleSlots.filter(t => !booked.includes(t))
+        times: availableTimes
       };
     });
     return res.json({ success: true, availability: slots });
@@ -65,110 +79,88 @@ exports.getAvailability = async (req, res) => {
   }
 };
 
+// Book an appointment (best practice: create as 'pending', confirm after payment)
 exports.bookAppointment = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { salon_id, staff_id, start_at, notes, service_ids } = req.body;
-
-    //  التحقق من الموظف والصالون
-    const staff = await Staff.findOne({ where: { id: staff_id, salon_id } });
-    if (!staff) return res.status(400).json({ error: 'Invalid staff or salon' });
-
-    //  التحقق من الخدمات
-    if (!Array.isArray(service_ids) || service_ids.length === 0) {
-      return res.status(400).json({ error: 'At least one service must be selected' });
+    if (!salon_id || !staff_id || !start_at || !Array.isArray(service_ids) || service_ids.length === 0) {
+      return res.status(400).json({ error: 'Missing required fields' });
     }
-
-    const services = await Service.findAll({ where: { id: service_ids } });
+    // Validate staff and salon
+    const staff = await Staff.findOne({ where: { id: staff_id, salon_id }, transaction: t });
+    if (!staff) {
+      await t.rollback();
+      return res.status(400).json({ error: 'Invalid staff or salon' });
+    }
+    // Validate services
+    const services = await Service.findAll({ where: { id: service_ids }, transaction: t });
     if (services.length !== service_ids.length) {
+      await t.rollback();
       return res.status(400).json({ error: 'One or more services are invalid' });
     }
-
-    //  حساب المدة والسعر
-    const totalDuration = services.reduce((sum, s) => sum + s.duration, 0); // بالدقائق
+    // Calculate duration and price
+    const totalDuration = services.reduce((sum, s) => sum + s.duration, 0);
     const totalPrice = services.reduce((sum, s) => sum + parseFloat(s.price), 0);
-
-    //  حساب end_at تلقائيًا
+    // Calculate end_at
     const startTime = new Date(start_at);
-    const endTime = new Date(startTime.getTime() + totalDuration * 60000); // + دقائق
-
-    //  التحقق من تضارب المواعيد
+    const endTime = new Date(startTime.getTime() + totalDuration * 60000);
+    // Check for appointment conflicts
     const hasConflict = await Appointment.findOne({
       where: {
         staff_id,
         status: { [Op.in]: ['pending', 'booked'] },
         [Op.or]: [
-          {
-            start_at: {
-              [Op.between]: [startTime, endTime]
-            }
-          },
-          {
-            end_at: {
-              [Op.between]: [startTime, endTime]
-            }
-          },
-          {
-            [Op.and]: [
-              { start_at: { [Op.lte]: startTime } },
-              { end_at: { [Op.gte]: endTime } }
-            ]
-          }
+          { start_at: { [Op.between]: [startTime, endTime] } },
+          { end_at: { [Op.between]: [startTime, endTime] } },
+          { [Op.and]: [ { start_at: { [Op.lte]: startTime } }, { end_at: { [Op.gte]: endTime } } ] }
         ]
-      }
+      },
+      transaction: t
     });
-
     if (hasConflict) {
+      await t.rollback();
       return res.status(409).json({ error: 'This staff member already has an appointment during the selected time.' });
     }
-
-    //  إنشاء الموعد
+    // Create appointment as 'pending'
     const appointment = await Appointment.create({
       user_id: req.user.id,
       salon_id,
       staff_id,
       start_at: startTime,
       end_at: endTime,
-      status: 'booked',
+      status: 'pending', // Not 'booked' until payment is confirmed
       notes,
       total_price: totalPrice,
       duration: totalDuration
-    });
-
-    //  ربط الخدمات
+    }, { transaction: t });
+    // Link services
     for (const service of services) {
       await AppointmentService.create({
         appointment_id: appointment.id,
         service_id: service.id,
         price: service.price
-      });
+      }, { transaction: t });
     }
-
-    //  تنسيق التاريخ
-    const formattedDate = startTime.toLocaleDateString('en-US', {
-      month: '2-digit', day: '2-digit', year: 'numeric'
-    });
-
-    const formattedTime = startTime.toLocaleTimeString('en-US', {
-      hour: '2-digit', minute: '2-digit'
-    });
-
-    //  الإرجاع
+    await t.commit();
+    // TODO: Integrate with payment provider here (create payment session/intent)
+    // For now, return a placeholder paymentSessionId
+    // const paymentSessionId = `demo-session-${appointment.id}`;
     return res.status(201).json({
       success: true,
-      appointment: {
+      appointment: serializeAppointment({
         ...appointment.toJSON(),
-        formattedDate,
-        formattedTime,
         services: services.map(s => ({
           id: s.id,
           name: s.name,
           price: s.price,
           duration: s.duration
         }))
-      }
+      }),
+      // paymentSessionId // Frontend should use this to initiate payment
     });
-
   } catch (err) {
+    await t.rollback();
     console.error('Book appointment error:', err);
     return res.status(500).json({
       error: 'Failed to book appointment',
@@ -178,32 +170,74 @@ exports.bookAppointment = async (req, res) => {
   }
 };
 
+// Confirm payment and mark appointment as 'booked' (to be called by payment webhook or after payment success)
+exports.confirmPayment = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    const appointment = await Appointment.findByPk(appointmentId);
+    if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
+    if (appointment.status !== 'pending') return res.status(400).json({ error: 'Appointment is not pending' });
+    appointment.status = 'booked';
+    await appointment.save();
+    return res.json({ success: true, appointment: serializeAppointment(appointment) });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to confirm payment' });
+  }
+};
+
+// Cancel pending appointment (to be called on payment failure/timeout)
+exports.cancelPendingAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    const appointment = await Appointment.findByPk(appointmentId);
+    if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
+    if (appointment.status !== 'pending') return res.status(400).json({ error: 'Appointment is not pending' });
+    appointment.status = 'cancelled';
+    await appointment.save();
+    return res.json({ success: true, appointment: serializeAppointment(appointment) });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to cancel appointment' });
+  }
+};
+
+// Get all appointments for the current user (serialized)
 exports.getAppointments = async (req, res) => {
   try {
-    const appointments = await Appointment.findAll({ where: { user_id: req.user.id } });
-    return res.json({ success: true, appointments });
+    const appointments = await Appointment.findAll({
+      where: { user_id: req.user.id },
+      include: [
+        {
+          model: Service,
+          as: 'services',
+          through: { attributes: [] }
+        }
+      ]
+    });
+    return res.json({ success: true, appointments: appointments.map(serializeAppointment) });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to fetch appointments' });
   }
 };
 
+// Get appointment by ID (serialized)
 exports.getAppointmentById = async (req, res) => {
   try {
     const appointment = await Appointment.findOne({ where: { id: req.params.id, user_id: req.user.id } });
     if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
-    return res.json({ success: true, appointment });
+    return res.json({ success: true, appointment: serializeAppointment(appointment) });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to fetch appointment' });
   }
 };
 
+// Cancel appointment (serialized)
 exports.cancelAppointment = async (req, res) => {
   try {
     const appointment = await Appointment.findOne({ where: { id: req.params.id, user_id: req.user.id } });
     if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
     appointment.status = 'cancelled';
     await appointment.save();
-    return res.json({ success: true, appointment });
+    return res.json({ success: true, appointment: serializeAppointment(appointment) });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to cancel appointment' });
   }

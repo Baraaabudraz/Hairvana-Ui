@@ -36,18 +36,11 @@ exports.createUserPayment = async (req, res, next) => {
 
 // POST /checkout — Initiate payment for an appointment
 exports.checkoutPayment = async (req, res, next) => {
-  const t = await sequelize.transaction(); // Add transaction support
-  
   try {
     const userId = req.user.id;
-    const { appointment_id, method } = req.body;
+    const { appointment_id ,method } = req.body;
 
-    // Validate input
-    if (!appointment_id || !method) {
-      return res.status(400).json({ message: 'Appointment ID and payment method are required' });
-    }
-
-    // Fetch integration settings
+    // Fetch integration settings and check feature toggle
     const { IntegrationSettings } = require('../../models');
     const settings = await IntegrationSettings.findOne({ order: [['updated_at', 'DESC']] });
     if (!settings || settings.stripe_enabled === false) {
@@ -59,27 +52,14 @@ exports.checkoutPayment = async (req, res, next) => {
     const stripe = Stripe(settings.payment_api_key);
 
     // Validate appointment
-    const appointment = await Appointment.findOne({ 
-      where: { id: appointment_id, user_id: userId },
-      transaction: t
-    });
-    if (!appointment) {
-      await t.rollback();
-      return res.status(404).json({ message: 'Appointment not found or not yours' });
-    }
+    const appointment = await Appointment.findOne({ where: { id: appointment_id, user_id: userId } });
+    if (!appointment) return res.status(404).json({ message: 'Appointment not found or not yours' });
     if (["cancelled", "completed"].includes(appointment.status)) {
-      await t.rollback();
       return res.status(400).json({ message: 'Cannot pay for a cancelled or completed appointment' });
     }
 
-    // Check if appointment amount is valid
-    if (!appointment.total_price || appointment.total_price <= 0) {
-      await t.rollback();
-      return res.status(400).json({ message: 'Invalid appointment amount' });
-    }
-
-    // Prevent duplicate payments
-    const [payment, created] = await Payment.findOrCreate({
+    // Prevent duplicate payments (atomic)
+    const [existingPayment, created] = await Payment.findOrCreate({
       where: { appointment_id },
       defaults: {
         user_id: userId,
@@ -88,45 +68,30 @@ exports.checkoutPayment = async (req, res, next) => {
         method,
         status: 'pending',
         payment_date: new Date()
-      },
-      transaction: t
+      }
     });
-
     if (!created) {
-      await t.rollback();
       return res.status(400).json({ message: 'Payment already exists for this appointment' });
     }
 
-    // Create PaymentIntent with Stripe
+    // Create a PaymentIntent with Stripe
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(Number(appointment.total_price) * 100), // cents
       currency: 'usd',
       metadata: {
         appointment_id: appointment.id,
-        user_id: userId,
-        payment_id: payment.id
+        user_id: userId
       }
     });
 
-    // Update payment with transaction ID
-    payment.transaction_id = paymentIntent.id;
-    await payment.save({ transaction: t });
-
-    await t.commit();
+    // Update the payment record with the Stripe transaction ID
+    existingPayment.transaction_id = paymentIntent.id;
+    await existingPayment.save();
 
     res.status(201).json({
-      payment_id: payment.id,
-      stripeClientSecret: paymentIntent.client_secret,
-      amount: appointment.total_price
+      stripeClientSecret: paymentIntent.client_secret
     });
   } catch (error) {
-    await t.rollback();
-    console.error('Checkout error:', error);
-    
-    if (error.type === 'StripeCardError') {
-      return res.status(400).json({ message: 'Payment failed: ' + error.message });
-    }
-    
     next(error);
   }
 };

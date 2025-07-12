@@ -26,12 +26,9 @@ module.exports = {
         type: Sequelize.TEXT
       },
       status: {
-        type: Sequelize.TEXT,
+        type: Sequelize.ENUM('active', 'pending', 'suspended'),
         allowNull: false,
-        defaultValue: 'pending',
-        validate: {
-          isIn: [['active', 'pending', 'suspended']]
-        }
+        defaultValue: 'pending'
       },
       join_date: {
         type: Sequelize.DATE,
@@ -76,12 +73,6 @@ module.exports = {
           key: 'id'
         },
         onDelete: 'CASCADE'
-      },
-      owner_name: {
-        type: Sequelize.TEXT
-      },
-      owner_email: {
-        type: Sequelize.TEXT
       },
       created_at: {
         type: Sequelize.DATE,

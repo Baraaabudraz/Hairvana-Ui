@@ -135,3 +135,47 @@ export async function fetchSubscriptionPlans() {
     throw error;
   }
 }
+
+export async function fetchSubscriptionPlanById(id: string) {
+  try {
+    return await apiFetch(`/subscriptions/plans/${id}`);
+  } catch (error) {
+    console.error(`Error fetching subscription plan with ID ${id}:`, error);
+    throw error;
+  }
+}
+
+export async function createSubscriptionPlan(planData: any) {
+  try {
+    return await apiFetch('/subscriptions/plans', {
+      method: 'POST',
+      body: JSON.stringify(planData),
+    });
+  } catch (error) {
+    console.error('Error creating subscription plan:', error);
+    throw error;
+  }
+}
+
+export async function updateSubscriptionPlan(id: string, planData: any) {
+  try {
+    return await apiFetch(`/subscriptions/plans/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(planData),
+    });
+  } catch (error) {
+    console.error(`Error updating subscription plan with ID ${id}:`, error);
+    throw error;
+  }
+}
+
+export async function deleteSubscriptionPlan(id: string) {
+  try {
+    return await apiFetch(`/subscriptions/plans/${id}`, {
+      method: 'DELETE',
+    });
+  } catch (error) {
+    console.error(`Error deleting subscription plan with ID ${id}:`, error);
+    throw error;
+  }
+}

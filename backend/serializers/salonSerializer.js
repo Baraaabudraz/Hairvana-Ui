@@ -2,7 +2,8 @@
 
 function serializeSalon(salon) {
   if (!salon) return null;
-  return {
+  
+  const salonData = {
     id: salon.id,
     name: salon.name,
     email: salon.email,
@@ -15,14 +16,26 @@ function serializeSalon(salon) {
     bookings: salon.bookings,
     rating: salon.rating,
     hours: salon.hours,
-    gallery: salon.gallery,
-    owner: salon.owner ? {
-      id: salon.owner.id,
-      name: salon.owner.name,
-      email: salon.owner.email,
-      avatar: salon.owner.avatar,
-    } : undefined,
+    owner_id: salon.owner_id,
+    // Include owner information
+    owner_name: salon.owner?.name || salon.owner_name,
+    owner_email: salon.owner?.email || salon.owner_email,
+    owner_phone: salon.owner?.phone || salon.owner_phone,
+    owner_avatar: salon.owner?.avatar || salon.owner_avatar,
+    owner_role: salon.owner?.role || salon.owner_role,
+    // Include services if available
+    services: salon.services || [],
+    // Include additional fields that might be present
+    website: salon.website,
+    description: salon.description,
+    business_license: salon.business_license,
+    tax_id: salon.tax_id,
+    images: salon.images || [],
+    created_at: salon.created_at,
+    updated_at: salon.updated_at
   };
+  
+  return salonData;
 }
 
 module.exports = {

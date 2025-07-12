@@ -57,7 +57,20 @@ interface Salon {
   ownerPhone?: string;
   businessLicense?: string;
   taxId?: string;
-  services: string[];
+  services: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    price?: number;
+    duration?: number;
+    status?: string;
+    image_url?: string;
+    is_popular?: boolean;
+    special_offers?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    salon_services?: any;
+  }> | string[];
   hours: Record<string, { open: string; close: string; closed: boolean }>;
   images?: string[];
   status: 'active' | 'pending' | 'suspended';
@@ -109,11 +122,11 @@ export default function EditSalonPage() {
           zipCode: zipCode || '',
           website: data.website || '',
           description: data.description || '',
-          ownerName: data.ownerName || '',
-          ownerEmail: data.ownerEmail || '',
-          ownerPhone: data.ownerPhone || '',
-          businessLicense: data.businessLicense || '',
-          taxId: data.taxId || '',
+          ownerName: data.owner_name || '',
+          ownerEmail: data.owner_email || '',
+          ownerPhone: data.owner_phone || '',
+          businessLicense: data.business_license || '',
+          taxId: data.tax_id || '',
         });
 
         // Convert hours format
@@ -129,7 +142,12 @@ export default function EditSalonPage() {
           }
         });
 
-        setSelectedServices(data.services);
+        // Convert services to array of service names
+        const serviceNames = Array.isArray(data.services) 
+          ? data.services.map(service => typeof service === 'string' ? service : service.name)
+          : [];
+        
+        setSelectedServices(serviceNames);
         setHours(formattedHours);
         setUploadedImages(data.images || []);
       } catch (error) {

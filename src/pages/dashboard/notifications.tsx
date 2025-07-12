@@ -152,6 +152,7 @@ export default function NotificationsPage() {
       }
       
       const data = await fetchNotifications(params);
+      console.log('Fetched notifications:', data); // Debug log
       setNotifications(data);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -289,6 +290,32 @@ export default function NotificationsPage() {
   const getClickRate = (notification: Notification) => {
     if (notification.recipients.opened === 0) return 0;
     return ((notification.recipients.clicked / notification.recipients.opened) * 100).toFixed(1);
+  };
+
+  // Helper function to safely format dates
+  const safeFormatDate = (dateString: string | null | undefined, formatString: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return format(date, formatString);
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error);
+      return 'N/A';
+    }
+  };
+
+  // Helper function to safely format distance to now
+  const safeFormatDistance = (dateString: string | null | undefined) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (error) {
+      console.error('Error formatting distance:', dateString, error);
+      return 'N/A';
+    }
   };
 
   if (loading) {
@@ -758,11 +785,11 @@ export default function NotificationsPage() {
                         <span>•</span>
                         <span>By: {notification.createdBy}</span>
                         <span>•</span>
-                        <span>{format(new Date(notification.createdAt), 'MMM dd, yyyy HH:mm')}</span>
+                        <span>{safeFormatDate(notification.createdAt, 'MMM dd, yyyy HH:mm')}</span>
                         {notification.sentAt && (
                           <>
                             <span>•</span>
-                            <span>Sent: {formatDistanceToNow(new Date(notification.sentAt), { addSuffix: true })}</span>
+                            <span>Sent: {safeFormatDistance(notification.sentAt)}</span>
                           </>
                         )}
                         <span>•</span>

@@ -21,6 +21,7 @@ async function seed() {
     await seedSalonServices();
     await seedStaff();
     await seedIntegrationSettings();
+    await seedReportTemplates();
   
     
     console.log('✅ Database seeding completed successfully!');
@@ -203,13 +204,17 @@ async function seedSalons() {
   try {
     // Clean slate - delete existing salons
     await db.Salon.destroy({ where: {} });
-    
+    // Clean up salon_services join table
+    if (db.sequelize.getQueryInterface().bulkDelete) {
+      await db.sequelize.getQueryInterface().bulkDelete('salon_services', null, {});
+    }
     // Get salon owners
     const salonOwners = await db.User.findAll({
       where: { role: 'salon' },
-      attributes: ['id']
+      attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role']
     });
-    
+    // Get all services
+    const allServices = await db.Service.findAll();
     // Define salons to seed
     const salons = [
       {
@@ -233,7 +238,15 @@ async function seedSalons() {
           friday: '9:00 AM - 9:00 PM',
           saturday: '8:00 AM - 9:00 PM',
           sunday: '10:00 AM - 6:00 PM'
-        }
+        },
+        website: 'https://luxehair.com',
+        description: 'Premium hair salon offering luxury hair services in Beverly Hills.',
+        business_license: 'CA123456789',
+        tax_id: '12-3456789',
+        images: [
+          'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=800',
+          'https://images.pexels.com/photos/3993450/pexels-photo-3993450.jpeg?auto=compress&cs=tinysrgb&w=800'
+        ]
       },
       {
         id: '00000000-0000-0000-0000-000000000002',
@@ -256,11 +269,33 @@ async function seedSalons() {
           friday: '10:00 AM - 8:00 PM',
           saturday: '9:00 AM - 8:00 PM',
           sunday: 'Closed'
-        }
+        },
+        website: 'https://urbancuts.com',
+        description: 'Modern hair salon in downtown Los Angeles.',
+        business_license: 'CA987654321',
+        tax_id: '98-7654321',
+        images: [
+          'https://images.pexels.com/photos/3993451/pexels-photo-3993451.jpeg?auto=compress&cs=tinysrgb&w=800'
+        ]
       }
     ];
-    
-    await db.Salon.bulkCreate(salons);
+    await db.Salon.bulkCreate(salons, {
+      fields: [
+        'id', 'name', 'email', 'phone', 'address', 'location', 'website', 
+        'description', 'business_license', 'tax_id', 'owner_id', 'status', 
+        'join_date', 'revenue', 'bookings', 'rating', 'hours', 'images'
+      ]
+    });
+    // Associate each salon with 2 random services
+    for (const salon of salons) {
+      const salonInstance = await db.Salon.findByPk(salon.id);
+      if (salonInstance && allServices.length > 0) {
+        // Pick 2 random services for each salon
+        const shuffled = allServices.sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, 2);
+        await salonInstance.setServices(selected.map(s => s.id));
+      }
+    }
     console.log(`Seeded ${salons.length} salons successfully.`);
   } catch (error) {
     console.error('Error seeding salons:', error);
@@ -272,8 +307,11 @@ async function seedSalons() {
 async function seedSubscriptionPlans() {
   console.log('Seeding subscription plans...');
   try {
-    // Clean slate - delete existing plans
+    // Clean slate - delete existing subscriptions first to avoid foreign key constraint
+    await db.Subscription.destroy({ where: {} });
+    // Then delete existing plans
     await db.SubscriptionPlan.destroy({ where: {} });
+    
     // Plans matching the frontend
     const plans = [
       {
@@ -371,8 +409,7 @@ async function seedSubscriptions() {
   console.log('Seeding subscriptions...');
   
   try {
-    // Clean slate - delete existing subscriptions
-    await db.Subscription.destroy({ where: {} });
+    // Subscriptions are already deleted in seedSubscriptionPlans, so no need to delete again
     
     // Get salons and plans
     const salons = await db.Salon.findAll({ attributes: ['id'] });
@@ -476,6 +513,13 @@ async function seedStaff() {
 async function seedIntegrationSettings() {
   console.log('Seeding integration settings...');
   const seeder = require('./20250709000100-demo-integration-settings.js');
+  await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
+}
+
+// Seed report templates
+async function seedReportTemplates() {
+  console.log('Seeding report templates...');
+  const seeder = require('./20250703150000-demo-report-templates.js');
   await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
 }
 

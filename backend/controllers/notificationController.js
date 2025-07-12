@@ -130,12 +130,25 @@ exports.createNotification = async (req, res, next) => {
       users = [{ id: userId }];
     }
 
-    // Create notification-user relationships
-    const notificationUsers = users.map(user => ({
-      notification_id: notification.id,
-      user_id: user.id,
-      is_read: false
-    }));
+    console.log('Found users for notification:', users.map(u => ({ id: u.id, idLength: u.id.length })));
+
+    // Create notification-user relationships with cleaned user IDs
+    const notificationUsers = users.map(user => {
+      const cleanUserId = user.id.toString().trim(); // Remove any whitespace
+      console.log('Creating notification-user relationship:', {
+        notification_id: notification.id,
+        user_id: cleanUserId,
+        original_user_id: user.id
+      });
+      
+      return {
+        notification_id: notification.id,
+        user_id: cleanUserId,
+        is_read: false
+      };
+    });
+
+    console.log('Notification users to create:', notificationUsers);
 
     await NotificationUser.bulkCreate(notificationUsers);
 

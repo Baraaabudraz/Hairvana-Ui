@@ -11,7 +11,7 @@ export async function fetchAnalytics(period: string = '30d') {
 
 export async function generateReport(templateId: string, parameters: any) {
   try {
-    return await apiFetch('/analytics/reports/generate', {
+    return await apiFetch('/reports/generate', {
       method: 'POST',
       body: JSON.stringify({ templateId, parameters }),
     });

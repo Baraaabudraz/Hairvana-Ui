@@ -41,7 +41,20 @@ interface Salon {
   revenue: number;
   bookings: number;
   rating: number;
-  services: string[];
+  services: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    price?: number;
+    duration?: number;
+    status?: string;
+    image_url?: string;
+    is_popular?: boolean;
+    special_offers?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    salon_services?: any;
+  }> | string[];
   hours: Record<string, string>;
   website?: string;
   description?: string;
@@ -103,6 +116,7 @@ export default function SalonDetailsPage() {
         // Try to fetch from API first
         try {
           const data = await fetchSalonById(params.id as string);
+          console.log('API response data:', data);
           // Ensure arrays are not null
           const salonData = {
             ...data,
@@ -110,6 +124,7 @@ export default function SalonDetailsPage() {
             hours: data.hours || {},
             images: data.images || []
           };
+          console.log('Processed salon data:', salonData);
           setSalon(salonData);
         } catch (apiError) {
           console.warn('API fetch failed, using mock data:', apiError);
@@ -129,7 +144,13 @@ export default function SalonDetailsPage() {
               revenue: 12450,
               bookings: 156,
               rating: 4.8,
-              services: ['Haircut', 'Hair Color', 'Hair Styling', 'Hair Extensions', 'Hair Treatment'],
+              services: [
+                { id: '1', name: 'Haircut', price: 50, duration: 30 },
+                { id: '2', name: 'Hair Color', price: 100, duration: 60 },
+                { id: '3', name: 'Hair Styling', price: 70, duration: 45 },
+                { id: '4', name: 'Hair Extensions', price: 200, duration: 120 },
+                { id: '5', name: 'Hair Treatment', price: 150, duration: 90 }
+              ],
               hours: {
                 monday: '9:00 AM - 7:00 PM',
                 tuesday: '9:00 AM - 7:00 PM',
@@ -165,7 +186,11 @@ export default function SalonDetailsPage() {
               revenue: 8900,
               bookings: 98,
               rating: 4.5,
-              services: ['Haircut', 'Hair Color', 'Hair Styling', 'Beard Trim'],
+              services: [
+                { id: '6', name: 'Haircut', price: 40, duration: 30 },
+                { id: '7', name: 'Hair Color', price: 90, duration: 60 },
+                { id: '8', name: 'Beard Trim', price: 30, duration: 20 }
+              ],
               hours: {
                 monday: '8:00 AM - 6:00 PM',
                 tuesday: '8:00 AM - 6:00 PM',
@@ -200,7 +225,11 @@ export default function SalonDetailsPage() {
               revenue: 3200,
               bookings: 45,
               rating: 4.2,
-              services: ['Haircut', 'Hair Styling', 'Hair Treatment'],
+              services: [
+                { id: '9', name: 'Haircut', price: 45, duration: 30 },
+                { id: '10', name: 'Hair Styling', price: 60, duration: 45 },
+                { id: '11', name: 'Hair Treatment', price: 140, duration: 90 }
+              ],
               hours: {
                 monday: '10:00 AM - 6:00 PM',
                 tuesday: '10:00 AM - 6:00 PM',
@@ -595,11 +624,22 @@ export default function SalonDetailsPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            {(salon.services || []).map((service) => (
-              <Badge key={service} variant="secondary">
-                {service}
-              </Badge>
-            ))}
+            {(salon.services || []).map((service, index) => {
+              // Handle both service objects and service strings
+              const serviceName = typeof service === 'string' ? service : (service?.name || 'Unknown Service');
+              const serviceKey = typeof service === 'string' ? service : (service?.id || index);
+              
+              // Skip rendering if service name is invalid
+              if (!serviceName || serviceName === 'Unknown Service') {
+                return null;
+              }
+              
+              return (
+                <Badge key={serviceKey} variant="secondary">
+                  {serviceName}
+                </Badge>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

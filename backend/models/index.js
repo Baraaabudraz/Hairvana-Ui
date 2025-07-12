@@ -30,6 +30,7 @@ const Payment = require('./payment');
 const AppointmentService = require('./appointment_service');
 const Notification = require('./notification');
 const NotificationTemplate = require('./notification_template');
+const NotificationUser = require('./notification_user');
 const UserSettings = require('./user_settings');
 const BillingHistory = require('./billing_history');
 const BillingSettings = require('./billing_settings');
@@ -54,6 +55,7 @@ const models = {
   AppointmentService: AppointmentService(sequelize, Sequelize.DataTypes),
   Notification: Notification(sequelize, Sequelize.DataTypes),
   NotificationTemplate: NotificationTemplate(sequelize, Sequelize.DataTypes),
+  NotificationUser: NotificationUser(sequelize, Sequelize.DataTypes),
   UserSettings: UserSettings(sequelize, Sequelize.DataTypes),
   BillingHistory: BillingHistory(sequelize, Sequelize.DataTypes),
   BillingSettings: BillingSettings(sequelize, Sequelize.DataTypes),
@@ -97,6 +99,7 @@ async function syncOrdered(options = {}) {
       'payments',
       'appointment_services',
       'notifications',
+      'notification_users',
       'user_settings',
       'billing_histories',
       'billing_settings',

@@ -13,6 +13,8 @@ module.exports = {
         message: 'Your account has been created successfully.',
         is_read: false,
         status: 'sent',
+        target_audience: 'all',
+        created_by: 'System',
         created_at: new Date(),
         updated_at: new Date()
       },
@@ -24,6 +26,8 @@ module.exports = {
         message: 'Your subscription will expire in 3 days. Please renew to continue enjoying our services.',
         is_read: false,
         status: 'sent',
+        target_audience: 'all',
+        created_by: 'System',
         created_at: new Date(),
         updated_at: new Date()
       },
@@ -35,6 +39,8 @@ module.exports = {
         message: 'Get 20% off on your next booking. Use code HAIRVANA20.',
         is_read: false,
         status: 'sent',
+        target_audience: 'all',
+        created_by: 'System',
         created_at: new Date(),
         updated_at: new Date()
       }

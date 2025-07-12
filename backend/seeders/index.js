@@ -15,7 +15,7 @@ async function seed() {
     await seedSubscriptionPlans();
     await seedSubscriptions();
     await seedNotificationTemplates();
-    await seedNotifications();
+    // await seedNotifications();
     await seedServices();
     await seedHairstyles();
     await seedSalonServices();

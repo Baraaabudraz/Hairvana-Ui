@@ -3,11 +3,6 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('salon_services', {
-      id: {
-        allowNull: false,
-        primaryKey: true,
-        type: Sequelize.UUID,
-      },
       salon_id: {
         type: Sequelize.UUID,
         allowNull: false,

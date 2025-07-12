@@ -34,7 +34,7 @@ const NotificationUser = require('./notification_user');
 const UserSettings = require('./user_settings');
 const BillingHistory = require('./billing_history');
 const BillingSettings = require('./billing_settings');
-const ReportTemplate = require('./report_template')(sequelize);
+const ReportTemplate = require('./report_template');
 const Report = require('./report');
 const Hairstyle = require('./hairstyle');
 const SecuritySettings = require('./security_settings');
@@ -59,7 +59,7 @@ const models = {
   UserSettings: UserSettings(sequelize, Sequelize.DataTypes),
   BillingHistory: BillingHistory(sequelize, Sequelize.DataTypes),
   BillingSettings: BillingSettings(sequelize, Sequelize.DataTypes),
-  ReportTemplate: ReportTemplate,
+  ReportTemplate: ReportTemplate(sequelize),
   Report: Report(sequelize, Sequelize.DataTypes),
   Hairstyle: Hairstyle(sequelize, Sequelize.DataTypes),
   SecuritySettings: SecuritySettings(sequelize, Sequelize.DataTypes),

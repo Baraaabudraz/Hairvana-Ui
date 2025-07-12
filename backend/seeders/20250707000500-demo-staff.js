@@ -3,6 +3,9 @@ const { v4: uuidv4 } = require('uuid');
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Clean up existing staff data first
+    await queryInterface.bulkDelete('staffs', null, {});
+    
     // Real salon UUIDs from seeders
     const salonIds = [
       '00000000-0000-0000-0000-000000000001', // Luxe Hair Studio
@@ -58,7 +61,7 @@ module.exports = {
         role: 'stylist',
         email: 'mike@urbancuts.com',
         phone: '+1 (555) 777-8888',
-        bio: 'Classic and modern men’s styles.',
+        bio: 'Classic and modern men\'s styles.',
         avatar: 'https://randomuser.me/api/portraits/men/4.jpg',
         status: 'active',
         hire_date: new Date(),

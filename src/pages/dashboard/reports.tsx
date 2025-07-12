@@ -677,7 +677,7 @@ export default function ReportsPage() {
                         <span>•</span>
                         <span>{getDateRangeLabel(report.parameters.dateRange)}</span>
                         <span>•</span>
-                        <span>{report.parameters.format.toUpperCase()}</span>
+                        <span>{report.parameters?.format ? report.parameters.format.toUpperCase() : ''}</span>
                       </div>
                     </div>
                   </div>

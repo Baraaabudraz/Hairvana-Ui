@@ -24,9 +24,9 @@ import ReportsPage from './pages/dashboard/reports';
 import NotificationsPage from './pages/dashboard/notifications';
 import SettingsPage from './pages/dashboard/settings';
 import ProfilePage from './pages/dashboard/profile/index';
-import PlansPage from './app/dashboard/plans/page';
-import EditPlanPage from './app/dashboard/plans/[id]/page';
-import NewPlanPage from './app/dashboard/plans/new/page';
+import PlansPage from './pages/dashboard/plans/index';
+import EditPlanPage from './pages/dashboard/plans/edit';
+import NewPlanPage from './pages/dashboard/plans/new';
 
 function App() {
   const { user, isLoading, checkSession } = useAuthStore();
@@ -81,7 +81,7 @@ function App() {
         <Route path="users/new" element={<NewUserPage />} />
         <Route path="plans" element={<PlansPage />} />
         <Route path="plans/new" element={<NewPlanPage />} />
-        <Route path="plans/:id" element={<EditPlanPage />} />
+        <Route path="plans/:id/edit" element={<EditPlanPage />} />
         <Route path="subscriptions" element={<SubscriptionsPage />} />
         <Route path="subscriptions/:id" element={<SubscriptionDetailsPage />} />
         <Route path="subscriptions/new" element={<NewSubscriptionPage />} />

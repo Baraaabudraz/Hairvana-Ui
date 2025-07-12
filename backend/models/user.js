@@ -40,10 +40,20 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'user_id',
         as: 'appointments'
       });
-       User.hasMany(models.Notification,{
-        foreignKey:'user_id',
-        as:'user'
-       })
+      
+      // Many-to-many relationship with notifications through NotificationUser
+      User.belongsToMany(models.Notification, {
+        through: models.NotificationUser,
+        foreignKey: 'user_id',
+        otherKey: 'notification_id',
+        as: 'notifications'
+      });
+      
+      // Direct access to the join table
+      User.hasMany(models.NotificationUser, {
+        foreignKey: 'user_id',
+        as: 'notificationUsers'
+      });
     }
   }
   User.init({

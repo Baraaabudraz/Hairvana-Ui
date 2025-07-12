@@ -34,21 +34,18 @@ exports.getSalonById = async (req, res, next) => {
     const { id } = req.params;
     const salon = await Salon.findOne({
       where: { id },
-      include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] }]
+      include: [
+        { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] },
+        { model: Service, as: 'services' }
+      ]
     });
     if (!salon) {
       return res.status(404).json({ message: 'Salon not found' });
     }
-    const s = salon.toJSON();
-    if (s.owner) {
-      s.owner_name = s.owner_name || s.owner.name;
-      s.owner_email = s.owner_email || s.owner.email;
-      s.owner_phone = s.owner.phone;
-      s.owner_avatar = s.owner.avatar;
-      s.owner_role = s.owner.role;
-      delete s.owner;
-    }
-    res.json(serializeSalon(salon));
+    
+    // Serialize the salon with all included data
+    const serializedSalon = serializeSalon(salon);
+    res.json(serializedSalon);
   } catch (error) {
     next(error);
   }

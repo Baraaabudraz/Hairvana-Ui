@@ -55,6 +55,10 @@ module.exports = (sequelize, DataTypes) => {
     phone: DataTypes.STRING,
     address: DataTypes.STRING,
     location: DataTypes.STRING,
+    website: DataTypes.STRING,
+    description: DataTypes.TEXT,
+    business_license: DataTypes.STRING,
+    tax_id: DataTypes.STRING,
     owner_id: {
       type: DataTypes.UUID,
       allowNull: false,
@@ -64,7 +68,7 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     status: {
-      type: DataTypes.ENUM('active', 'pending', 'inactive'),
+      type: DataTypes.ENUM('active', 'pending', 'suspended'),
       defaultValue: 'pending'
     },
     join_date: {
@@ -81,14 +85,14 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0
     },
     rating: {
-      type: DataTypes.DECIMAL(2, 1),
+      type: DataTypes.DECIMAL(3, 1),
       defaultValue: 0
     },
     hours: {
       type: DataTypes.JSONB,
       defaultValue: {}
     },
-    gallery: {
+    images: {
       type: DataTypes.ARRAY(DataTypes.STRING),
       allowNull: true
     }

@@ -3,6 +3,8 @@ const { v4: uuidv4 } = require('uuid');
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Always clear the table before inserting
+    await queryInterface.bulkDelete('salon_services', null, {});
     // Real salon UUIDs from seeders
     const salonIds = [
       '00000000-0000-0000-0000-000000000001', // Luxe Hair Studio
@@ -19,7 +21,6 @@ module.exports = {
     for (const salonId of salonIds) {
       for (const serviceId of serviceIds) {
         salonServices.push({
-          id: uuidv4(),
           salon_id: salonId,
           service_id: serviceId,
           created_at: new Date(),

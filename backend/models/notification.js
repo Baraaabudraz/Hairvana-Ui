@@ -2,7 +2,7 @@
 const {
   Model
 } = require('sequelize');
-const { FOREIGNKEYS } = require('sequelize/lib/query-types');
+
 module.exports = (sequelize, DataTypes) => {
   class Notification extends Model {
     /**
@@ -12,10 +12,18 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-        // Notification belongs to a User (many-to-one)
-      Notification.belongsTo(models.User,{
-        foreignKey:'user_id',
-        as:'user'
+      // Many-to-many relationship with users through NotificationUser
+      Notification.belongsToMany(models.User, {
+        through: models.NotificationUser,
+        foreignKey: 'notification_id',
+        otherKey: 'user_id',
+        as: 'users'
+      });
+      
+      // Direct access to the join table
+      Notification.hasMany(models.NotificationUser, {
+        foreignKey: 'notification_id',
+        as: 'notificationUsers'
       });
     }
   }
@@ -26,12 +34,15 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false
     },
-    user_id: DataTypes.UUID,
     type: DataTypes.STRING,
     title: DataTypes.STRING,
     message: DataTypes.STRING,
-    is_read: DataTypes.BOOLEAN,
-    created_at: DataTypes.DATE
+    target_audience: DataTypes.STRING,
+    created_by: DataTypes.STRING,
+    status: {
+      type: DataTypes.ENUM('draft', 'sent', 'cancelled'),
+      defaultValue: 'draft'
+    }
   }, {
     sequelize,
     modelName: 'Notification',

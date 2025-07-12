@@ -9,16 +9,6 @@ module.exports = {
         allowNull: false,
         primaryKey: true,
       },
-      user_id: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
-      },
       type: Sequelize.STRING,
       title: Sequelize.STRING,
       message: Sequelize.STRING,
@@ -30,6 +20,14 @@ module.exports = {
         type: Sequelize.ENUM('sent', 'scheduled', 'draft', 'failed'),
         allowNull: false,
         defaultValue: 'draft'
+      },
+      target_audience: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      created_by: {
+        type: Sequelize.STRING,
+        allowNull: true
       },
       created_at: {
         type: Sequelize.DATE,

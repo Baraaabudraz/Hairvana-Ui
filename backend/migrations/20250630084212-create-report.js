@@ -2,12 +2,12 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Reports', {
+    await queryInterface.createTable('reports', {
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4
       },
       user_id: {
         type: Sequelize.UUID,
@@ -37,27 +37,42 @@ module.exports = {
         type: Sequelize.ENUM('daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom'),
         allowNull: false
       },
+      data: {
+        type: Sequelize.JSONB,
+        allowNull: false,
+        defaultValue: {}
+      },
+      generated_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.NOW
+      },
       status: {
         type: Sequelize.ENUM('pending', 'generating', 'completed', 'failed'),
         defaultValue: 'pending'
       },
-      data: {
-        type: Sequelize.JSON
+      file_url: {
+        type: Sequelize.STRING,
+        allowNull: true
       },
-      generated_at: {
-        type: Sequelize.DATE
+      parameters: {
+        type: Sequelize.JSONB,
+        allowNull: true,
+        defaultValue: {}
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.NOW
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.NOW
       }
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Reports');
+    await queryInterface.dropTable('reports');
   }
 };

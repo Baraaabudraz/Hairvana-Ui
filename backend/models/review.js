@@ -22,12 +22,6 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'appointment_id',
         as: 'appointment'
       });
-      
-      // Review belongs to a Staff member (optional - for staff-specific reviews)
-      Review.belongsTo(models.Staff, {
-        foreignKey: 'staff_id',
-        as: 'staff'
-      });
     }
   }
   
@@ -68,16 +62,6 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'SET NULL'
     },
-    staff_id: {
-      type: DataTypes.UUID,
-      allowNull: true, // Optional - for staff-specific reviews
-      references: {
-        model: 'staff',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'SET NULL'
-    },
     rating: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -94,7 +78,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
-    // Individual rating categories
     service_quality: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -102,75 +85,6 @@ module.exports = (sequelize, DataTypes) => {
         min: 1,
         max: 5
       }
-    },
-    cleanliness: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      validate: {
-        min: 1,
-        max: 5
-      }
-    },
-    staff_friendliness: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      validate: {
-        min: 1,
-        max: 5
-      }
-    },
-    value_for_money: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      validate: {
-        min: 1,
-        max: 5
-      }
-    },
-    overall_experience: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      validate: {
-        min: 1,
-        max: 5
-      }
-    },
-    // Review status
-    status: {
-      type: DataTypes.ENUM('pending', 'approved', 'rejected', 'hidden'),
-      defaultValue: 'pending'
-    },
-    // Moderation fields
-    moderated_by: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
-    },
-    moderated_at: {
-      type: DataTypes.DATE,
-      allowNull: true
-    },
-    moderation_notes: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    // Helpful votes
-    helpful_votes: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0
-    },
-    // Review type
-    review_type: {
-      type: DataTypes.ENUM('general', 'appointment', 'staff'),
-      defaultValue: 'general'
-    },
-    // Anonymous review option
-    is_anonymous: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false
     }
   }, {
     sequelize,
@@ -180,16 +94,13 @@ module.exports = (sequelize, DataTypes) => {
     underscored: true,
     indexes: [
       {
-        fields: ['salon_id', 'status']
+        fields: ['salon_id']
       },
       {
         fields: ['user_id', 'salon_id']
       },
       {
         fields: ['appointment_id']
-      },
-      {
-        fields: ['staff_id']
       },
       {
         fields: ['rating']

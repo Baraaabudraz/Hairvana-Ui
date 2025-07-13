@@ -3,10 +3,10 @@ const router = express.Router();
 const salonController = require('../controllers/salonController');
 const { createSalonValidation, updateSalonValidation } = require('../validation/salonValidation');
 const validate = require('../middleware/validate');
-const { protect, authorize } = require('../middleware/authMiddleware');
+const { authenticateToken, authorize } = require('../middleware/authMiddleware');
 
 // Protect all routes
-router.use(protect);
+router.use(authenticateToken);
 
 // GET all salons
 router.get('/', salonController.getAllSalons);

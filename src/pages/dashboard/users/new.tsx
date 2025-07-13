@@ -40,7 +40,7 @@ const userSchema = z.discriminatedUnion('role', [
   baseUserSchema.extend({ role: z.literal('user') }),
 ]).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
-  path: ["confirmPassword"],
+  path: ['confirmPassword'],
 });
 
 type UserForm = z.infer<typeof userSchema>;
@@ -130,7 +130,7 @@ export default function NewUserPage() {
     try {
       const userData = {
         ...data,
-        avatar: uploadedAvatar || `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2`,
+        avatar: uploadedAvatar || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
         ...(data.role === 'admin' || data.role === 'super_admin' ? { permissions: selectedPermissions } : {}),
       };
 

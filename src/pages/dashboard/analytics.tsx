@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+// Optimize Recharts imports - only import what we use
 import {
   LineChart,
   Line,
@@ -52,7 +53,8 @@ import {
   ArrowDownRight
 } from 'lucide-react';
 import { fetchAnalytics } from '@/api/analytics';
-import * as XLSX from 'xlsx';
+// Replace xlsx with exceljs for security
+import * as ExcelJS from 'exceljs';
 
 interface AnalyticsData {
   overview: {
@@ -169,34 +171,61 @@ export default function AnalyticsPage() {
 
   const handleExportExcel = () => {
     if (!analyticsData) return;
-    // Prepare data for export (overview, revenue, bookings, etc.)
-    const overviewSheet = XLSX.utils.json_to_sheet([
-      {
-        'Total Salons': analyticsData.overview.totalSalons,
-        'Active Salons': analyticsData.overview.activeSalons,
-        'Total Users': analyticsData.overview.totalUsers,
-        'Active Users': analyticsData.overview.activeUsers,
-        'Total Bookings': analyticsData.overview.totalBookings,
-        'Completed Bookings': analyticsData.overview.completedBookings,
-        'Total Revenue': analyticsData.overview.totalRevenue,
-        'Monthly Growth (%)': analyticsData.overview.monthlyGrowth,
-      }
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Overview');
+
+    worksheet.addRow([
+      'Total Salons', analyticsData.overview.totalSalons,
+      'Active Salons', analyticsData.overview.activeSalons,
+      'Total Users', analyticsData.overview.totalUsers,
+      'Active Users', analyticsData.overview.activeUsers,
+      'Total Bookings', analyticsData.overview.totalBookings,
+      'Completed Bookings', analyticsData.overview.completedBookings,
+      'Total Revenue', analyticsData.overview.totalRevenue,
+      'Monthly Growth (%)', analyticsData.overview.monthlyGrowth,
     ]);
-    const revenueSheet = XLSX.utils.json_to_sheet(analyticsData.revenue.data || []);
-    const bookingsSheet = XLSX.utils.json_to_sheet(analyticsData.bookings.data || []);
-    const userGrowthSheet = XLSX.utils.json_to_sheet(analyticsData.userGrowth.data || []);
-    const topServicesSheet = XLSX.utils.json_to_sheet(analyticsData.topServices || []);
-    const geoSheet = XLSX.utils.json_to_sheet(analyticsData.geographicData || []);
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, overviewSheet, 'Overview');
-    XLSX.utils.book_append_sheet(wb, revenueSheet, 'Revenue');
-    XLSX.utils.book_append_sheet(wb, bookingsSheet, 'Bookings');
-    XLSX.utils.book_append_sheet(wb, userGrowthSheet, 'User Growth');
-    XLSX.utils.book_append_sheet(wb, topServicesSheet, 'Top Services');
-    XLSX.utils.book_append_sheet(wb, geoSheet, 'Geographic');
-    // Export to file
-    XLSX.writeFile(wb, 'analytics_export.xlsx');
+
+    const revenueWorksheet = workbook.addWorksheet('Revenue');
+    revenueWorksheet.addRow(['Month', 'Revenue', 'Subscriptions', 'Commissions']);
+    analyticsData.revenue.data?.forEach(row => {
+      revenueWorksheet.addRow([row.month, row.revenue, row.subscriptions, row.commissions]);
+    });
+
+    const bookingsWorksheet = workbook.addWorksheet('Bookings');
+    bookingsWorksheet.addRow(['Date', 'Total Bookings', 'Completed', 'Cancelled']);
+    analyticsData.bookings.data?.forEach(row => {
+      bookingsWorksheet.addRow([row.date, row.bookings, row.completed, row.cancelled]);
+    });
+
+    const userGrowthWorksheet = workbook.addWorksheet('User Growth');
+    userGrowthWorksheet.addRow(['Month', 'New Users', 'Returning Users', 'Total Users']);
+    analyticsData.userGrowth.data?.forEach(row => {
+      userGrowthWorksheet.addRow([row.month, row.newUsers, row.returningUsers, row.totalUsers]);
+    });
+
+    const topServicesWorksheet = workbook.addWorksheet('Top Services');
+    topServicesWorksheet.addRow(['Service Name', 'Bookings', 'Revenue', 'Growth']);
+    analyticsData.topServices?.forEach(service => {
+      topServicesWorksheet.addRow([service.name, service.bookings, service.revenue, service.growth]);
+    });
+
+    const geoWorksheet = workbook.addWorksheet('Geographic');
+    geoWorksheet.addRow(['Location', 'Salons', 'Users', 'Revenue']);
+    analyticsData.geographicData?.forEach(location => {
+      geoWorksheet.addRow([location.location, location.salons, location.users, location.revenue]);
+    });
+
+    workbook.xlsx.writeBuffer().then(buffer => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'analytics_export.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
   };
 
   if (loading) {

@@ -14,7 +14,7 @@ const createReviewValidation = [
   body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
   body('title').optional().isLength({ max: 100 }).withMessage('Title must be less than 100 characters'),
   body('comment').optional().isLength({ max: 1000 }).withMessage('Comment must be less than 1000 characters'),
-  body('appointment_id').optional().isUUID().withMessage('Valid appointment ID is required'),
+  body('appointment_id').isUUID().withMessage('Valid appointment ID is required'),
   body('staff_id').optional().isUUID().withMessage('Valid staff ID is required'),
   body('is_anonymous').optional().isBoolean().withMessage('is_anonymous must be a boolean')
 ];
@@ -41,19 +41,19 @@ router.post('/',
   authMiddleware.authenticateToken, 
   createReviewValidation, 
   validate, 
-  reviewController.createReview
+  reviewController.createReview.bind(reviewController)
 );
 
 // GET /backend/api/mobile/reviews/salon/:salon_id - Get reviews for a specific salon
 router.get('/salon/:salon_id', 
   queryValidation, 
   validate, 
-  reviewController.getSalonReviews
+  reviewController.getSalonReviews.bind(reviewController)
 );
 
 // GET /backend/api/mobile/reviews/salon/:salon_id/stats - Get review statistics for a salon
 router.get('/salon/:salon_id/stats', 
-  reviewController.getSalonReviewStats
+  reviewController.getSalonReviewStats.bind(reviewController)
 );
 
 // GET /backend/api/mobile/reviews/my - Get current user's reviews
@@ -61,7 +61,7 @@ router.get('/my',
   authMiddleware.authenticateToken, 
   queryValidation, 
   validate, 
-  reviewController.getUserReviews
+  reviewController.getUserReviews.bind(reviewController)
 );
 
 // PUT /backend/api/mobile/reviews/:review_id - Update user's own review
@@ -69,7 +69,7 @@ router.put('/:review_id',
   authMiddleware.authenticateToken, 
   updateReviewValidation, 
   validate, 
-  reviewController.updateReview
+  reviewController.updateReview.bind(reviewController)
 );
 
 // DELETE /backend/api/mobile/reviews/:review_id - Delete user's own review
@@ -77,7 +77,7 @@ router.delete('/:review_id',
   authMiddleware.authenticateToken, 
   param('review_id').isUUID().withMessage('Valid review ID is required'),
   validate,
-  reviewController.deleteReview
+  reviewController.deleteReview.bind(reviewController)
 );
 
 // POST /backend/api/mobile/reviews/:review_id/helpful - Mark a review as helpful
@@ -85,7 +85,7 @@ router.post('/:review_id/helpful',
   authMiddleware.authenticateToken,
   param('review_id').isUUID().withMessage('Valid review ID is required'),
   validate,
-  reviewController.markReviewHelpful
+  reviewController.markReviewHelpful.bind(reviewController)
 );
 
 // GET /backend/api/mobile/reviews/check-eligibility/:salon_id - Check if user can review a salon

@@ -429,7 +429,7 @@ export default function NotificationsPage() {
                         <Label htmlFor="title">Title *</Label>
                         <Input
                           id="title"
-                          placeholder={selectedTemplate.subject || "Enter notification title"}
+                          placeholder={selectedTemplate.subject || 'Enter notification title'}
                           value={notificationForm.title}
                           onChange={(e) => setNotificationForm(prev => ({ ...prev, title: e.target.value }))}
                         />
@@ -441,7 +441,7 @@ export default function NotificationsPage() {
                           id="message"
                           rows={4}
                           className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                          placeholder={selectedTemplate.content || "Enter notification message"}
+                          placeholder={selectedTemplate.content || 'Enter notification message'}
                           value={notificationForm.message}
                           onChange={(e) => setNotificationForm(prev => ({ ...prev, message: e.target.value }))}
                         />

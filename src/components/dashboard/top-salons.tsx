@@ -111,7 +111,7 @@ export function TopSalons() {
                   {index + 1}
                 </div>
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={salon.avatar || `https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2`} alt={salon.name} />
+                  <AvatarImage src={salon.avatar || 'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2'} alt={salon.name} />
                   <AvatarFallback>{salon.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                 </Avatar>
                 <div>

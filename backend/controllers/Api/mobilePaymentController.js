@@ -1,5 +1,6 @@
 const { Payment, Appointment } = require('../../models');
 const Stripe = require('stripe');
+const crypto = require('crypto');
 
 exports.getUserPayments = async (req, res, next) => {
   try {
@@ -194,3 +195,232 @@ exports.getUserPaymentWithDetails = async (req, res, next) => {
     next(error);
   }
 };
+
+// Stripe Webhook Handler
+exports.stripeWebhook = async (req, res, next) => {
+  try {
+    const sig = req.headers['stripe-signature'];
+    const { IntegrationSettings } = require('../../models');
+    
+    // Get webhook secret from settings
+    const settings = await IntegrationSettings.findOne({ 
+      order: [['updated_at', 'DESC']] 
+    });
+    
+    if (!settings || !settings.stripe_webhook_secret) {
+      console.error('Webhook secret not configured');
+      return res.status(400).json({ error: 'Webhook secret not configured' });
+    }
+
+    if (!settings.payment_api_key) {
+      console.error('Stripe API key not configured');
+      return res.status(500).json({ error: 'Stripe API key not configured' });
+    }
+
+    const stripe = Stripe(settings.payment_api_key);
+    
+    // Verify webhook signature
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, settings.stripe_webhook_secret);
+    } catch (err) {
+      console.error('Webhook signature verification failed:', err.message);
+      return res.status(400).json({ error: 'Invalid signature' });
+    }
+
+    console.log(`Processing webhook event: ${event.type}`);
+
+    // Handle the event
+    try {
+      switch (event.type) {
+        case 'payment_intent.succeeded':
+          await handlePaymentSucceeded(event.data.object);
+          break;
+        case 'payment_intent.payment_failed':
+          await handlePaymentFailed(event.data.object);
+          break;
+        case 'payment_intent.canceled':
+          await handlePaymentCanceled(event.data.object);
+          break;
+        case 'charge.refunded':
+          await handlePaymentRefunded(event.data.object);
+          break;
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
+      }
+    } catch (webhookError) {
+      console.error(`Error processing webhook event ${event.type}:`, webhookError);
+      // Don't return error to Stripe, just log it
+    }
+
+    res.json({ received: true });
+  } catch (error) {
+    console.error('Webhook handler error:', error);
+    next(error);
+  }
+};
+
+async function handlePaymentSucceeded(paymentIntent) {
+  const { Payment, Appointment } = require('../../models');
+  
+  try {
+    const payment = await Payment.findOne({ 
+      where: { transaction_id: paymentIntent.id } 
+    });
+    
+    if (!payment) {
+      console.warn(`Payment not found for transaction_id: ${paymentIntent.id}`);
+      return;
+    }
+    
+    // Use transaction to ensure data consistency
+    await Payment.sequelize.transaction(async (t) => {
+      // Update payment status
+      await payment.update({
+        status: 'paid',
+        payment_date: new Date(),
+        updated_at: new Date()
+      }, { transaction: t });
+      
+      // Update appointment status to 'booked'
+      await Appointment.update(
+        { 
+          status: 'booked',
+          updated_at: new Date()
+        },
+        { 
+          where: { id: payment.appointment_id },
+          transaction: t
+        }
+      );
+    });
+    
+    console.log(`Payment ${payment.id} marked as paid, appointment ${payment.appointment_id} booked`);
+  } catch (error) {
+    console.error('Error handling payment succeeded:', error);
+    throw error;
+  }
+}
+
+async function handlePaymentFailed(paymentIntent) {
+  const { Payment, Appointment } = require('../../models');
+  
+  try {
+    const payment = await Payment.findOne({ 
+      where: { transaction_id: paymentIntent.id } 
+    });
+    
+    if (!payment) {
+      console.warn(`Payment not found for transaction_id: ${paymentIntent.id}`);
+      return;
+    }
+    
+    // Use transaction to ensure data consistency
+    await Payment.sequelize.transaction(async (t) => {
+      // Update payment status
+      await payment.update({
+        status: 'failed',
+        updated_at: new Date()
+      }, { transaction: t });
+      
+      // Update appointment status to 'cancelled' if payment failed
+      await Appointment.update(
+        { 
+          status: 'cancelled',
+          updated_at: new Date()
+        },
+        { 
+          where: { id: payment.appointment_id },
+          transaction: t
+        }
+      );
+    });
+    
+    console.log(`Payment ${payment.id} marked as failed, appointment ${payment.appointment_id} cancelled`);
+  } catch (error) {
+    console.error('Error handling payment failed:', error);
+    throw error;
+  }
+}
+
+async function handlePaymentCanceled(paymentIntent) {
+  const { Payment, Appointment } = require('../../models');
+  
+  try {
+    const payment = await Payment.findOne({ 
+      where: { transaction_id: paymentIntent.id } 
+    });
+    
+    if (!payment) {
+      console.warn(`Payment not found for transaction_id: ${paymentIntent.id}`);
+      return;
+    }
+    
+    // Use transaction to ensure data consistency
+    await Payment.sequelize.transaction(async (t) => {
+      // Update payment status
+      await payment.update({
+        status: 'cancelled',
+        updated_at: new Date()
+      }, { transaction: t });
+      
+      // Update appointment status to 'cancelled'
+      await Appointment.update(
+        { 
+          status: 'cancelled',
+          updated_at: new Date()
+        },
+        { 
+          where: { id: payment.appointment_id },
+          transaction: t
+        }
+      );
+    });
+    
+    console.log(`Payment ${payment.id} marked as cancelled, appointment ${payment.appointment_id} cancelled`);
+  } catch (error) {
+    console.error('Error handling payment canceled:', error);
+    throw error;
+  }
+}
+
+async function handlePaymentRefunded(charge) {
+  const { Payment, Appointment } = require('../../models');
+  
+  try {
+    const payment = await Payment.findOne({ 
+      where: { transaction_id: charge.payment_intent } 
+    });
+    
+    if (!payment) {
+      console.warn(`Payment not found for payment_intent: ${charge.payment_intent}`);
+      return;
+    }
+    
+    // Use transaction to ensure data consistency
+    await Payment.sequelize.transaction(async (t) => {
+      // Update payment status
+      await payment.update({
+        status: 'refunded',
+        updated_at: new Date()
+      }, { transaction: t });
+      
+      // Update appointment status to 'cancelled' for refunds
+      await Appointment.update(
+        { 
+          status: 'cancelled',
+          updated_at: new Date()
+        },
+        { 
+          where: { id: payment.appointment_id },
+          transaction: t
+        }
+      );
+    });
+    
+    console.log(`Payment ${payment.id} marked as refunded, appointment ${payment.appointment_id} cancelled`);
+  } catch (error) {
+    console.error('Error handling payment refunded:', error);
+    throw error;
+  }
+}

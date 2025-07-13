@@ -859,7 +859,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <Button 
-              variant={userSettings?.twoFactorEnabled ? "outline" : "default"}
+              variant={userSettings?.twoFactorEnabled ? 'outline' : 'default'}
               onClick={() => setUserSettings(prev => prev ? { ...prev, twoFactorEnabled: !prev.twoFactorEnabled } : null)}
             >
               {userSettings?.twoFactorEnabled ? 'Disable' : 'Enable'}

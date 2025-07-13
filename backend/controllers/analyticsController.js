@@ -5,7 +5,7 @@ exports.getAnalytics = async (req, res, next) => {
   try {
     const { period = '30d' } = req.query;
     const startDate = getStartDateForPeriod(period);
-
+    
     // Helper function to safely count with fallback
     const safeCount = async (model, where = {}) => {
       try {
@@ -425,17 +425,17 @@ exports.generateReport = async (req, res, next) => {
 
     // Build the report
     const reportData = {
-      metadata: {
-        templateId,
-        generatedAt: new Date().toISOString(),
-        parameters,
-        reportPeriod: getDateRangeLabel(parameters.dateRange),
+    metadata: {
+      templateId,
+      generatedAt: new Date().toISOString(),
+      parameters,
+      reportPeriod: getDateRangeLabel(parameters.dateRange),
       },
       title: template.name,
-      sections: [
-        {
-          title: 'Executive Summary',
-          type: 'summary',
+        sections: [
+          {
+            title: 'Executive Summary',
+            type: 'summary',
           data
         }
       ]

@@ -5,9 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:simple": "chmod +x dev-simple.sh && ./dev-simple.sh",
-    "dev:node": "node dev-server.js",
-    "dev:python": "python3 -m http.server 3000",
     "build": "node --max-old-space-size=4096 ./node_modules/.bin/tsc && node --max-old-space-size=4096 ./node_modules/.bin/vite build",
     "build:server": "NODE_ENV=production node --max-old-space-size=4096 ./node_modules/.bin/tsc && NODE_ENV=production node --max-old-space-size=4096 ./node_modules/.bin/vite build --mode production",
     "build:low-memory": "NODE_ENV=production NODE_OPTIONS='--max-old-space-size=4096' npx tsc && NODE_ENV=production NODE_OPTIONS='--max-old-space-size=4096' npx vite build --config vite.config.server.ts",

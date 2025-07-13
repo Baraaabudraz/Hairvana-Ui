@@ -11,6 +11,8 @@ const {
 const validate = require('../../middleware/validate');
 
 router.get('/salons/:id/availability', checkAvailabilityValidation, appointmentController.getAvailability);
+router.get('/salons/:salon_id/services', appointmentController.getSalonServices);
+router.get('/services', appointmentController.getAllServices);
 router.post('/appointments', authenticateToken, bookAppointmentValidation, validate, appointmentController.bookAppointment);
 router.get('/appointments', authenticateToken, appointmentController.getAppointments);
 router.get('/appointments/:id', authenticateToken, appointmentController.getAppointmentById);

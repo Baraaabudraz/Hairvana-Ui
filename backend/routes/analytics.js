@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const analyticsController = require('../controllers/analyticsController');
-const { protect, authorize } = require('../middleware/authMiddleware');
+const { authenticateToken, authorize } = require('../middleware/authMiddleware');
 
 // Protect all routes
-router.use(protect);
+router.use(authenticateToken);
 
 // GET analytics data - admin only
 router.get('/', authorize('admin', 'super_admin'), analyticsController.getAnalytics);

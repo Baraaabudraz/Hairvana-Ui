@@ -3,10 +3,10 @@ const router = express.Router();
 const notificationController = require('../controllers/notificationController');
 const { createNotificationValidation } = require('../validation/notificationValidation');
 const validate = require('../middleware/validate');
-const { protect, authorize } = require('../middleware/authMiddleware');
+const { authenticateToken, authorize } = require('../middleware/authMiddleware');
 
 // Protect all routes
-router.use(protect);
+router.use(authenticateToken);
 
 // GET all notifications - admin only
 router.get('/', authorize('admin', 'super_admin'), notificationController.getAllNotifications);

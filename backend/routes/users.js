@@ -3,10 +3,10 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const { createUserValidation, updateUserValidation } = require('../validation/userValidation');
 const validate = require('../middleware/validate');
-const { protect, authorize } = require('../middleware/authMiddleware');
+const { authenticateToken, authorize } = require('../middleware/authMiddleware');
 
 // Protect all routes
-router.use(protect);
+router.use(authenticateToken);
 
 // GET all users - admin only
 router.get('/', authorize('admin', 'super_admin'), userController.getAllUsers);

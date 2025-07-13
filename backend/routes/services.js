@@ -3,10 +3,10 @@ const router = express.Router();
 const serviceController = require('../controllers/serviceController');
 const { createServiceValidation, updateServiceValidation } = require('../validation/serviceValidation');
 const validate = require('../middleware/validate');
-const { protect } = require('../middleware/authMiddleware');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 // Protect all routes
-router.use(protect);
+router.use(authenticateToken);
 
 // GET all services
 router.get('/', serviceController.getAllServices);

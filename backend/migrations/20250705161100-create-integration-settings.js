@@ -1,5 +1,7 @@
 'use strict';
 
+const { type } = require("os");
+
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('integration_settings', {
@@ -55,6 +57,10 @@ module.exports = {
       },
       webhooks: {
         type: Sequelize.ARRAY(Sequelize.JSONB),
+      },
+      stripe_webhook_secret:{
+        type:Sequelize.TEXT,
+        allowNull:true,
       },
       created_at: {
         type: Sequelize.DATE,

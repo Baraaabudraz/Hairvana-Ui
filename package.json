@@ -16,6 +16,8 @@
     "build:no-wasm": "chmod +x build-no-wasm.sh && ./build-no-wasm.sh",
     "build:manual": "chmod +x build-manual.sh && ./build-manual.sh",
     "build:legacy": "node build-legacy.mjs",
+    "build:copy-only": "chmod +x build-copy-only.sh && ./build-copy-only.sh",
+    "build:simple-copy": "chmod +x build-simple.sh && ./build-simple.sh",
     "build:win": "set NODE_OPTIONS=--max-old-space-size=4096 && npx tsc && set NODE_OPTIONS=--max-old-space-size=4096 && npx vite build",
     "build:linux": "NODE_OPTIONS=--max-old-space-size=4096 npx tsc && NODE_OPTIONS=--max-old-space-size=4096 npx vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",

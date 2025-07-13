@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const reviewController = require('../../controllers/Api/mobileReviewController');
+const MobileReviewController = require('../../controllers/Api/mobileReviewController');
 const authMiddleware = require('../../middleware/authMiddleware');
 const { body, param, query } = require('express-validator');
-const validate = require('../../middleware/validationMiddleware');
+const { validate } = require('../../middleware/validationMiddleware');
+
+// Instantiate controller
+const reviewController = new MobileReviewController();
 
 // Mobile-specific validation rules
 const createReviewValidation = [

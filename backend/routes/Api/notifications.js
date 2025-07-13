@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const mobileNotificationController = require('../../controllers/Api/mobileNotificationController');
-const { protect } = require('../../middleware/authMiddleware');
+const { authenticateToken } = require('../../middleware/authMiddleware');
 
 // Protect all routes
-router.use(protect);
+router.use(authenticateToken);
 
 // GET / — List user notifications
 router.get('/', mobileNotificationController.getUserNotifications);

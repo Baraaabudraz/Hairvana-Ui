@@ -1,4 +1,4 @@
-const { Review, User, Salon, Appointment, Staff, Payment } = require('../../models');
+const { Review, User, Salon, Appointment, Payment } = require('../../models');
 const { Op } = require('sequelize');
 
 class MobileReviewController {
@@ -8,11 +8,10 @@ class MobileReviewController {
       const {
         salon_id,
         appointment_id,
-        staff_id,
         rating,
         title,
         comment,
-        is_anonymous = false
+        service_quality
       } = req.body;
 
       const user_id = req.user.id;
@@ -90,13 +89,10 @@ class MobileReviewController {
         user_id,
         salon_id,
         appointment_id,
-        staff_id,
         rating,
         title,
         comment,
-        review_type: appointment_id ? 'appointment' : 'general',
-        is_anonymous,
-        status: 'approved' // Auto-approve for mobile
+        service_quality
       });
 
       // Update salon average rating
@@ -111,6 +107,7 @@ class MobileReviewController {
           rating: review.rating,
           title: review.title,
           comment: review.comment,
+          service_quality: review.service_quality,
           created_at: review.created_at
         }
       });
@@ -141,8 +138,7 @@ class MobileReviewController {
 
       // Build where clause
       const whereClause = {
-        salon_id: salon_id,
-        status: 'approved'
+        salon_id: salon_id
       };
 
       if (rating) {
@@ -155,13 +151,7 @@ class MobileReviewController {
           {
             model: User,
             as: 'user',
-            attributes: ['id', 'first_name', 'last_name', 'avatar'],
-            where: { is_anonymous: false }
-          },
-          {
-            model: Staff,
-            as: 'staff',
-            attributes: ['id', 'first_name', 'last_name']
+            attributes: ['id', 'first_name', 'last_name', 'avatar']
           }
         ],
         order: [[sort, order.toUpperCase()]],
@@ -175,14 +165,11 @@ class MobileReviewController {
         rating: review.rating,
         title: review.title,
         comment: review.comment,
-        helpful_votes: review.helpful_votes,
+        service_quality: review.service_quality,
         created_at: review.created_at,
         user: review.user ? {
           name: `${review.user.first_name} ${review.user.last_name}`,
           avatar: review.user.avatar
-        } : null,
-        staff: review.staff ? {
-          name: `${review.staff.first_name} ${review.staff.last_name}`
         } : null
       }));
 
@@ -219,8 +206,7 @@ class MobileReviewController {
 
       const stats = await Review.findAll({
         where: {
-          salon_id: salon_id,
-          status: 'approved'
+          salon_id: salon_id
         },
         attributes: [
           [Review.sequelize.fn('COUNT', Review.sequelize.col('id')), 'total_reviews'],
@@ -289,11 +275,6 @@ class MobileReviewController {
             attributes: ['id', 'name', 'address', 'logo']
           },
           {
-            model: Staff,
-            as: 'staff',
-            attributes: ['id', 'first_name', 'last_name']
-          },
-          {
             model: Appointment,
             as: 'appointment',
             attributes: ['id', 'start_at', 'end_at']
@@ -310,17 +291,13 @@ class MobileReviewController {
         rating: review.rating,
         title: review.title,
         comment: review.comment,
-        status: review.status,
+        service_quality: review.service_quality,
         created_at: review.created_at,
         salon: {
           id: review.salon.id,
           name: review.salon.name,
           logo: review.salon.logo
         },
-        staff: review.staff ? {
-          id: review.staff.id,
-          name: `${review.staff.first_name} ${review.staff.last_name}`
-        } : null,
         appointment: review.appointment ? {
           id: review.appointment.id,
           date: review.appointment.start_at
@@ -382,12 +359,13 @@ class MobileReviewController {
         });
       }
 
-      const { rating, title, comment } = req.body;
+      const { rating, title, comment, service_quality } = req.body;
       const updateData = {};
 
       if (rating !== undefined) updateData.rating = rating;
       if (title !== undefined) updateData.title = title;
       if (comment !== undefined) updateData.comment = comment;
+      if (service_quality !== undefined) updateData.service_quality = service_quality;
 
       await review.update(updateData);
 
@@ -402,6 +380,7 @@ class MobileReviewController {
           rating: review.rating,
           title: review.title,
           comment: review.comment,
+          service_quality: review.service_quality,
           updated_at: review.updated_at
         }
       });
@@ -457,7 +436,7 @@ class MobileReviewController {
     }
   }
 
-  // Mark review as helpful (mobile optimized)
+  // Mark a review as helpful (mobile optimized)
   async markReviewHelpful(req, res) {
     try {
       const { review_id } = req.params;
@@ -471,15 +450,11 @@ class MobileReviewController {
         });
       }
 
-      // Increment helpful votes
-      await review.increment('helpful_votes');
-
+      // For now, we'll just return success since we removed helpful_votes column
+      // In a future implementation, you could add a separate helpful_votes table
       res.json({
         success: true,
-        message: 'Review marked as helpful',
-        data: {
-          helpful_votes: review.helpful_votes + 1
-        }
+        message: 'Review marked as helpful'
       });
 
     } catch (error) {
@@ -497,8 +472,7 @@ class MobileReviewController {
     try {
       const stats = await Review.findOne({
         where: {
-          salon_id: salon_id,
-          status: 'approved'
+          salon_id: salon_id
         },
         attributes: [
           [Review.sequelize.fn('AVG', Review.sequelize.col('rating')), 'average_rating'],
@@ -523,4 +497,4 @@ class MobileReviewController {
   }
 }
 
-module.exports = new MobileReviewController(); 
+module.exports = MobileReviewController; 

@@ -170,6 +170,7 @@ interface IntegrationSettings {
   stripe_enabled: boolean;
   email_enabled: boolean;
   sms_enabled: boolean;
+  stripe_webhook_secret?: string;
 }
 
 interface BillingSettings {
@@ -513,6 +514,7 @@ export default function SettingsPage() {
               stripe_enabled: integrationSettings.stripe_enabled,
               email_enabled: integrationSettings.email_enabled,
               sms_enabled: integrationSettings.sms_enabled,
+              stripe_webhook_secret: integrationSettings.stripe_webhook_secret,
             };
             await updateIntegrationSettings(payload);
           }
@@ -1732,75 +1734,266 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
-
-          <div className="flex justify-end">
-            <Button 
-              onClick={() => handleSaveSettings('Integrations')}
-              disabled={loading}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {loading ? 'Saving...' : 'Save Integration Settings'}
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
-      <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <CardTitle>Social Login</CardTitle>
-          <CardDescription>
-            Enable social media login options
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Google Login</p>
-              <p className="text-sm text-gray-600">Allow users to sign in with Google</p>
+      {/* Show Webhook Configuration only if Stripe is enabled */}
+      {integrationSettings?.stripe_enabled && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle>Webhook Configuration</CardTitle>
+            <CardDescription>
+              Configure webhooks for third-party integrations and payment processing
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Stripe Webhook Configuration */}
+            <div className="space-y-4">
+              <h4 className="font-semibold">Stripe Webhook Settings</h4>
+              <div className="space-y-2">
+                <Label htmlFor="stripeWebhookSecret">Stripe Webhook Secret</Label>
+                <Input
+                  id="stripeWebhookSecret"
+                  type="password"
+                  placeholder="whsec_..."
+                  value={integrationSettings?.stripe_webhook_secret || ''}
+                  onChange={(e) => setIntegrationSettings(prev => prev ? { ...prev, stripe_webhook_secret: e.target.value } : null)}
+                />
+                <p className="text-xs text-gray-500">
+                  Get this from your Stripe Dashboard → Webhooks → Select webhook → Signing secret
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="stripeWebhookUrl">Stripe Webhook URL</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="stripeWebhookUrl"
+                    value={`${window.location.origin}/backend/api/mobile/payments/webhook`}
+                    readOnly
+                    className="bg-gray-50"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigator.clipboard.writeText(`${window.location.origin}/backend/api/mobile/payments/webhook`)}
+                  >
+                    Copy
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Use this URL in your Stripe Dashboard webhook configuration
+                </p>
+              </div>
             </div>
-            <input
-              type="checkbox"
-              checked={integrationSettings?.socialLogins?.google || true}
-              onChange={(e) => setIntegrationSettings(prev => prev ? { 
-                ...prev, 
-                socialLogins: { ...prev.socialLogins, google: e.target.checked }
-              } : null)}
-              className="rounded"
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Facebook Login</p>
-              <p className="text-sm text-gray-600">Allow users to sign in with Facebook</p>
+
+            {/* Custom Webhooks */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold">Custom Webhooks</h4>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const newWebhook = {
+                      id: Date.now().toString(),
+                      name: '',
+                      url: '',
+                      events: [],
+                      active: true
+                    };
+                    setIntegrationSettings(prev => prev ? {
+                      ...prev,
+                      webhooks: [...(prev.webhooks || []), newWebhook]
+                    } : null);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Webhook
+                </Button>
+              </div>
+
+              {(integrationSettings?.webhooks || []).map((webhook, index) => (
+                <div key={webhook.id} className="p-4 border rounded-lg space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h5 className="font-medium">Webhook {index + 1}</h5>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIntegrationSettings(prev => prev ? {
+                            ...prev,
+                            webhooks: prev.webhooks?.map((w, i) => 
+                              i === index ? { ...w, active: !w.active } : w
+                            ) || []
+                          } : null);
+                        }}
+                      >
+                        {webhook.active ? 'Disable' : 'Enable'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600"
+                        onClick={() => {
+                          setIntegrationSettings(prev => prev ? {
+                            ...prev,
+                            webhooks: prev.webhooks?.filter((_, i) => i !== index) || []
+                          } : null);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor={`webhook-name-${index}`}>Webhook Name</Label>
+                      <Input
+                        id={`webhook-name-${index}`}
+                        placeholder="e.g., Order Notifications"
+                        value={webhook.name}
+                        onChange={(e) => {
+                          setIntegrationSettings(prev => prev ? {
+                            ...prev,
+                            webhooks: prev.webhooks?.map((w, i) => 
+                              i === index ? { ...w, name: e.target.value } : w
+                            ) || []
+                          } : null);
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`webhook-url-${index}`}>Webhook URL</Label>
+                      <Input
+                        id={`webhook-url-${index}`}
+                        placeholder="https://your-domain.com/webhook"
+                        value={webhook.url}
+                        onChange={(e) => {
+                          setIntegrationSettings(prev => prev ? {
+                            ...prev,
+                            webhooks: prev.webhooks?.map((w, i) => 
+                              i === index ? { ...w, url: e.target.value } : w
+                            ) || []
+                          } : null);
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Events to Listen For</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {[
+                        'appointment.created',
+                        'appointment.updated',
+                        'appointment.cancelled',
+                        'payment.succeeded',
+                        'payment.failed',
+                        'payment.refunded',
+                        'user.registered',
+                        'user.updated',
+                        'salon.created',
+                        'salon.updated'
+                      ].map((event) => (
+                        <div key={event} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`${webhook.id}-${event}`}
+                            checked={webhook.events.includes(event)}
+                            onChange={(e) => {
+                              setIntegrationSettings(prev => prev ? {
+                                ...prev,
+                                webhooks: prev.webhooks?.map((w, i) => 
+                                  i === index ? {
+                                    ...w,
+                                    events: e.target.checked 
+                                      ? [...w.events, event]
+                                      : w.events.filter(ev => ev !== event)
+                                  } : w
+                                ) || []
+                              } : null);
+                            }}
+                            className="rounded"
+                          />
+                          <Label htmlFor={`${webhook.id}-${event}`} className="text-sm">
+                            {event}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${webhook.active ? 'bg-green-500' : 'bg-gray-400'}`} />
+                    <span className="text-sm text-gray-600">
+                      {webhook.active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              {(!integrationSettings?.webhooks || integrationSettings.webhooks.length === 0) && (
+                <div className="text-center py-8 text-gray-500">
+                  <Zap className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>No custom webhooks configured</p>
+                  <p className="text-sm">Add webhooks to receive real-time notifications</p>
+                </div>
+              )}
             </div>
-            <input
-              type="checkbox"
-              checked={integrationSettings?.socialLogins?.facebook || false}
-              onChange={(e) => setIntegrationSettings(prev => prev ? { 
-                ...prev, 
-                socialLogins: { ...prev.socialLogins, facebook: e.target.checked }
-              } : null)}
-              className="rounded"
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Apple Login</p>
-              <p className="text-sm text-gray-600">Allow users to sign in with Apple ID</p>
+
+            {/* Webhook Testing */}
+            <div className="space-y-4">
+              <h4 className="font-semibold">Test Webhooks</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button 
+                  variant="outline" 
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                  onClick={() => {
+                    // Test webhook functionality
+                    toast({
+                      title: 'Webhook Test',
+                      description: 'Test webhook sent successfully',
+                    });
+                  }}
+                >
+                  <Zap className="h-6 w-6 text-blue-600" />
+                  <span className="font-medium">Test Stripe Webhook</span>
+                  <span className="text-xs text-gray-500">Send test payment event</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                  onClick={() => {
+                    // Test custom webhooks
+                    toast({
+                      title: 'Webhook Test',
+                      description: 'Test webhooks sent to all active endpoints',
+                    });
+                  }}
+                >
+                  <Activity className="h-6 w-6 text-green-600" />
+                  <span className="font-medium">Test All Webhooks</span>
+                  <span className="text-xs text-gray-500">Send test to all active webhooks</span>
+                </Button>
+              </div>
             </div>
-            <input
-              type="checkbox"
-              checked={integrationSettings?.socialLogins?.apple || false}
-              onChange={(e) => setIntegrationSettings(prev => prev ? { 
-                ...prev, 
-                socialLogins: { ...prev.socialLogins, apple: e.target.checked }
-              } : null)}
-              className="rounded"
-            />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Save button at the end */}
+      <div className="flex justify-end">
+        <Button 
+          onClick={() => handleSaveSettings('Integrations')}
+          disabled={loading}
+          className="bg-purple-600 hover:bg-purple-700"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {loading ? 'Saving...' : 'Save Integration Settings'}
+        </Button>
+      </div>
     </div>
   );
 

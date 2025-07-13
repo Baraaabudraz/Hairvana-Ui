@@ -3,10 +3,10 @@ const router = express.Router();
 const appointmentController = require('../controllers/appointmentController');
 const { createAppointmentValidation, updateAppointmentValidation } = require('../validation/appointmentValidation');
 const validate = require('../middleware/validate');
-const { protect } = require('../middleware/authMiddleware');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 // Protect all routes
-router.use(protect);
+router.use(authenticateToken);
 
 // GET all appointments
 router.get('/', appointmentController.getAllAppointments);

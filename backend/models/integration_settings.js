@@ -44,6 +44,9 @@ module.exports = (sequelize) => {
     payment_api_key: {
       type: DataTypes.TEXT,
     },
+    stripe_webhook_secret: {
+      type: DataTypes.TEXT,
+    },
     analytics_provider: {
       type: DataTypes.TEXT,
       defaultValue: 'google',

@@ -56,7 +56,7 @@ const passwordSchema = z.object({
   confirmPassword: z.string(),
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "Passwords don't match",
-  path: ["confirmPassword"],
+  path: ['confirmPassword'],
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;

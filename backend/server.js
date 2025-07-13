@@ -44,7 +44,7 @@ app.use('/backend/api/report-templates', require('./routes/reportTemplates'));
 app.use('/backend/api/reports', require('./routes/reports'));
 app.use('/backend/api/payments', require('./routes/payments'));
 
-// Mobile API Rodutes
+// Mobile API Routes
 app.use('/backend/api/mobile/auth', require('./routes/Api/mobileAuth'));
 app.use('/backend/api/mobile/user', require('./routes/Api/mobileUser'));
 app.use('/backend/api/mobile/salons', require('./routes/Api/salon'));
@@ -53,6 +53,7 @@ app.use('/backend/api/mobile', require('./routes/Api/appointment'));
 app.use('/backend/api/mobile/payments', require('./routes/Api/payment'));
 app.use('/backend/api/mobile/notifications', require('./routes/Api/notifications'));
 app.use('/backend/api/mobile/staff', require('./routes/Api/staff'));
+app.use('/backend/api/mobile/reviews', require('./routes/Api/mobileReviews'));
 
 
 // Error handler

@@ -93,11 +93,28 @@ exports.bookAppointment = async (req, res) => {
       await t.rollback();
       return res.status(400).json({ error: 'Invalid staff or salon' });
     }
-    // Validate services
-    const services = await Service.findAll({ where: { id: service_ids }, transaction: t });
+    // Validate services and check if they're available for this salon
+    const services = await Service.findAll({ 
+      where: { id: service_ids }, 
+      include: [{
+        model: Salon,
+        as: 'salons',
+        where: { id: salon_id },
+        through: { attributes: [] }
+      }],
+      transaction: t 
+    });
+    
     if (services.length !== service_ids.length) {
       await t.rollback();
-      return res.status(400).json({ error: 'One or more services are invalid' });
+      return res.status(400).json({ 
+        error: 'One or more services are invalid or not available for this salon',
+        details: {
+          requested: service_ids.length,
+          found: services.length,
+          available_services: services.map(s => ({ id: s.id, name: s.name }))
+        }
+      });
     }
     // Calculate duration and price
     const totalDuration = services.reduce((sum, s) => sum + s.duration, 0);
@@ -240,5 +257,64 @@ exports.cancelAppointment = async (req, res) => {
     return res.json({ success: true, appointment: serializeAppointment(appointment) });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to cancel appointment' });
+  }
+}; 
+
+// Get available services for a salon (mobile API)
+exports.getSalonServices = async (req, res) => {
+  try {
+    const { salon_id } = req.params;
+    
+    if (!salon_id) {
+      return res.status(400).json({ error: 'Salon ID is required' });
+    }
+
+    const services = await Service.findAll({
+      include: [{
+        model: Salon,
+        as: 'salons',
+        where: { id: salon_id },
+        through: { attributes: [] }
+      }],
+      order: [['name', 'ASC']]
+    });
+
+    return res.json({
+      success: true,
+      services: services.map(service => ({
+        id: service.id,
+        name: service.name,
+        description: service.description,
+        price: service.price,
+        duration: service.duration,
+        image_url: service.image_url
+      }))
+    });
+  } catch (err) {
+    console.error('Get salon services error:', err);
+    return res.status(500).json({ error: 'Failed to fetch salon services' });
+  }
+}; 
+
+// Get all services (for debugging)
+exports.getAllServices = async (req, res) => {
+  try {
+    const services = await Service.findAll({
+      order: [['name', 'ASC']]
+    });
+
+    return res.json({
+      success: true,
+      services: services.map(service => ({
+        id: service.id,
+        name: service.name,
+        description: service.description,
+        price: service.price,
+        duration: service.duration
+      }))
+    });
+  } catch (err) {
+    console.error('Get all services error:', err);
+    return res.status(500).json({ error: 'Failed to fetch services' });
   }
 }; 

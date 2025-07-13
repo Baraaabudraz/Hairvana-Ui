@@ -151,7 +151,8 @@ class MobileReviewController {
           {
             model: User,
             as: 'user',
-            attributes: ['id', 'first_name', 'last_name', 'avatar']
+            attributes:
+              ['id', 'name', 'avatar'] 
           }
         ],
         order: [[sort, order.toUpperCase()]],
@@ -168,7 +169,7 @@ class MobileReviewController {
         service_quality: review.service_quality,
         created_at: review.created_at,
         user: review.user ? {
-          name: `${review.user.first_name} ${review.user.last_name}`,
+          name: review.user.name,
           avatar: review.user.avatar
         } : null
       }));

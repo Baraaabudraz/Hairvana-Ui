@@ -423,9 +423,25 @@ export default function SettingsPage() {
               stripe_enabled: true,
               email_enabled: true,
               sms_enabled: true,
+              stripe_webhook_secret: '',
             });
           } else {
-            setIntegrationSettings(data);
+            setIntegrationSettings({
+              emailProvider: data.email_provider,
+              emailApiKey: data.email_api_key,
+              smsProvider: data.sms_provider,
+              smsApiKey: data.sms_api_key,
+              paymentGateway: data.payment_gateway,
+              paymentApiKey: data.payment_api_key,
+              analyticsProvider: data.analytics_provider,
+              analyticsTrackingId: data.analytics_tracking_id,
+              socialLogins: data.social_logins,
+              webhooks: data.webhooks,
+              stripe_enabled: data.stripe_enabled,
+              email_enabled: data.email_enabled,
+              sms_enabled: data.sms_enabled,
+              stripe_webhook_secret: data.stripe_webhook_secret,
+            });
           }
         } catch (error) {
           console.error('Error loading integration settings:', error);

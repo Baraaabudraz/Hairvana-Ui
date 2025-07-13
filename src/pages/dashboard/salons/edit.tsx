@@ -144,7 +144,7 @@ export default function EditSalonPage() {
 
         // Convert services to array of service names
         const serviceNames = Array.isArray(data.services) 
-          ? data.services.map(service => typeof service === 'string' ? service : service.name)
+          ? data.services.map((service: string | { name: string }) => typeof service === 'string' ? service : service.name)
           : [];
         
         setSelectedServices(serviceNames);

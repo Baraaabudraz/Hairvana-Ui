@@ -43,6 +43,7 @@ interface Salon {
   bookings: number;
   rating: number;
   avatar: string;
+  images?: string[]; // Added images property
 }
 
 const statusColors: Record<SalonStatus, string> = {
@@ -56,6 +57,17 @@ const subscriptionColors: Record<SubscriptionType, string> = {
   Standard: 'bg-blue-100 text-blue-800',
   Premium: 'bg-purple-100 text-purple-800',
 };
+
+// Utility to handle images as array or string
+function parseImages(images: string | string[] | undefined): string[] {
+  if (!images) return [];
+  if (Array.isArray(images)) return images;
+  return images
+    .replace(/^{|}$/g, '')
+    .split(',')
+    .map(img => img.trim())
+    .filter(Boolean);
+}
 
 export default function SalonsPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
@@ -294,126 +306,140 @@ export default function SalonsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredSalons.map((salon) => (
-              <div key={salon.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                <div className="flex items-center space-x-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={salon.avatar} alt={salon.name} />
-                    <AvatarFallback>{salon.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{salon.name}</h3>
-                    <p className="text-sm text-gray-600">{salon.location}</p>
-                    <p className="text-xs text-gray-500">{salon.email}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-6">
-                  <div className="text-center">
-                    <p className="text-sm font-semibold text-gray-900">{salon.revenue}</p>
-                    <p className="text-xs text-gray-500">Revenue</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-semibold text-gray-900">{salon.bookings}</p>
-                    <p className="text-xs text-gray-500">Bookings</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {salon.rating > 0 ? `★ ${salon.rating}` : 'N/A'}
-                    </p>
-                    <p className="text-xs text-gray-500">Rating</p>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <Badge className={statusColors[salon.status]}>
-                      {salon.status}
-                    </Badge>
-                    <Badge className={subscriptionColors[salon.subscription]}>
-                      {salon.subscription}
-                    </Badge>
+            {filteredSalons.map((salon) => {
+              const imageList = parseImages(salon.images);
+              return (
+                <div key={salon.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center space-x-4">
+                    {/* Salon Image */}
+                    {imageList.length > 0 ? (
+                      <img
+                        src={imageList[0].startsWith('http')
+                          ? imageList[0]
+                          : `${import.meta.env.VITE_BASE_URL || ''}${imageList[0].startsWith('/uploads') ? imageList[0] : `/uploads${imageList[0]}`}`}
+                        alt={salon.name}
+                        className="h-12 w-12 rounded-full object-cover border"
+                      />
+                    ) : (
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={salon.avatar} alt={salon.name} />
+                        <AvatarFallback>{salon.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                      </Avatar>
+                    )}
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{salon.name}</h3>
+                      <p className="text-sm text-gray-600">{salon.location}</p>
+                      <p className="text-xs text-gray-500">{salon.email}</p>
+                    </div>
                   </div>
                   
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link to={`/dashboard/salons/${salon.id}`} className="flex items-center w-full">
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to={`/dashboard/salons/${salon.id}/edit`} className="flex items-center w-full">
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </Link>
-                      </DropdownMenuItem>
-                      {salon.status === 'pending' && (
-                        <>
-                          <DropdownMenuItem 
-                            className="text-green-600 cursor-pointer"
-                            onSelect={(e) => {
-                              e.preventDefault();
-                              openApproveDialog(salon);
-                            }}
-                          >
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            Approve
-                          </DropdownMenuItem>
+                  <div className="flex items-center space-x-6">
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-gray-900">{salon.revenue}</p>
+                      <p className="text-xs text-gray-500">Revenue</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-gray-900">{salon.bookings}</p>
+                      <p className="text-xs text-gray-500">Bookings</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {salon.rating > 0 ? `★ ${salon.rating}` : 'N/A'}
+                      </p>
+                      <p className="text-xs text-gray-500">Rating</p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Badge className={statusColors[salon.status]}>
+                        {salon.status}
+                      </Badge>
+                      <Badge className={subscriptionColors[salon.subscription]}>
+                        {salon.subscription}
+                      </Badge>
+                    </div>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link to={`/dashboard/salons/${salon.id}`} className="flex items-center w-full">
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to={`/dashboard/salons/${salon.id}/edit`} className="flex items-center w-full">
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        {salon.status === 'pending' && (
+                          <>
+                            <DropdownMenuItem 
+                              className="text-green-600 cursor-pointer"
+                              onSelect={(e) => {
+                                e.preventDefault();
+                                openApproveDialog(salon);
+                              }}
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Approve
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-red-600 cursor-pointer"
+                              onSelect={(e) => {
+                                e.preventDefault();
+                                openRejectDialog(salon);
+                              }}
+                            >
+                              <XCircle className="mr-2 h-4 w-4" />
+                              Reject
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        {salon.status === 'active' && (
                           <DropdownMenuItem 
                             className="text-red-600 cursor-pointer"
                             onSelect={(e) => {
                               e.preventDefault();
-                              openRejectDialog(salon);
+                              openSuspendDialog(salon);
                             }}
                           >
                             <XCircle className="mr-2 h-4 w-4" />
-                            Reject
+                            Suspend
                           </DropdownMenuItem>
-                        </>
-                      )}
-                      {salon.status === 'active' && (
+                        )}
+                        {salon.status === 'suspended' && (
+                          <DropdownMenuItem 
+                            className="text-green-600 cursor-pointer"
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              openReactivateDialog(salon);
+                            }}
+                          >
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Reactivate
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem 
                           className="text-red-600 cursor-pointer"
                           onSelect={(e) => {
                             e.preventDefault();
-                            openSuspendDialog(salon);
+                            openDeleteDialog(salon);
                           }}
                         >
-                          <XCircle className="mr-2 h-4 w-4" />
-                          Suspend
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
                         </DropdownMenuItem>
-                      )}
-                      {salon.status === 'suspended' && (
-                        <DropdownMenuItem 
-                          className="text-green-600 cursor-pointer"
-                          onSelect={(e) => {
-                            e.preventDefault();
-                            openReactivateDialog(salon);
-                          }}
-                        >
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Reactivate
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem 
-                        className="text-red-600 cursor-pointer"
-                        onSelect={(e) => {
-                          e.preventDefault();
-                          openDeleteDialog(salon);
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>

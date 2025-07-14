@@ -273,7 +273,7 @@ class MobileReviewController {
           {
             model: Salon,
             as: 'salon',
-            attributes: ['id', 'name', 'address', 'logo']
+            attributes: ['id', 'name', 'address']
           },
           {
             model: Appointment,
@@ -297,7 +297,6 @@ class MobileReviewController {
         salon: {
           id: review.salon.id,
           name: review.salon.name,
-          logo: review.salon.logo
         },
         appointment: review.appointment ? {
           id: review.appointment.id,

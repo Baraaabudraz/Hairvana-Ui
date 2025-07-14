@@ -110,7 +110,7 @@ export async function uploadSalonImage(file: File) {
   // Use fetch directly because apiFetch sets Content-Type to application/json, which breaks FormData
   const BASE_API_URL = import.meta.env.VITE_BASE_API_URL || '';
   const token = localStorage.getItem('token');
-  const response = await fetch(`${BASE_API_URL}/backend/api/salons/upload-image`, {
+  const response = await fetch(`${BASE_API_URL}/salons/upload-image`, {
     method: 'POST',
     headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
     body: formData,

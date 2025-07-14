@@ -17,5 +17,6 @@ router.post('/appointments', authenticateToken, bookAppointmentValidation, valid
 router.get('/appointments', authenticateToken, appointmentController.getAppointments);
 router.get('/appointments/:id', authenticateToken, appointmentController.getAppointmentById);
 router.put('/appointments/:id/cancel', authenticateToken, cancelAppointmentValidation, validate, appointmentController.cancelAppointment);
+router.put('/appointments/:id/complete', authenticateToken, appointmentController.completeAppointment);
 
 module.exports = router; 

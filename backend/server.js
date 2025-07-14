@@ -62,6 +62,10 @@ app.use('/backend/api/mobile/notifications', require('./routes/Api/notifications
 app.use('/backend/api/mobile/staff', require('./routes/Api/staff'));
 app.use('/backend/api/mobile/reviews', require('./routes/Api/mobileReviews'));
 
+// Serve uploaded images statically
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+// Salon image upload route
+app.use('/backend/api/salons', require('./routes/salonImages'));
 
 // Error handler
 app.use((err, req, res, next) => {

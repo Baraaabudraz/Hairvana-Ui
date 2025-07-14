@@ -13,6 +13,13 @@ if (typeof(PhusionPassenger) !== 'undefined') {
 // Initialize Express app
 const app = express();
 
+// Register Stripe webhook route FIRST
+app.use('/backend/api/mobile/payments', require('./routes/Api/stripeWebhook'));
+
+// Now add body parsers for all other routes
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

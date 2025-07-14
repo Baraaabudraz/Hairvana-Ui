@@ -3,9 +3,6 @@ const router = express.Router();
 const mobilePaymentController = require('../../controllers/Api/mobilePaymentController');
 const { authenticateToken } = require('../../middleware/authMiddleware');
 
-// POST /webhook — Stripe webhook handler (no auth required, raw body needed)
-router.post('/webhook', express.raw({ type: 'application/json' }), mobilePaymentController.stripeWebhook);
-
 // Protect all other routes
 router.use(authenticateToken);
 

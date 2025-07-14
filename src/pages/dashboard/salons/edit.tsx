@@ -131,13 +131,19 @@ export default function EditSalonPage() {
 
         // Convert hours format
         const formattedHours: Record<string, { open: string; close: string; closed: boolean }> = {};
-        Object.entries(data.hours).forEach(([day, timeRange]) => {
-          if (typeof timeRange === 'string') {
+        Object.entries(data.hours || {}).forEach(([day, timeRange]) => {
+          if (typeof timeRange === 'string' && timeRange.toLowerCase() !== 'closed') {
             const [open, close] = timeRange.split(' - ');
             formattedHours[day] = {
               open: convertTo24Hour(open),
               close: convertTo24Hour(close),
               closed: false
+            };
+          } else {
+            formattedHours[day] = {
+              open: '',
+              close: '',
+              closed: true
             };
           }
         });
@@ -168,17 +174,17 @@ export default function EditSalonPage() {
   }, [params.id, reset, toast]);
 
   const convertTo24Hour = (time12h: string) => {
+    if (!time12h || typeof time12h !== 'string') return '';
     const [time, modifier] = time12h.split(' ');
+    if (!time || !modifier) return '';
     let [hours, minutes] = time.split(':');
-    
+    if (!hours || !minutes) return '';
     if (hours === '12') {
       hours = '00';
     }
-    
     if (modifier === 'PM') {
       hours = String(parseInt(hours, 10) + 12);
     }
-    
     return `${hours.padStart(2, '0')}:${minutes}`;
   };
 

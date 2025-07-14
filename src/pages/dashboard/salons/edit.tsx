@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Upload, X, Plus, Save } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { fetchSalonById, updateSalon } from '@/api/salons';
+import { fetchSalonById, updateSalon, uploadSalonImage } from '@/api/salons';
 
 const salonSchema = z.object({
   name: z.string().min(2, 'Salon name must be at least 2 characters'),
@@ -231,15 +231,31 @@ export default function EditSalonPage() {
     }));
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      // In a real app, you would upload these to a storage service
-      // For demo purposes, we'll just add placeholder URLs
-      const newImages = Array.from(files).map((file, index) => 
-        `https://images.pexels.com/photos/399999${index}/pexels-photo-399999${index}.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2`
-      );
-      setUploadedImages(prev => [...prev, ...newImages].slice(0, 5)); // Max 5 images
+      const uploaded: string[] = [];
+      for (const file of Array.from(files).slice(0, 5 - uploadedImages.length)) {
+        if (!file.type.startsWith('image/')) {
+          toast({ title: 'Invalid file', description: 'Only image files are allowed.', variant: 'destructive' });
+          continue;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          toast({ title: 'File too large', description: 'Max size is 10MB.', variant: 'destructive' });
+          continue;
+        }
+        try {
+          const data = await uploadSalonImage(file);
+          if (data.url) {
+            uploaded.push(data.url);
+          } else if (data.error) {
+            toast({ title: 'Upload error', description: data.error, variant: 'destructive' });
+          }
+        } catch (err: any) {
+          toast({ title: 'Upload error', description: err.message || 'Failed to upload image', variant: 'destructive' });
+        }
+      }
+      setUploadedImages(prev => [...prev, ...uploaded].slice(0, 5));
     }
   };
 

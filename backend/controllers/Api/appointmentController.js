@@ -260,6 +260,20 @@ exports.cancelAppointment = async (req, res) => {
   }
 }; 
 
+// Update appointment status to 'completed'
+exports.completeAppointment = async (req, res) => {
+  try {
+    const appointmentId = req.params.id;
+    const appointment = await Appointment.findOne({ where: { id: appointmentId, user_id: req.user.id } });
+    if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
+    appointment.status = 'completed';
+    await appointment.save();
+    return res.json({ success: true, appointment: serializeAppointment(appointment) });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to complete appointment' });
+  }
+};
+
 // Get available services for a salon (mobile API)
 exports.getSalonServices = async (req, res) => {
   try {

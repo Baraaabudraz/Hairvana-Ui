@@ -21,7 +21,7 @@ exports.getAllSalons = async (req, res, next) => {
       include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] }]
     });
     // Merge owner info
-    const serializedSalons = salons.map(serializeSalon);
+    const serializedSalons = salons.map(salon => serializeSalon(salon, { req }));
     res.json({ salons: serializedSalons, total: salons.length });
   } catch (error) {
     next(error);
@@ -44,7 +44,7 @@ exports.getSalonById = async (req, res, next) => {
     }
     
     // Serialize the salon with all included data
-    const serializedSalon = serializeSalon(salon);
+    const serializedSalon = serializeSalon(salon, { req });
     res.json(serializedSalon);
   } catch (error) {
     next(error);
@@ -56,7 +56,7 @@ exports.createSalon = async (req, res, next) => {
   try {
     const salonData = req.body;
     const newSalon = await Salon.create(salonData);
-    res.status(201).json(serializeSalon(newSalon));
+    res.status(201).json(serializeSalon(newSalon, { req }));
   } catch (error) {
     next(error);
   }
@@ -74,7 +74,7 @@ exports.updateSalon = async (req, res, next) => {
     if (!updatedSalon) {
       return res.status(404).json({ message: 'Salon not found' });
     }
-    res.json(serializeSalon(updatedSalon));
+    res.json(serializeSalon(updatedSalon, { req }));
   } catch (error) {
     next(error);
   }
@@ -109,7 +109,7 @@ exports.updateSalonStatus = async (req, res, next) => {
     if (!updatedSalon) {
       return res.status(404).json({ message: 'Salon not found' });
     }
-    res.json(serializeSalon(updatedSalon));
+    res.json(serializeSalon(updatedSalon, { req }));
   } catch (error) {
     next(error);
   }

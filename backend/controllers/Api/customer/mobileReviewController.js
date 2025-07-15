@@ -1,4 +1,4 @@
-const { Review, User, Salon, Appointment, Payment } = require('../../models');
+const { Review, User, Salon, Appointment, Payment } = require('../../../models');
 const { Op } = require('sequelize');
 
 class MobileReviewController {

@@ -1,4 +1,4 @@
-const { Staff } = require('../../models');
+const { Staff } = require('../../../models');
 
 // List staff for a salon by salon_id in the path
 exports.getStaffForSalon = async (req, res, next) => {

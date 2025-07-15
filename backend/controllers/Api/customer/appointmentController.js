@@ -1,7 +1,7 @@
 'use strict';
-const { Appointment, Salon, Staff, Service, AppointmentService, sequelize } = require('../../models');
+const { Appointment, Salon, Staff, Service, AppointmentService, sequelize } = require('../../../models');
 const { Op } = require('sequelize');
-const { serializeAppointment } = require('../../serializers/appointmentSerializer');
+const { serializeAppointment } = require('../../../serializers/appointmentSerializer');
 
 // Get availability for a salon (using start_at/end_at fields)
 exports.getAvailability = async (req, res) => {

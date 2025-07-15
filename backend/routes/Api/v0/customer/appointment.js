@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const appointmentController = require('../../controllers/Api/appointmentController');
-const { authenticateToken } = require('../../middleware/authMiddleware');
+const { authenticateToken } = require('../../../../middleware/authMiddleware');
 const { 
   createAppointmentValidation, 
   bookAppointmentValidation,
   checkAvailabilityValidation,
   cancelAppointmentValidation 
-} = require('../../validation/appointmentValidation');
-const validate = require('../../middleware/validate');
+} = require('../../../../validation/appointmentValidation');
+const validate = require('../../../../middleware/validate');
 
 router.get('/salons/:id/availability', checkAvailabilityValidation, appointmentController.getAvailability);
 router.get('/salons/:salon_id/services', appointmentController.getSalonServices);

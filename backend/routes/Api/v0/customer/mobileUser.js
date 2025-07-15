@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const mobileUserController = require('../../controllers/Api/mobileUserController');
-const { authenticateToken } = require('../../middleware/authMiddleware');
-const { updateProfileValidation } = require('../../validation/mobileUserValidation');
-const validate = require('../../middleware/validate');
+const { authenticateToken } = require('../../../../middleware/authMiddleware');
+const { updateProfileValidation } = require('../../../../validation/mobileUserValidation');
+const validate = require('../../../../middleware/validate');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');

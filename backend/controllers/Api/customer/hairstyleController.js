@@ -1,5 +1,5 @@
 'use strict';
-const { Hairstyle } = require('../../models');
+const { Hairstyle } = require('../../../models');
 
 exports.getHairstyles = async (req, res) => {
   try {

@@ -1,8 +1,8 @@
 'use strict';
-const { User, Customer } = require('../../models');
+const { User, Customer } = require('../../../../models');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const config = require('../../config/config.json');
+const config = require('../../../../config/config.json');
 
 exports.register = async (req, res) => {
   try {

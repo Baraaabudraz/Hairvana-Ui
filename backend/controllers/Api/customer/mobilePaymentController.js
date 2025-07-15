@@ -1,4 +1,4 @@
-const { Payment, Appointment } = require('../../models');
+const { Payment, Appointment } = require('../../../models');
 const Stripe = require('stripe');
 const crypto = require('crypto');
 
@@ -42,7 +42,7 @@ exports.checkoutPayment = async (req, res, next) => {
     const { appointment_id ,method } = req.body;
 
     // Fetch integration settings and check feature toggle
-    const { IntegrationSettings } = require('../../models');
+    const { IntegrationSettings } = require('../../../models');
     const settings = await IntegrationSettings.findOne({ order: [['updated_at', 'DESC']] });
     if (!settings || settings.stripe_enabled === false) {
       return res.status(503).json({ message: 'Payments are currently disabled by the admin.' });
@@ -160,7 +160,7 @@ exports.cancelPayment = async (req, res, next) => {
     
     // Cancel with Stripe if transaction_id exists
     if (payment.transaction_id) {
-      const { IntegrationSettings } = require('../../models');
+      const { IntegrationSettings } = require('../../../models');
       const settings = await IntegrationSettings.findOne({ order: [['updated_at', 'DESC']] });
       if (settings && settings.payment_api_key) {
         const stripe = Stripe(settings.payment_api_key);
@@ -200,7 +200,7 @@ exports.getUserPaymentWithDetails = async (req, res, next) => {
 exports.stripeWebhook = async (req, res, next) => {
   try {
     const sig = req.headers['stripe-signature'];
-    const { IntegrationSettings } = require('../../models');
+    const { IntegrationSettings } = require('../../../models');
     
     // Get webhook secret from settings
     const settings = await IntegrationSettings.findOne({ 
@@ -261,7 +261,7 @@ exports.stripeWebhook = async (req, res, next) => {
 };
 
 async function handlePaymentSucceeded(paymentIntent) {
-  const { Payment, Appointment } = require('../../models');
+  const { Payment, Appointment } = require('../../../models');
   
   try {
     const payment = await Payment.findOne({ 
@@ -303,7 +303,7 @@ async function handlePaymentSucceeded(paymentIntent) {
 }
 
 async function handlePaymentFailed(paymentIntent) {
-  const { Payment, Appointment } = require('../../models');
+  const { Payment, Appointment } = require('../../../models');
   
   try {
     const payment = await Payment.findOne({ 
@@ -344,7 +344,7 @@ async function handlePaymentFailed(paymentIntent) {
 }
 
 async function handlePaymentCanceled(paymentIntent) {
-  const { Payment, Appointment } = require('../../models');
+  const { Payment, Appointment } = require('../../../models');
   
   try {
     const payment = await Payment.findOne({ 
@@ -385,7 +385,7 @@ async function handlePaymentCanceled(paymentIntent) {
 }
 
 async function handlePaymentRefunded(charge) {
-  const { Payment, Appointment } = require('../../models');
+  const { Payment, Appointment } = require('../../../models');
   
   try {
     const payment = await Payment.findOne({ 

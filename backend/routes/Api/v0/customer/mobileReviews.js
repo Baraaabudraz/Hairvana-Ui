@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const MobileReviewController = require('../../controllers/Api/mobileReviewController');
-const authMiddleware = require('../../middleware/authMiddleware');
+const authMiddleware = require('../../../../middleware/authMiddleware');
 const { body, param, query } = require('express-validator');
-const { validate } = require('../../middleware/validationMiddleware');
+const { validate } = require('../../../../middleware/validationMiddleware');
 
 // Instantiate controller
 const reviewController = new MobileReviewController();
@@ -99,7 +99,7 @@ router.get('/check-eligibility/:salon_id',
       const user_id = req.user.id;
 
       // Check if user has completed appointments with this salon
-      const { Appointment, Payment } = require('../../models');
+      const { Appointment, Payment } = require('../../../../models');
       
       const hasCompletedAppointment = await Appointment.findOne({
         where: {
@@ -115,7 +115,7 @@ router.get('/check-eligibility/:salon_id',
       });
 
       // Check if user already reviewed this salon (for general reviews)
-      const existingReview = await require('../../models').Review.findOne({
+      const existingReview = await require('../../../../models').Review.findOne({
         where: {
           user_id: user_id,
           salon_id: salon_id,
@@ -153,7 +153,7 @@ router.get('/check-appointment/:appointment_id',
       const { appointment_id } = req.params;
       const user_id = req.user.id;
 
-      const { Appointment, Payment, Review } = require('../../models');
+      const { Appointment, Payment, Review } = require('../../../../models');
       
       // Check if appointment exists and belongs to user
       const appointment = await Appointment.findOne({

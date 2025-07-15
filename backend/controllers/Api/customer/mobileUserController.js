@@ -1,6 +1,6 @@
 'use strict';
-const { User } = require('../../models');
-const { serializeUser } = require('../../serializers/userSerializer');
+const { User } = require('../../../models');
+const { serializeUser } = require('../../../serializers/userSerializer');
 
 exports.getProfile = async (req, res) => {
   try {

@@ -1,5 +1,5 @@
 'use strict';
-const { Salon, Service } = require('../../models');
+const { Salon, Service } = require('../../../models');
 
 exports.getSalons = async (req, res) => {
   try {

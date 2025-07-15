@@ -1,4 +1,4 @@
-const { Notification, NotificationUser, User } = require('../../models');
+const { Notification, NotificationUser, User } = require('../../../models');
 
 // GET / — List user notifications
 exports.getUserNotifications = async (req, res, next) => {

@@ -99,6 +99,15 @@ interface User {
   totalSpent?: number;
   favoriteServices?: string[];
   suspensionReason?: string;
+  join_date?: string; // Added for new_code
+  createdAt?: string; // Added for new_code
+  // For salon owner, these might be nested
+  salonOwner?: {
+    total_salons?: number;
+    total_revenue?: number;
+    total_bookings?: number;
+    salons?: Salon[];
+  };
 }
 
 const statusColors = {
@@ -142,136 +151,8 @@ export default function UserDetailsPage() {
     const fetchUser = async () => {
       try {
         setLoading(true);
-        
-        // Try to fetch from API first
-        try {
-          const data = await fetchUserById(params.id as string);
-          setUser(data);
-        } catch (apiError) {
-          console.warn('API fetch failed, using mock data:', apiError);
-          
-          // Fallback to mock data if API fails
-          const mockUsers: Record<string, User> = {
-            '1': {
-              id: '1',
-              name: 'John Smith',
-              email: 'admin@hairvana.com',
-              phone: '+1 (555) 123-4567',
-              role: 'admin',
-              status: 'active',
-              joinDate: '2024-01-01',
-              lastLogin: '2024-06-15T10:30:00Z',
-              avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              permissions: ['manage_salons', 'manage_users', 'view_analytics', 'manage_subscriptions'],
-            },
-            '2': {
-              id: '2',
-              name: 'Sarah Johnson',
-              email: 'superadmin@hairvana.com',
-              phone: '+1 (555) 234-5678',
-              role: 'super_admin',
-              status: 'active',
-              joinDate: '2024-01-01',
-              lastLogin: '2024-06-15T09:15:00Z',
-              avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              permissions: ['full_access'],
-            },
-            '3': {
-              id: '3',
-              name: 'Maria Rodriguez',
-              email: 'maria@luxehair.com',
-              phone: '+1 (555) 345-6789',
-              role: 'salon',
-              status: 'active',
-              joinDate: '2024-01-15',
-              lastLogin: '2024-06-15T14:20:00Z',
-              avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              salons: [
-                {
-                  id: '1',
-                  name: 'Luxe Hair Studio',
-                  location: 'Beverly Hills, CA',
-                  subscription: 'Premium',
-                  bookingsCount: 156,
-                  revenue: 12450,
-                  status: 'active'
-                },
-                {
-                  id: '4',
-                  name: 'Luxe Hair Downtown',
-                  location: 'Downtown LA, CA',
-                  subscription: 'Standard',
-                  bookingsCount: 89,
-                  revenue: 7800,
-                  status: 'active'
-                }
-              ],
-              totalSalons: 2,
-              totalRevenue: 20250,
-              totalBookings: 245,
-            },
-            '4': {
-              id: '4',
-              name: 'David Chen',
-              email: 'david@stylecuts.com',
-              phone: '+1 (555) 456-7890',
-              role: 'salon',
-              status: 'active',
-              joinDate: '2024-01-20',
-              lastLogin: '2024-06-15T11:45:00Z',
-              avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              salons: [
-                {
-                  id: '2',
-                  name: 'Style Cuts',
-                  location: 'San Francisco, CA',
-                  subscription: 'Standard',
-                  bookingsCount: 98,
-                  revenue: 8900,
-                  status: 'active'
-                }
-              ],
-              totalSalons: 1,
-              totalRevenue: 8900,
-              totalBookings: 98,
-            },
-            '5': {
-              id: '5',
-              name: 'Lisa Thompson',
-              email: 'lisa.thompson@email.com',
-              phone: '+1 (555) 567-8901',
-              role: 'user',
-              status: 'active',
-              joinDate: '2024-02-01',
-              lastLogin: '2024-06-15T15:30:00Z',
-              avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              totalBookings: 8,
-              totalSpent: 650,
-              favoriteServices: ['Haircut', 'Hair Styling'],
-            },
-            '6': {
-              id: '6',
-              name: 'Emily Davis',
-              email: 'emily.davis@email.com',
-              phone: '+1 (555) 678-9012',
-              role: 'user',
-              status: 'active',
-              joinDate: '2024-02-01',
-              lastLogin: '2024-06-15T13:20:00Z',
-              avatar: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              totalBookings: 12,
-              totalSpent: 850,
-              favoriteServices: ['Haircut', 'Hair Color', 'Hair Styling'],
-            },
-          };
-          
-          const userData = mockUsers[params.id as string];
-          if (userData) {
-            setUser(userData);
-          } else {
-            throw new Error('User not found');
-          }
-        }
+        const data = await fetchUserById(params.id as string);
+        setUser(data);
       } catch (error) {
         console.error('Error fetching user:', error);
         toast({
@@ -440,7 +321,7 @@ export default function UserDetailsPage() {
                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    Joined {formatDateSafely(user.joinDate, 'MMM dd, yyyy')}
+                    Joined {formatDateSafely(user.join_date || user.joinDate || user.createdAt, 'MMM dd, yyyy')}
                   </div>
                   {user.lastLogin && (
                     <div className="flex items-center gap-1">
@@ -477,7 +358,7 @@ export default function UserDetailsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Salons</p>
-                  <p className="text-2xl font-bold text-gray-900">{user.totalSalons || 0}</p>
+                  <p className="text-2xl font-bold text-gray-900">{(user.salonOwner?.total_salons ?? user.totalSalons) || 0}</p>
                 </div>
                 <Building2 className="h-8 w-8 text-blue-500" />
               </div>
@@ -488,7 +369,7 @@ export default function UserDetailsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900">${user.totalRevenue?.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">${(user.salonOwner?.total_revenue ?? user.totalRevenue)?.toLocaleString()}</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-green-500" />
               </div>
@@ -499,7 +380,7 @@ export default function UserDetailsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Bookings</p>
-                  <p className="text-2xl font-bold text-gray-900">{user.totalBookings}</p>
+                  <p className="text-2xl font-bold text-gray-900">{(user.salonOwner?.total_bookings ?? user.totalBookings) || 0}</p>
                 </div>
                 <Calendar className="h-8 w-8 text-blue-500" />
               </div>
@@ -511,7 +392,7 @@ export default function UserDetailsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Avg Revenue/Salon</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    ${user.totalSalons ? Math.round((user.totalRevenue || 0) / user.totalSalons).toLocaleString() : 0}
+                    {user.salonOwner?.total_salons && user.salonOwner?.total_revenue ? Math.round((user.salonOwner.total_revenue / user.salonOwner.total_salons)).toLocaleString() : 0}
                   </p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-purple-500" />
@@ -588,7 +469,7 @@ export default function UserDetailsPage() {
               <div>
                 <p className="text-sm font-medium">Member Since</p>
                 <p className="text-sm text-gray-600">
-                  {formatDateSafely(user.joinDate, 'MMMM dd, yyyy')}
+                  {formatDateSafely(user.join_date || user.joinDate || user.createdAt, 'MMMM dd, yyyy')}
                 </p>
               </div>
             </div>
@@ -647,28 +528,34 @@ export default function UserDetailsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
-                Salon Portfolio ({user.totalSalons} {user.totalSalons === 1 ? 'Salon' : 'Salons'})
+                Salon Portfolio ({(user.salonOwner?.total_salons ?? user.totalSalons) || 0} {(user.salonOwner?.total_salons ?? user.totalSalons) === 1 ? 'Salon' : 'Salons'})
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {user.salons?.map((salon) => (
+              {(user.salonOwner?.salons ?? user.salons)?.map((salon: any) => (
                 <div key={salon.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-semibold text-gray-900">{salon.name}</h4>
-                      <p className="text-sm text-gray-600">{salon.location}</p>
+                      <p className="text-sm text-gray-600">{salon.address || salon.location}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <Badge className={subscriptionColors[salon.subscription as keyof typeof subscriptionColors]}>
-                          {salon.subscription}
-                        </Badge>
+                        {salon.subscription && (
+                          <Badge className={subscriptionColors[salon.subscription as keyof typeof subscriptionColors]}>
+                            {salon.subscription}
+                          </Badge>
+                        )}
                         <Badge className={statusColors[salon.status as keyof typeof statusColors]}>
                           {salon.status}
                         </Badge>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-gray-900">${salon.revenue.toLocaleString()}</p>
-                      <p className="text-xs text-gray-500">{salon.bookingsCount} bookings</p>
+                      {salon.revenue && (
+                        <p className="text-sm font-semibold text-gray-900">${salon.revenue.toLocaleString()}</p>
+                      )}
+                      {salon.bookingsCount && (
+                        <p className="text-xs text-gray-500">{salon.bookingsCount} bookings</p>
+                      )}
                       <Link to={`/dashboard/salons/${salon.id}`}>
                         <Button variant="outline" size="sm" className="mt-2">
                           <Eye className="h-3 w-3 mr-1" />
@@ -679,13 +566,12 @@ export default function UserDetailsPage() {
                   </div>
                 </div>
               ))}
-              
-              {user.salons && user.salons.length > 0 && (
+              {((user.salonOwner?.salons?.length ?? user.salons?.length) ?? 0) > 0 && (
                 <div className="mt-4 pt-4 border-t">
                   <Link to={`/dashboard/salons?ownerId=${user.id}`}>
                     <Button variant="outline" className="w-full">
                       <Building2 className="h-4 w-4 mr-2" />
-                      View All Salons ({user.totalSalons})
+                      View All Salons ({user.salonOwner?.total_salons ?? user.totalSalons})
                     </Button>
                   </Link>
                 </div>

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const salonController = require('../../controllers/Api/salonController');
+const salonController = require('../../../../controllers/Api/customer/salonController');
 const { getSalonsValidation, getSalonByIdValidation } = require('../../../../validation/salonValidation');
 const validate = require('../../../../middleware/validate');
 

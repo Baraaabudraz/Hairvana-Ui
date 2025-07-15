@@ -86,6 +86,7 @@ export default function EditSalonPage() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [customService, setCustomService] = useState('');
   const [hours, setHours] = useState<Record<string, { open: string; close: string; closed: boolean }>>({});
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
 
   const {
@@ -231,31 +232,10 @@ export default function EditSalonPage() {
     }));
   };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      const uploaded: string[] = [];
-      for (const file of Array.from(files).slice(0, 5 - uploadedImages.length)) {
-        if (!file.type.startsWith('image/')) {
-          toast({ title: 'Invalid file', description: 'Only image files are allowed.', variant: 'destructive' });
-          continue;
-        }
-        if (file.size > 10 * 1024 * 1024) {
-          toast({ title: 'File too large', description: 'Max size is 10MB.', variant: 'destructive' });
-          continue;
-        }
-        try {
-          const data = await uploadSalonImage(file);
-          if (data.url) {
-            uploaded.push(data.url);
-          } else if (data.error) {
-            toast({ title: 'Upload error', description: data.error, variant: 'destructive' });
-          }
-        } catch (err: any) {
-          toast({ title: 'Upload error', description: err.message || 'Failed to upload image', variant: 'destructive' });
-        }
-      }
-      setUploadedImages(prev => [...prev, ...uploaded].slice(0, 5));
+      setSelectedFiles(Array.from(files).slice(0, 5 - uploadedImages.length));
     }
   };
 
@@ -279,15 +259,42 @@ export default function EditSalonPage() {
       // Format address
       const fullAddress = `${data.address}, ${data.city}, ${data.state} ${data.zipCode}`;
 
+      // 1. Upload new images if any are selected
+      let imageUrls: string[] = [...uploadedImages]; // keep existing images
+      if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          const formData = new FormData();
+          formData.append('image', file);
+          const token = localStorage.getItem('token');
+          const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/salons/upload-image`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          });
+          const result = await response.json();
+          if (result.url) imageUrls.push(result.url);
+        }
+      }
+      // 2. Use all image URLs in salonData
       const salonData = {
         ...data,
         address: fullAddress,
         services: selectedServices,
         hours: formattedHours,
-        images: uploadedImages,
+        images: imageUrls,
       };
 
-      await updateSalon(params.id as string, salonData);
+      const token = localStorage.getItem('token');
+      await fetch(`${import.meta.env.VITE_BASE_API_URL}/salons/${params.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(salonData),
+      });
 
       toast({
         title: 'Salon updated successfully',
@@ -664,7 +671,7 @@ export default function EditSalonPage() {
                   type="file"
                   multiple
                   accept="image/*"
-                  onChange={handleImageUpload}
+                  onChange={handleImageSelect}
                   className="hidden"
                 />
               </div>
@@ -688,6 +695,18 @@ export default function EditSalonPage() {
                       <X className="h-3 w-3" />
                     </button>
                   </div>
+                ))}
+              </div>
+            )}
+            {selectedFiles.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                {selectedFiles.map((file, idx) => (
+                  <img
+                    key={idx}
+                    src={URL.createObjectURL(file)}
+                    alt="Preview"
+                    style={{ width: 100, height: 100, objectFit: 'cover' }}
+                  />
                 ))}
               </div>
             )}

@@ -1,8 +1,13 @@
 // Salon resource serializer
 
-function serializeSalon(salon) {
+function serializeSalon(salon, options = {}) {
   if (!salon) return null;
-  
+  // Helper to build full URL
+  const buildUrl = (img) =>
+    img && !img.startsWith('http')
+      ? `${options.req?.protocol || 'http'}://${options.req?.get ? options.req.get('host') : 'localhost:5000'}${img}`
+      : img;
+
   const salonData = {
     id: salon.id,
     name: salon.name,
@@ -30,7 +35,9 @@ function serializeSalon(salon) {
     description: salon.description,
     business_license: salon.business_license,
     tax_id: salon.tax_id,
-    images: salon.images || [],
+    images: Array.isArray(salon.images)
+      ? salon.images.map(buildUrl)
+      : (salon.images ? [buildUrl(salon.images)] : []),
     created_at: salon.created_at,
     updated_at: salon.updated_at
   };

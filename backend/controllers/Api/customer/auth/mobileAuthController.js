@@ -1,5 +1,5 @@
 'use strict';
-const { User, Customer } = require('../../../../models');
+const { User, Customer, MobileDevice } = require('../../../../models');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const config = require('../../../../config/config.json');
@@ -22,7 +22,7 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, device_token, device_type } = req.body;
     const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials.' });
@@ -32,6 +32,19 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, config.jwtSecret || process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    // Register or update device token for push notifications
+    if (device_token && device_type) {
+      await MobileDevice.upsert({
+        user_id: user.id,
+        device_token,
+        device_type,
+        last_login: new Date()
+      }, {
+        where: { user_id: user.id, device_token }
+      });
+    }
+
     return res.json({ success: true, token, user: { id: user.id, name: user.name, email: user.email } });
   } catch (err) {
     return res.status(500).json({ error: 'Login failed.' });

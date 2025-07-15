@@ -6,7 +6,7 @@ const fs = require('fs');
 const router = express.Router();
 
 // Ensure upload directory exists
-const uploadDir = path.join(__dirname, '../../public/uploads/salons');
+const uploadDir = path.join(__dirname, '../public/uploads/salons');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 // File filter for images only
@@ -39,8 +39,8 @@ const upload = multer({
 // POST /backend/api/salons/upload-image
 router.post('/upload-image', upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  // Return the public URL for the uploaded image
-  const url = `/uploads/salons/${req.file.filename}`;
+  // Return the full public URL for the uploaded image
+  const url = `${req.protocol}://${req.get('host')}/uploads/salons/${req.file.filename}`;
   res.json({ url });
 });
 

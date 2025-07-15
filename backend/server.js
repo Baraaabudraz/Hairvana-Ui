@@ -60,6 +60,8 @@ app.use('/backend/api/mobile/reviews', require('./routes/Api/mobileReviews'));
 
 // Serve uploaded images statically
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+// Serve avatars from public/uploads/avatars
+app.use('/uploads/avatars', express.static(path.join(__dirname, '../public/uploads/avatars')));
 // Salon image upload route
 app.use('/backend/api/salons', require('./routes/salonImages'));
 

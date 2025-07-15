@@ -40,6 +40,7 @@ const Hairstyle = require('./hairstyle');
 const SecuritySettings = require('./security_settings');
 const IntegrationSettings = require('./integration_settings')(sequelize);
 const Review = require('./review');
+const MobileDevice = require('./mobile_device');
 
 // Initialize models in dependency order
 const models = {
@@ -65,7 +66,8 @@ const models = {
   Hairstyle: Hairstyle(sequelize, Sequelize.DataTypes),
   SecuritySettings: SecuritySettings(sequelize, Sequelize.DataTypes),
   IntegrationSettings: IntegrationSettings,
-  Review: Review(sequelize, Sequelize.DataTypes)
+  Review: Review(sequelize, Sequelize.DataTypes),
+  MobileDevice: MobileDevice(sequelize, Sequelize.DataTypes)
 };
 
 // Initialize associations

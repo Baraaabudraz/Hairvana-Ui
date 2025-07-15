@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const mobileNotificationController = require('../../controllers/Api/mobileNotificationController');
+const mobileNotificationController = require('../../../../controllers/Api/customer/mobileNotificationController');
 const { authenticateToken } = require('../../../../middleware/authMiddleware');
 
 // Protect all routes

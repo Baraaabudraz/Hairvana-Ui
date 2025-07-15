@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const MobileReviewController = require('../../controllers/Api/mobileReviewController');
+const MobileReviewController = require('../../../../controllers/Api/customer/mobileReviewController');
 const authMiddleware = require('../../../../middleware/authMiddleware');
 const { body, param, query } = require('express-validator');
 const { validate } = require('../../../../middleware/validationMiddleware');

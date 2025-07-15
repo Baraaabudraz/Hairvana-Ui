@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const appointmentController = require('../../controllers/Api/appointmentController');
+const appointmentController = require('../../../../controllers/Api/customer/appointmentController');
 const { authenticateToken } = require('../../../../middleware/authMiddleware');
 const { 
   createAppointmentValidation, 

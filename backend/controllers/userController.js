@@ -32,7 +32,7 @@ exports.getAllUsers = async (req, res, next) => {
         { model: Salon, as: 'salons' }
       ]
     });
-    users = users.map(serializeUser);
+    users = users.map(user => serializeUser(user, { req }));
     // Calculate stats
     const stats = {
       total: users.length,

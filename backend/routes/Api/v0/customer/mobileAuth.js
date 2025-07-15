@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const mobileAuthController = require('../../controllers/Api/mobileAuthController');
+const mobileAuthController = require('../../../../controllers/Api/customer/auth/mobileAuthController');
 const { registerValidation, loginValidation } = require('../../../../validation/mobileAuthValidation');
 const validate = require('../../../../middleware/validate');
 

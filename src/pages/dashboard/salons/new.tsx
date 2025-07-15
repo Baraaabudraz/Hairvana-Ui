@@ -59,6 +59,7 @@ export default function NewSalonPage() {
     saturday: { open: '08:00', close: '19:00', closed: false },
     sunday: { open: '10:00', close: '18:00', closed: false },
   });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
 
   const {
@@ -130,15 +131,10 @@ export default function NewSalonPage() {
     }));
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      // In a real app, you would upload these to a storage service
-      // For demo purposes, we'll just add placeholder URLs
-      const newImages = Array.from(files).map((file, index) => 
-        `https://images.pexels.com/photos/399999${index}/pexels-photo-399999${index}.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=2`
-      );
-      setUploadedImages(prev => [...prev, ...newImages].slice(0, 5)); // Max 5 images
+      setSelectedFiles(Array.from(files).slice(0, 5)); // Max 5 images
     }
   };
 
@@ -178,6 +174,25 @@ export default function NewSalonPage() {
       // Format address
       const fullAddress = `${data.address}, ${data.city}, ${data.state} ${data.zipCode}`;
 
+      // 1. Upload images if any are selected
+      let imageUrls: string[] = [];
+      if (selectedFiles.length > 0) {
+        const token = localStorage.getItem('token');
+        for (const file of selectedFiles) {
+          const formData = new FormData();
+          formData.append('image', file);
+          const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/salons/upload-image`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          });
+          const result = await response.json();
+          if (result.url) imageUrls.push(result.url);
+        }
+      }
+
       const salonData = {
         name: data.name,
         email: data.email,
@@ -193,11 +208,12 @@ export default function NewSalonPage() {
         tax_id: data.taxId,
         services: selectedServices,
         hours: formattedHours,
-        images: uploadedImages,
+        images: imageUrls,
         status: 'pending'
       };
 
-      await createSalon(salonData);
+      const token = localStorage.getItem('token');
+      await createSalon(salonData, token);
 
       toast({
         title: 'Salon created successfully',
@@ -597,12 +613,21 @@ export default function NewSalonPage() {
                   type="file"
                   multiple
                   accept="image/*"
-                  onChange={handleImageUpload}
+                  onChange={handleImageSelect}
                   className="hidden"
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2">PNG, JPG, GIF up to 10MB each</p>
             </div>
+
+            {selectedFiles.map((file, idx) => (
+              <img
+                key={idx}
+                src={URL.createObjectURL(file)}
+                alt="Preview"
+                style={{ width: 100, height: 100, objectFit: 'cover' }}
+              />
+            ))}
 
             {uploadedImages.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">

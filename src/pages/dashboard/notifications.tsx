@@ -759,7 +759,8 @@ export default function NotificationsPage() {
         <CardContent>
           <div className="space-y-4">
             {(filteredNotifications || []).filter((n): n is Notification => !!n && typeof n.id === 'string').map((notification) => {
-              const TypeIcon = notificationTypes[notification.type].icon;
+              const notificationType = notificationTypes[notification.type] || { color: 'bg-gray-100 text-gray-800', icon: Info };
+              const TypeIcon = notificationType.icon;
               return (
                 <div key={notification.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-4">
@@ -769,8 +770,8 @@ export default function NotificationsPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold text-gray-900">{notification.title}</h3>
-                        <Badge className={notificationTypes[notification.type].color}>
-                          {notification.type}
+                        <Badge className={notificationType.color}>
+                          {notification.type || 'unknown'}
                         </Badge>
                         <Badge className={priorityColors[notification.priority]}>
                           {notification.priority}

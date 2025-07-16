@@ -1,5 +1,6 @@
 const { Notification, NotificationTemplate, NotificationUser, User } = require('../models');
 const { Sequelize } = require('sequelize');
+const notificationService = require('../services/notificationService');
 
 // Get all notifications
 exports.getAllNotifications = async (req, res, next) => {
@@ -151,6 +152,15 @@ exports.createNotification = async (req, res, next) => {
     console.log('Notification users to create:', notificationUsers);
 
     await NotificationUser.bulkCreate(notificationUsers);
+
+    // Send push notifications to all users
+    const userIds = users.map(u => u.id);
+    await notificationService.sendToUsers(
+      userIds,
+      notification.title,
+      notification.message || '',
+      { notificationId: notification.id }
+    );
 
     // Return the created notification with user relationships
     const createdNotification = await Notification.findByPk(notification.id, {

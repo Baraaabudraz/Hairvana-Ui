@@ -57,6 +57,8 @@ app.use('/backend/api/mobile/payments', require('./routes/Api/v0/customer/paymen
 app.use('/backend/api/mobile/notifications', require('./routes/Api/v0/customer/notifications'));
 app.use('/backend/api/mobile/staff', require('./routes/Api/v0/customer/staff'));
 app.use('/backend/api/mobile/reviews', require('./routes/Api/v0/customer/mobileReviews'));
+app.use('/backend/api/mobile/devices', require('./routes/Api/v0/customer/mobileDevices'));
+
 
 // Serve uploaded images statically
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));

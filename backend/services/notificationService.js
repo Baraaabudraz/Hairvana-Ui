@@ -25,26 +25,37 @@ exports.sendToUsers = async (userIds, title, body, data) => {
   for (let i = 0; i < tokenBatches.length; i++) {
     const batchTokens = tokenBatches[i];
     const batchUserIds = userIdBatches[i];
-    console.log(batchTokens)
-    const response = await admin.messaging().sendEachForMulticast({
-      notification: { title, body },
-      data,
-      tokens: batchTokens,
-    });
+    console.log('Sending to tokens:', batchTokens);
+    try {
+      // --- TEST: Send minimal payload (only notification, no data) ---
+      const response = await admin.messaging().sendEachForMulticast({
+        notification: { title, body },
+        tokens: batchTokens,
+      });
+      // --- To restore full payload, use this instead: ---
+      // const response = await admin.messaging().sendEachForMulticast({
+      //   notification: { title, body },
+      //   data,
+      //   tokens: batchTokens,
+      // });
+      console.log('FCM response:', JSON.stringify(response, null, 2));
 
-    await Promise.all(response.responses.map((res, idx) =>
-      Notification.create({
-        user_id: batchUserIds[idx],
-        title,
-        body,
-        data,
-        status: res.success ? 'sent' : 'failed',
-        sent_at: res.success ? new Date() : null,
-      })
-    ));
+      await Promise.all(response.responses.map((res, idx) =>
+        Notification.create({
+          user_id: batchUserIds[idx],
+          title,
+          body,
+          data,
+          status: res.success ? 'sent' : 'failed',
+          sent_at: res.success ? new Date() : null,
+        })
+      ));
 
-    totalSuccess += response.successCount;
-    totalFailure += response.failureCount;
+      totalSuccess += response.successCount;
+      totalFailure += response.failureCount;
+    } catch (err) {
+      console.error('Error sending push notification batch:', err);
+    }
   }
 
   return {

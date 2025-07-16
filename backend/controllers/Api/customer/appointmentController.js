@@ -273,6 +273,10 @@ exports.completeAppointment = async (req, res) => {
     if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
     appointment.status = 'completed';
     await appointment.save();
+    // Send notification to user
+    await notificationService.sendToUsers([
+      req.user.id
+    ], 'Appointment Completed', 'Your appointment has been marked as completed.', { appointmentId: appointment.id });
     return res.json({ success: true, appointment: serializeAppointment(appointment) });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to complete appointment' });

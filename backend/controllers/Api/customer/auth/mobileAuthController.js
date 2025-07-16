@@ -38,4 +38,29 @@ exports.login = async (req, res) => {
   } catch (err) {
     return res.status(500).json({ error: 'Login failed.' });
   }
+};
+
+exports.logout = async (req, res) => {
+  try {
+    // Best practice: require device token to remove from MobileDevice table
+    const { deviceToken } = req.body;
+    if (!deviceToken) {
+      return res.status(400).json({ error: 'Device token is required.' });
+    }
+    // Find the user from the JWT (if using auth middleware) or from the request
+    // For now, we'll use the token payload if available
+    let userId;
+    if (req.user && req.user.id) {
+      userId = req.user.id;
+    } else if (req.body.userId) {
+      userId = req.body.userId;
+    } else {
+      return res.status(401).json({ error: 'User not authenticated.' });
+    }
+    // Remove the device token for this user
+    await MobileDevice.destroy({ where: { user_id: userId, device_token: deviceToken } });
+    return res.json({ success: true, message: 'Logged out successfully.' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Logout failed.' });
+  }
 }; 

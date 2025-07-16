@@ -212,8 +212,7 @@ export default function NewSalonPage() {
         status: 'pending'
       };
 
-      const token = localStorage.getItem('token');
-      await createSalon(salonData, token);
+      await createSalon(salonData);
 
       toast({
         title: 'Salon created successfully',

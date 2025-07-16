@@ -34,13 +34,19 @@ module.exports = (sequelize, DataTypes) => {
     },
     last_login: DataTypes.DATE,
     created_at: DataTypes.DATE,
-    updated_at: DataTypes.DATE
+    updated_at: DataTypes.DATE,
   }, {
     sequelize,
     modelName: 'MobileDevice',
     tableName: 'mobile_devices',
     timestamps: true,
-    underscored: true
+    underscored: true,
+    indexes: [
+      {
+        unique: true,
+        fields: ['user_id', 'device_token']
+      }
+    ]
   });
   return MobileDevice;
 }; 

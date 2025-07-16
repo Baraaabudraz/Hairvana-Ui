@@ -41,6 +41,11 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
+    await queryInterface.addConstraint('mobile_devices', {
+      fields: ['user_id', 'device_token'],
+      type: 'unique',
+      name: 'unique_user_device'
+    });
   },
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('mobile_devices');

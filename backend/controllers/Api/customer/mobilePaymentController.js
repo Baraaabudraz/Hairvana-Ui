@@ -1,6 +1,7 @@
 const { Payment, Appointment } = require('../../../models');
 const Stripe = require('stripe');
 const crypto = require('crypto');
+const notificationService = require('../../../services/notificationService');
 
 exports.getUserPayments = async (req, res, next) => {
   try {
@@ -294,6 +295,10 @@ async function handlePaymentSucceeded(paymentIntent) {
         }
       );
     });
+    // Send notification to user
+    await notificationService.sendToUsers([
+      payment.user_id
+    ], 'Payment Successful', 'Your payment was successful and your appointment is now booked.', { appointmentId: payment.appointment_id });
     
     console.log(`Payment ${payment.id} marked as paid, appointment ${payment.appointment_id} booked`);
   } catch (error) {

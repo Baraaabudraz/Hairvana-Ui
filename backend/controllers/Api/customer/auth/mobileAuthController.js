@@ -22,7 +22,7 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password, device_token, device_type } = req.body;
+    const { email, password } = req.body;
     const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials.' });
@@ -33,17 +33,6 @@ exports.login = async (req, res) => {
     }
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, config.jwtSecret || process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    // Register or update device token for push notifications
-    if (device_token && device_type) {
-      await MobileDevice.upsert({
-        user_id: user.id,
-        device_token,
-        device_type,
-        last_login: new Date()
-      }, {
-        where: { user_id: user.id, device_token }
-      });
-    }
 
     return res.json({ success: true, token, user: { id: user.id, name: user.name, email: user.email } });
   } catch (err) {

@@ -2,6 +2,7 @@
 const { Appointment, Salon, Staff, Service, AppointmentService, sequelize } = require('../../../models');
 const { Op } = require('sequelize');
 const { serializeAppointment } = require('../../../serializers/appointmentSerializer');
+const notificationService = require('../../../services/notificationService');
 
 // Get availability for a salon (using start_at/end_at fields)
 exports.getAvailability = async (req, res) => {
@@ -160,6 +161,10 @@ exports.bookAppointment = async (req, res) => {
       }, { transaction: t });
     }
     await t.commit();
+    // Send notification to user
+    await notificationService.sendToUsers([
+      req.user.id
+    ], 'Appointment Booked', 'Your appointment has been booked. Please proceed to payment.', { appointmentId: appointment.id });
     // TODO: Integrate with payment provider here (create payment session/intent)
     // For now, return a placeholder paymentSessionId
     // const paymentSessionId = `demo-session-${appointment.id}`;

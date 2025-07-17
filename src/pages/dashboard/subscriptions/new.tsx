@@ -140,90 +140,26 @@ export default function CreateSubscriptionPage() {
         setLoading(true);
         const response = await fetchSalons();
         console.log('Loaded salons:', response);
-        
         if (response && response.salons) {
           setSalons(response.salons);
           setFilteredSalons(response.salons);
         } else {
-          // Fallback to mock data if API fails or returns unexpected structure
-          console.warn('API returned unexpected structure, using mock data');
-          const mockSalons = [
-            {
-              id: '1',
-              name: 'Luxe Hair Studio',
-              location: 'Beverly Hills, CA',
-              ownerName: 'Maria Rodriguez',
-              ownerEmail: 'maria@luxehair.com',
-              status: 'active',
-              avatar: 'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=800'
-            },
-            {
-              id: '2',
-              name: 'Style Cuts',
-              location: 'San Francisco, CA',
-              ownerName: 'David Chen',
-              ownerEmail: 'david@stylecuts.com',
-              status: 'active',
-              avatar: 'https://images.pexels.com/photos/3993451/pexels-photo-3993451.jpeg?auto=compress&cs=tinysrgb&w=800'
-            },
-            {
-              id: '3',
-              name: 'Beauty Haven',
-              location: 'Los Angeles, CA',
-              ownerName: 'Lisa Thompson',
-              ownerEmail: 'lisa@beautyhaven.com',
-              status: 'active',
-              avatar: ''
-            }
-          ];
-          setSalons(mockSalons);
-          setFilteredSalons(mockSalons);
+          setSalons([]);
+          setFilteredSalons([]);
         }
       } catch (error) {
         console.error('Error loading salons:', error);
-        // Use mock data as fallback
-        const mockSalons = [
-          {
-            id: '1',
-            name: 'Luxe Hair Studio',
-            location: 'Beverly Hills, CA',
-            ownerName: 'Maria Rodriguez',
-            ownerEmail: 'maria@luxehair.com',
-            status: 'active',
-            avatar: 'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=800'
-          },
-          {
-            id: '2',
-            name: 'Style Cuts',
-            location: 'San Francisco, CA',
-            ownerName: 'David Chen',
-            ownerEmail: 'david@stylecuts.com',
-            status: 'active',
-            avatar: 'https://images.pexels.com/photos/3993451/pexels-photo-3993451.jpeg?auto=compress&cs=tinysrgb&w=800'
-          },
-          {
-            id: '3',
-            name: 'Beauty Haven',
-            location: 'Los Angeles, CA',
-            ownerName: 'Lisa Thompson',
-            ownerEmail: 'lisa@beautyhaven.com',
-            status: 'active',
-            avatar: ''
-          }
-        ];
-        setSalons(mockSalons);
-        setFilteredSalons(mockSalons);
-        
+        setSalons([]);
+        setFilteredSalons([]);
         toast({
-          title: 'Warning',
-          description: 'Using demo data. Some features may be limited.',
-          variant: 'default',
+          title: 'Error',
+          description: 'Failed to load salons. Please try again.',
+          variant: 'destructive',
         });
       } finally {
         setLoading(false);
       }
     };
-
     loadSalons();
   }, [toast]);
 
@@ -255,7 +191,10 @@ export default function CreateSubscriptionPage() {
 
   const calculatePrice = () => {
     if (!selectedPlan) return 0;
-    return billingCycle === 'yearly' ? selectedPlan.yearlyPrice : selectedPlan.price;
+    if (billingCycle === 'yearly') {
+      return typeof selectedPlan.yearlyPrice === 'number' && !isNaN(selectedPlan.yearlyPrice) ? selectedPlan.yearlyPrice : 0;
+    }
+    return selectedPlan.price;
   };
 
   const calculateSavings = () => {
@@ -348,7 +287,14 @@ export default function CreateSubscriptionPage() {
       setPlansLoading(true);
       setPlansError(null);
       const data = await fetchSubscriptionPlans();
-      setPlans(data);
+      // Map backend fields to camelCase and ensure numbers
+      const mappedPlans = data.map((plan: any) => ({
+        ...plan,
+        yearlyPrice: Number(plan.yearly_price),
+        price: Number(plan.price),
+        // Optionally map other fields if needed
+      }));
+      setPlans(mappedPlans);
     } catch (error: any) {
       setPlansError('Failed to load plans');
       toast({
@@ -517,7 +463,7 @@ export default function CreateSubscriptionPage() {
                 plans.map((plan) => {
                   const PlanIcon = planIcons[plan.name];
                   const isSelected = selectedPlan?.id === plan.id;
-                  const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.price;
+                  const price = billingCycle === 'yearly' ? (typeof plan.yearlyPrice === 'number' && !isNaN(plan.yearlyPrice) ? plan.yearlyPrice : 0) : plan.price;
                   const savings = billingCycle === 'yearly' ? (plan.price * 12) - plan.yearlyPrice : 0;
                   
                   return (

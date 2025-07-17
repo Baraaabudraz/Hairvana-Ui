@@ -6,31 +6,35 @@ module.exports = (sequelize, DataTypes) => {
   class Customer extends Model {
     static associate(models) {
       Customer.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'userId',
         as: 'user'
       });
     }
   }
   Customer.init({
-    user_id: {
+    userId: {
       type: DataTypes.UUID,
       primaryKey: true,
+      field: 'user_id',
       references: {
         model: 'users',
         key: 'id'
       }
     },
-    total_spent: {
+    totalSpent: {
       type: DataTypes.DECIMAL(10, 2),
-      defaultValue: 0
+      defaultValue: 0,
+      field: 'total_spent'
     },
-    total_bookings: {
+    totalBookings: {
       type: DataTypes.INTEGER,
-      defaultValue: 0
+      defaultValue: 0,
+      field: 'total_bookings'
     },
-    favorite_services: {
+    favoriteServices: {
       type: DataTypes.ARRAY(DataTypes.TEXT),
-      defaultValue: []
+      defaultValue: [],
+      field: 'favorite_services'
     }
   }, {
     sequelize,

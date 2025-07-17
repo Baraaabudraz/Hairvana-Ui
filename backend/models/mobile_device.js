@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 module.exports = (sequelize, DataTypes) => {
   class MobileDevice extends Model {
     static associate(models) {
-      MobileDevice.belongsTo(models.User, { foreignKey: 'user_id', as: 'user' });
+      MobileDevice.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
     }
   }
   MobileDevice.init({
@@ -15,7 +15,8 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false
     },
-    user_id: {
+    userId: {
+      field: 'user_id',
       type: DataTypes.UUID,
       allowNull: false,
       references: {
@@ -24,17 +25,28 @@ module.exports = (sequelize, DataTypes) => {
       },
       onDelete: 'CASCADE'
     },
-    device_token: {
+    deviceToken: {
+      field: 'device_token',
       type: DataTypes.TEXT,
       allowNull: false
     },
-    device_type: {
+    deviceType: {
+      field: 'device_type',
       type: DataTypes.TEXT,
       allowNull: false
     },
-    last_login: DataTypes.DATE,
-    created_at: DataTypes.DATE,
-    updated_at: DataTypes.DATE,
+    lastLogin: {
+      field: 'last_login',
+      type: DataTypes.DATE
+    },
+    createdAt: {
+      field: 'created_at',
+      type: DataTypes.DATE
+    },
+    updatedAt: {
+      field: 'updated_at',
+      type: DataTypes.DATE
+    }
   }, {
     sequelize,
     modelName: 'MobileDevice',

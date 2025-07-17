@@ -7,19 +7,19 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // Review belongs to a User (customer who wrote the review)
       Review.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'userId',
         as: 'user'
       });
       
       // Review belongs to a Salon (the salon being reviewed)
       Review.belongsTo(models.Salon, {
-        foreignKey: 'salon_id',
+        foreignKey: 'salonId',
         as: 'salon'
       });
       
       // Review belongs to an Appointment (optional - for appointment-specific reviews)
       Review.belongsTo(models.Appointment, {
-        foreignKey: 'appointment_id',
+        foreignKey: 'appointmentId',
         as: 'appointment'
       });
     }
@@ -32,9 +32,10 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false,
     },
-    user_id: {
+    userId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'user_id',
       references: {
         model: 'users',
         key: 'id'
@@ -42,9 +43,10 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
     },
-    salon_id: {
+    salonId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'salon_id',
       references: {
         model: 'salons',
         key: 'id'
@@ -52,9 +54,10 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
     },
-    appointment_id: {
+    appointmentId: {
       type: DataTypes.UUID,
       allowNull: true, // Optional - for general salon reviews
+      field: 'appointment_id',
       references: {
         model: 'appointments',
         key: 'id'
@@ -78,13 +81,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
-    service_quality: {
+    serviceQuality: {
       type: DataTypes.INTEGER,
       allowNull: true,
       validate: {
         min: 1,
         max: 5
-      }
+      },
+      field: 'service_quality'
     }
   }, {
     sequelize,

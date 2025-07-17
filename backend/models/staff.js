@@ -43,9 +43,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false
     },
-    salon_id: {
+    salonId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'salon_id',
       references: {
         model: 'salons',
         key: 'id'
@@ -72,19 +73,22 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: {}
     },
-    hire_date: {
+    hireDate: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: DataTypes.NOW
+      defaultValue: DataTypes.NOW,
+      field: 'hire_date'
     },
-    hourly_rate: {
+    hourlyRate: {
       type: DataTypes.DECIMAL(8, 2),
-      allowNull: true
+      allowNull: true,
+      field: 'hourly_rate'
     },
-    commission_rate: {
+    commissionRate: {
       type: DataTypes.DECIMAL(5, 2),
       allowNull: true,
-      defaultValue: 0
+      defaultValue: 0,
+      field: 'commission_rate'
     },
     specializations: {
       type: DataTypes.ARRAY(DataTypes.TEXT),
@@ -95,10 +99,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
-    experience_years: {
+    experienceYears: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      defaultValue: 0
+      defaultValue: 0,
+      field: 'experience_years'
     }
   }, {
     sequelize,

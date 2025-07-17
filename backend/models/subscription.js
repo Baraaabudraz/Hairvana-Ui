@@ -13,11 +13,11 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       Subscription.belongsTo(models.Salon, {
-        foreignKey: 'salon_id',
+        foreignKey: 'salonId',
         as: 'salon'
       });
       Subscription.belongsTo(models.SubscriptionPlan, {
-        foreignKey: 'plan_id',
+        foreignKey: 'planId',
         as: 'plan'
       });
     }
@@ -29,17 +29,19 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false,
     },
-    salon_id: {
+    salonId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'salon_id',
       references: {
         model: 'salons',
         key: 'id'
       }
     },
-    plan_id: {
+    planId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'plan_id',
       references: {
         model: 'subscription_plans',
         key: 'id'
@@ -49,35 +51,43 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('active', 'cancelled', 'expired'),
       defaultValue: 'active'
     },
-    start_date: {
+    startDate: {
       type: DataTypes.DATE,
-      allowNull: false
+      allowNull: false,
+      field: 'start_date'
     },
-    end_date: {
+    endDate: {
       type: DataTypes.DATE,
-      allowNull: true
+      allowNull: true,
+      field: 'end_date'
     },
-    billing_period: {
+    billingPeriod: {
       type: DataTypes.ENUM('monthly', 'yearly'),
-      defaultValue: 'monthly'
+      defaultValue: 'monthly',
+      field: 'billing_period'
     },
-    next_billing_date: DataTypes.DATE,
+    nextBillingDate: {
+      type: DataTypes.DATE,
+      field: 'next_billing_date'
+    },
     amount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false
     },
-    billing_cycle: {
+    billingCycle: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
         isIn: [['monthly', 'yearly']]
-      }
+      },
+      field: 'billing_cycle'
     },
     usage: {
       type: DataTypes.JSONB
     },
-    payment_method: {
-      type: DataTypes.JSONB
+    paymentMethod: {
+      type: DataTypes.JSONB,
+      field: 'payment_method'
     }
   }, {
     sequelize,

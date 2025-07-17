@@ -1,26 +1,16 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
 
 module.exports = (sequelize, DataTypes) => {
   class Report extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // Report belongs to a User (one-to-many)
       Report.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'userId',
         as: 'user'
       });
-      
-      // Report belongs to a Salon (one-to-many)
       Report.belongsTo(models.Salon, {
-        foreignKey: 'salon_id',
+        foreignKey: 'salonId',
         as: 'salon'
       });
     }
@@ -32,7 +22,8 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false,
     },
-    user_id: {
+    userId: {
+      field: 'user_id',
       type: DataTypes.UUID,
       allowNull: true,
       references: {
@@ -40,7 +31,8 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    salon_id: {
+    salonId: {
+      field: 'salon_id',
       type: DataTypes.UUID,
       allowNull: true,
       references: {
@@ -61,7 +53,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: {}
     },
-    generated_at: {
+    generatedAt: {
+      field: 'generated_at',
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW
@@ -70,7 +63,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('pending', 'generating', 'completed', 'failed'),
       defaultValue: 'pending'
     },
-    file_url: {
+    fileUrl: {
+      field: 'file_url',
       type: DataTypes.STRING,
       allowNull: true
     },
@@ -78,10 +72,21 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSONB,
       allowNull: true,
       defaultValue: {}
+    },
+    createdAt: {
+      field: 'created_at',
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
+    },
+    updatedAt: {
+      field: 'updated_at',
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
     }
   }, {
     sequelize,
     modelName: 'Report',
+    tableName: 'reports',
     timestamps: true,
     underscored: true
   });

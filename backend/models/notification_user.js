@@ -1,23 +1,15 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class NotificationUser extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // define association here
       NotificationUser.belongsTo(models.Notification, {
-        foreignKey: 'notification_id',
+        foreignKey: 'notificationId',
         as: 'notification'
       });
       NotificationUser.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'userId',
         as: 'user'
       });
     }
@@ -29,7 +21,8 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false
     },
-    notification_id: {
+    notificationId: {
+      field: 'notification_id',
       type: DataTypes.UUID,
       allowNull: false,
       references: {
@@ -37,7 +30,8 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    user_id: {
+    userId: {
+      field: 'user_id',
       type: DataTypes.UUID,
       allowNull: false,
       references: {
@@ -45,9 +39,20 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    is_read: {
+    isRead: {
+      field: 'is_read',
       type: DataTypes.BOOLEAN,
       defaultValue: false
+    },
+    createdAt: {
+      field: 'created_at',
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
+    },
+    updatedAt: {
+      field: 'updated_at',
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
     }
   }, {
     sequelize,

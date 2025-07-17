@@ -1,16 +1,9 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
 
 module.exports = (sequelize, DataTypes) => {
   class AppointmentService extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
       // This is a pivot table, no additional associations needed
     }
@@ -22,7 +15,8 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false,
     },
-    appointment_id: {
+    appointmentId: {
+      field: 'appointment_id',
       type: DataTypes.UUID,
       allowNull: false,
       references: {
@@ -32,7 +26,8 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
     },
-    service_id: {
+    serviceId: {
+      field: 'service_id',
       type: DataTypes.UUID,
       allowNull: false,
       references: {
@@ -45,6 +40,16 @@ module.exports = (sequelize, DataTypes) => {
     price: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false
+    },
+    createdAt: {
+      field: 'created_at',
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
+    },
+    updatedAt: {
+      field: 'updated_at',
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
     }
   }, {
     sequelize,

@@ -72,9 +72,10 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       unique: true
     },
-    password_hash: {
+    passwordHash: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      field: 'password_hash'
     },
     phone: DataTypes.STRING,
     role: {
@@ -90,14 +91,16 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ARRAY(DataTypes.TEXT),
       defaultValue: []
     },
-    join_date: {
+    joinDate: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: DataTypes.NOW
+      defaultValue: DataTypes.NOW,
+      field: 'join_date'
     },
-    last_login: {
+    lastLogin: {
       type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW
+      defaultValue: DataTypes.NOW,
+      field: 'last_login'
     },
     preferences: {
       type: DataTypes.JSONB,

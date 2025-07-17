@@ -37,8 +37,14 @@ module.exports = (sequelize, DataTypes) => {
     type: DataTypes.STRING,
     title: DataTypes.STRING,
     message: DataTypes.STRING,
-    target_audience: DataTypes.STRING,
-    created_by: DataTypes.STRING,
+    targetAudience: {
+      type: DataTypes.STRING,
+      field: 'target_audience'
+    },
+    createdBy: {
+      type: DataTypes.STRING,
+      field: 'created_by'
+    },
     status: {
       type: DataTypes.ENUM('draft', 'sent', 'cancelled'),
       defaultValue: 'draft'

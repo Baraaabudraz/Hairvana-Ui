@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
   class BillingSettings extends Model {
     static associate(models) {
       BillingSettings.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'userId',
         as: 'user'
       });
     }
@@ -18,7 +18,8 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false,
     },
-    user_id: {
+    userId: {
+      field: 'user_id',
       type: DataTypes.UUID,
       allowNull: false,
       references: {
@@ -26,21 +27,39 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    default_payment_method: DataTypes.STRING,
-    billing_address: DataTypes.TEXT,
-    tax_id: DataTypes.STRING,
-    invoice_email: DataTypes.STRING,
-    auto_pay: {
+    defaultPaymentMethod: {
+      field: 'default_payment_method',
+      type: DataTypes.STRING,
+    },
+    billingAddress: {
+      field: 'billing_address',
+      type: DataTypes.TEXT,
+    },
+    taxId: {
+      field: 'tax_id',
+      type: DataTypes.STRING,
+    },
+    invoiceEmail: {
+      field: 'invoice_email',
+      type: DataTypes.STRING,
+    },
+    autoPay: {
+      field: 'auto_pay',
       type: DataTypes.BOOLEAN,
       defaultValue: false
     },
-    payment_methods: DataTypes.JSONB,
-    created_at: {
+    paymentMethods: {
+      field: 'payment_methods',
+      type: DataTypes.JSONB,
+    },
+    createdAt: {
+      field: 'created_at',
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW
     },
-    updated_at: {
+    updatedAt: {
+      field: 'updated_at',
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW

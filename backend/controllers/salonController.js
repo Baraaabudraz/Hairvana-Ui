@@ -95,6 +95,7 @@ exports.getSalonById = async (req, res, next) => {
 exports.createSalon = async (req, res, next) => {
   try {
     const salonData = req.body;
+    console.log(salonData)
     const newSalon = await Salon.create(salonData);
     res.status(201).json(serializeSalon(newSalon, { req }));
   } catch (error) {

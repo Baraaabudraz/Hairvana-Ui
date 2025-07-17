@@ -1,27 +1,42 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Analytic extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
       // define association here
     }
   }
   Analytic.init({
-    user_id: DataTypes.INTEGER,
-    salon_id: DataTypes.INTEGER,
+    userId: {
+      field: 'user_id',
+      type: DataTypes.INTEGER
+    },
+    salonId: {
+      field: 'salon_id',
+      type: DataTypes.INTEGER
+    },
     metric: DataTypes.STRING,
     value: DataTypes.FLOAT,
-    recorded_at: DataTypes.DATE
+    recordedAt: {
+      field: 'recorded_at',
+      type: DataTypes.DATE
+    },
+    createdAt: {
+      field: 'created_at',
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
+    },
+    updatedAt: {
+      field: 'updated_at',
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
+    }
   }, {
     sequelize,
     modelName: 'Analytic',
+    tableName: 'analytics',
+    timestamps: true,
+    underscored: true
   });
   return Analytic;
 };

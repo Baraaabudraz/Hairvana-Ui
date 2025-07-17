@@ -10,11 +10,13 @@ module.exports = (sequelize) => {
       primaryKey: true,
       allowNull: false,
     },
-    site_name: {
+    siteName: {
+      field: 'site_name',
       type: DataTypes.TEXT,
       defaultValue: 'Hairvana',
     },
-    site_description: {
+    siteDescription: {
+      field: 'site_description',
       type: DataTypes.TEXT,
       defaultValue: 'Professional Salon Management Platform',
     },
@@ -24,11 +26,13 @@ module.exports = (sequelize) => {
     favicon: {
       type: DataTypes.TEXT,
     },
-    primary_color: {
+    primaryColor: {
+      field: 'primary_color',
       type: DataTypes.TEXT,
       defaultValue: '#8b5cf6',
     },
-    secondary_color: {
+    secondaryColor: {
+      field: 'secondary_color',
       type: DataTypes.TEXT,
       defaultValue: '#ec4899',
     },
@@ -44,39 +48,48 @@ module.exports = (sequelize) => {
       type: DataTypes.TEXT,
       defaultValue: 'en',
     },
-    maintenance_mode: {
+    maintenanceMode: {
+      field: 'maintenance_mode',
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    registration_enabled: {
+    registrationEnabled: {
+      field: 'registration_enabled',
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    email_verification_required: {
+    emailVerificationRequired: {
+      field: 'email_verification_required',
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    max_file_upload_size: {
+    maxFileUploadSize: {
+      field: 'max_file_upload_size',
       type: DataTypes.INTEGER,
       defaultValue: 10,
     },
-    allowed_file_types: {
+    allowedFileTypes: {
+      field: 'allowed_file_types',
       type: DataTypes.ARRAY(DataTypes.TEXT),
       defaultValue: ['jpg', 'jpeg', 'png', 'gif', 'pdf'],
     },
-    session_timeout: {
+    sessionTimeout: {
+      field: 'session_timeout',
       type: DataTypes.INTEGER,
       defaultValue: 30,
     },
-    password_policy: {
+    passwordPolicy: {
+      field: 'password_policy',
       type: DataTypes.JSONB,
       defaultValue: { min_length: 8, require_uppercase: true, require_lowercase: true, require_numbers: true, require_special_chars: true },
     },
-    created_at: {
+    createdAt: {
+      field: 'created_at',
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
-    updated_at: {
+    updatedAt: {
+      field: 'updated_at',
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },

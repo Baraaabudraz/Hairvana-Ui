@@ -58,18 +58,21 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'active'
     },
-    image_url: {
+    imageUrl: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      field: 'image_url'
     },
-    is_popular: {
+    isPopular: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false
+      defaultValue: false,
+      field: 'is_popular'
     },
-    special_offers: {
+    specialOffers: {
       type: DataTypes.JSONB,
       allowNull: true,
-      defaultValue: {}
+      defaultValue: {},
+      field: 'special_offers'
     }
   }, {
     sequelize,

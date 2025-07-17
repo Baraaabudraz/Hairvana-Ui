@@ -10,62 +10,76 @@ module.exports = (sequelize) => {
       primaryKey: true,
       allowNull: false,
     },
-    email_provider: {
+    emailProvider: {
+      field: 'email_provider',
       type: DataTypes.TEXT,
       defaultValue: 'sendgrid',
     },
-    email_api_key: {
+    emailApiKey: {
+      field: 'email_api_key',
       type: DataTypes.TEXT,
     },
-    sms_provider: {
+    smsProvider: {
+      field: 'sms_provider',
       type: DataTypes.TEXT,
       defaultValue: 'twilio',
     },
-    sms_api_key: {
+    smsApiKey: {
+      field: 'sms_api_key',
       type: DataTypes.TEXT,
     },
-    // Add feature toggles
-    stripe_enabled: {
+    stripeEnabled: {
+      field: 'stripe_enabled',
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    email_enabled: {
+    emailEnabled: {
+      field: 'email_enabled',
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    sms_enabled: {
+    smsEnabled: {
+      field: 'sms_enabled',
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    payment_gateway: {
+    paymentGateway: {
+      field: 'payment_gateway',
       type: DataTypes.TEXT,
       defaultValue: 'stripe',
     },
-    payment_api_key: {
+    paymentApiKey: {
+      field: 'payment_api_key',
       type: DataTypes.TEXT,
     },
-    stripe_webhook_secret: {
+    stripeWebhookSecret: {
+      field: 'stripe_webhook_secret',
       type: DataTypes.TEXT,
     },
-    analytics_provider: {
+    analyticsProvider: {
+      field: 'analytics_provider',
       type: DataTypes.TEXT,
       defaultValue: 'google',
     },
-    analytics_tracking_id: {
+    analyticsTrackingId: {
+      field: 'analytics_tracking_id',
       type: DataTypes.TEXT,
     },
-    social_logins: {
+    socialLogins: {
+      field: 'social_logins',
       type: DataTypes.JSONB,
       defaultValue: { google: true, facebook: false, apple: false },
     },
     webhooks: {
       type: DataTypes.ARRAY(DataTypes.JSONB),
     },
-    created_at: {
+    createdAt: {
+      field: 'created_at',
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
-    updated_at: {
+    updatedAt: {
+      field: 'updated_at',
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },

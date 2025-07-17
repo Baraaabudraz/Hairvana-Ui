@@ -7,13 +7,13 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // Payment belongs to a User (many-to-one)
       Payment.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'userId',
         as: 'user'
       });
       
       // Payment belongs to an Appointment (one-to-one)
       Payment.belongsTo(models.Appointment, {
-        foreignKey: 'appointment_id',
+        foreignKey: 'appointmentId',
         as: 'appointment'
       });
     }
@@ -25,9 +25,10 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false,
     },
-    user_id: {
+    userId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'user_id',
       references: {
         model: 'users',
         key: 'id'
@@ -35,10 +36,11 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
     },
-    appointment_id: {
+    appointmentId: {
       type: DataTypes.UUID,
       allowNull: false,
       unique:true,
+      field: 'appointment_id',
       references: {
         model: 'appointments',
         key: 'id'
@@ -59,22 +61,26 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'pending'
     },
-    transaction_id: {
+    transactionId: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      field: 'transaction_id'
     },
-    payment_date: {
+    paymentDate: {
       type: DataTypes.DATE,
-      allowNull: true
+      allowNull: true,
+      field: 'payment_date'
     },
-    refund_amount: {
+    refundAmount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
-      defaultValue: 0
+      defaultValue: 0,
+      field: 'refund_amount'
     },
-    refund_reason: {
+    refundReason: {
       type: DataTypes.TEXT,
-      allowNull: true
+      allowNull: true,
+      field: 'refund_reason'
     }
   }, {
     sequelize,

@@ -1,5 +1,5 @@
-const { Salon, User, Service, Staff, Appointment } = require('../models');
-const { Op } = require('sequelize');
+const { Salon, User, Service, Staff, Appointment, Review } = require('../models');
+const { Op, Sequelize } = require('sequelize');
 const { serializeSalon } = require('../serializers/salonSerializer');
 
 // Get all salons
@@ -20,8 +20,29 @@ exports.getAllSalons = async (req, res, next) => {
       where,
       include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] }]
     });
-    // Merge owner info
-    const serializedSalons = salons.map(salon => serializeSalon(salon, { req }));
+    // Calculate revenue for each salon
+    const serializedSalons = await Promise.all(salons.map(async salon => {
+      let revenue = await Appointment.sum('total_price', {
+        where: {
+          salon_id: salon.id,
+          status: ['booked', 'completed'],
+        }
+      });
+      revenue = revenue || 0;
+      let bookings = await Appointment.count({
+        where: {
+          salon_id: salon.id,
+          status: ['booked', 'completed'],
+        }
+      });
+      bookings = bookings || 0;
+      const ratingResult = await Review.findOne({
+        attributes: [[Sequelize.fn('AVG', Sequelize.col('rating')), 'avgRating']],
+        where: { salon_id: salon.id }
+      });
+      let rating = ratingResult && ratingResult.dataValues.avgRating ? parseFloat(ratingResult.dataValues.avgRating) : 0;
+      return serializeSalon({ ...salon.toJSON(), revenue, bookings, rating }, { req });
+    }));
     res.json({ salons: serializedSalons, total: salons.length });
   } catch (error) {
     next(error);
@@ -42,9 +63,28 @@ exports.getSalonById = async (req, res, next) => {
     if (!salon) {
       return res.status(404).json({ message: 'Salon not found' });
     }
-    
-    // Serialize the salon with all included data
-    const serializedSalon = serializeSalon(salon, { req });
+    // Calculate revenue dynamically
+    const revenue = await Appointment.sum('total_price', {
+      where: {
+        salon_id: id,
+        status: ['booked', 'completed'],
+      }
+    });
+    const safeRevenue = revenue || 0;
+    let bookings = await Appointment.count({
+      where: {
+        salon_id: id,
+        status: ['booked', 'completed'],
+      }
+    });
+    bookings = bookings || 0;
+    const ratingResult = await Review.findOne({
+      attributes: [[Sequelize.fn('AVG', Sequelize.col('rating')), 'avgRating']],
+      where: { salon_id: id }
+    });
+    let rating = ratingResult && ratingResult.dataValues.avgRating ? parseFloat(ratingResult.dataValues.avgRating) : 0;
+    // Serialize the salon with all included data and dynamic revenue
+    const serializedSalon = serializeSalon({ ...salon.toJSON(), revenue: safeRevenue, bookings, rating }, { req });
     res.json(serializedSalon);
   } catch (error) {
     next(error);

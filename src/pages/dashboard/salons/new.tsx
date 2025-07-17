@@ -197,8 +197,10 @@ export default function NewSalonPage() {
         name: data.name,
         email: data.email,
         phone: data.phone,
-        address: fullAddress,
-        location: `${data.city}, ${data.state}`,
+        address: data.address, // street address only
+        city: data.city,
+        state: data.state,
+        zipCode: data.zipCode,
         website: data.website || null,
         description: data.description,
         owner_id: data.owner_id,

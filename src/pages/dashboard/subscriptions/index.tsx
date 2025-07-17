@@ -725,7 +725,11 @@ export default function SubscriptionsPage() {
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-3 w-3 text-gray-400" />
                         <span className="text-xs text-gray-500">
-                          Next billing: {format(new Date(subscription.nextBillingDate), 'MMM dd, yyyy')}
+                          Next billing: {(() => {
+                            if (!subscription.nextBillingDate) return 'N/A';
+                            const date = new Date(subscription.nextBillingDate);
+                            return isNaN(date.getTime()) ? 'N/A' : format(date, 'MMM dd, yyyy');
+                          })()}
                         </span>
                       </div>
                     </div>

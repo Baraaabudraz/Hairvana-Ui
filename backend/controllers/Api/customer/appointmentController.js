@@ -278,6 +278,7 @@ exports.completeAppointment = async (req, res) => {
       req.user.id
     ], 'Appointment Completed', 'Your appointment has been marked as completed.', 
     { appointmentId: appointment.id ,
+      salonId:appointment.salon_id,
       status: appointment.status
 
     });

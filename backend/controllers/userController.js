@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { User, SalonOwner, Customer, Salon } = require('../models');
 const { serializeUser } = require('../serializers/userSerializer');
+const user = require('../models/user');
 
 // Get all users
 exports.getAllUsers = async (req, res, next) => {
@@ -77,23 +78,17 @@ exports.createUser = async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(userData.password, salt);
     // Create user
-    const newUser = await User.create({
-      email: userData.email,
-      name: userData.name,
-      phone: userData.phone || null,
-      role: userData.role,
-      status: 'active',
-      avatar: userData.avatar || null,
-      permissions: (userData.role === 'admin' || userData.role === 'super_admin') ? userData.permissions : null,
-      password_hash: hashedPassword
-    });
+    userData.passwordHash=hashedPassword;
+ 
+    userData.status="active";
+    const newUser = await User.create(userData);
     // Create role-specific record
     if (userData.role === 'salon') {
       await SalonOwner.create({
-        user_id: newUser.id,
-        total_salons: 0,
-        total_revenue: 0,
-        total_bookings: 0
+        userId: newUser.id,
+        totalSalons: 0,
+        totalRevenue: 0,
+        totalBookings: 0
       });
       // If salon data is provided, create a salon
       if (userData.salonName) {
@@ -102,17 +97,17 @@ exports.createUser = async (req, res, next) => {
           email: userData.email,
           phone: userData.phone || null,
           address: userData.salonAddress,
-          owner_id: newUser.id,
+          ownerId: newUser.id,
           // owner_name, owner_email, business_license fields can be added if present in model
           status: 'pending'
         });
       }
     } else if (userData.role === 'user') {
       await Customer.create({
-        user_id: newUser.id,
-        total_spent: 0,
-        total_bookings: 0,
-        favorite_services: []
+        userId: newUser.id,
+        totalSpent: 0,
+        totalBookings: 0,
+        favoriteServices: []
       });
     }
     res.status(201).json(serializeUser(newUser));

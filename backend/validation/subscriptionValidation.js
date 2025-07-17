@@ -5,13 +5,13 @@ const { commonRules } = require('./index');
  * Validation schema for creating a new subscription
  */
 const createSubscriptionValidation = [
-  body('salon_id')
+  body('salonId')
     .notEmpty()
     .withMessage('Salon ID is required')
     .isUUID()
     .withMessage('Salon ID must be a valid UUID'),
   
-  body('plan_id')
+  body('planId')
     .notEmpty()
     .withMessage('Plan ID is required'),
   
@@ -20,13 +20,13 @@ const createSubscriptionValidation = [
     .isIn(['active', 'trial', 'cancelled', 'past_due'])
     .withMessage('Invalid subscription status'),
   
-  commonRules.date('start_date'),
+  commonRules.date('startDate'),
   
-  commonRules.date('next_billing_date'),
+  commonRules.date('nextBillingDate'),
   
   commonRules.requiredNumber('amount'),
   
-  body('billing_cycle')
+  body('billingCycle')
     .notEmpty()
     .withMessage('Billing cycle is required')
     .isIn(['monthly', 'yearly'])
@@ -37,40 +37,40 @@ const createSubscriptionValidation = [
     .isObject()
     .withMessage('Usage must be an object'),
   
-  body('payment_method')
+  body('paymentMethod')
     .optional()
     .isObject()
     .withMessage('Payment method must be an object'),
   
   // Validate payment method details if provided
-  body('payment_method.type')
-    .if(body('payment_method').exists())
+  body('paymentMethod.type')
+    .if(body('paymentMethod').exists())
     .notEmpty()
     .withMessage('Payment method type is required')
     .isIn(['card'])
     .withMessage('Invalid payment method type'),
   
-  body('payment_method.last4')
-    .if(body('payment_method').exists())
+  body('paymentMethod.last4')
+    .if(body('paymentMethod').exists())
     .notEmpty()
     .withMessage('Card last 4 digits are required')
     .isLength({ min: 4, max: 4 })
     .withMessage('Card last 4 digits must be 4 characters'),
   
-  body('payment_method.brand')
-    .if(body('payment_method').exists())
+  body('paymentMethod.brand')
+    .if(body('paymentMethod').exists())
     .notEmpty()
     .withMessage('Card brand is required'),
   
-  body('payment_method.expiryMonth')
-    .if(body('payment_method').exists())
+  body('paymentMethod.expiryMonth')
+    .if(body('paymentMethod').exists())
     .notEmpty()
     .withMessage('Card expiry month is required')
     .isInt({ min: 1, max: 12 })
     .withMessage('Invalid expiry month'),
   
-  body('payment_method.expiryYear')
-    .if(body('payment_method').exists())
+  body('paymentMethod.expiryYear')
+    .if(body('paymentMethod').exists())
     .notEmpty()
     .withMessage('Card expiry year is required')
     .isInt({ min: new Date().getFullYear() })
@@ -81,7 +81,7 @@ const createSubscriptionValidation = [
  * Validation schema for updating an existing subscription
  */
 const updateSubscriptionValidation = [
-  body('plan_id')
+  body('planId')
     .optional()
     .notEmpty()
     .withMessage('Plan ID cannot be empty'),
@@ -91,7 +91,7 @@ const updateSubscriptionValidation = [
     .isIn(['active', 'trial', 'cancelled', 'past_due'])
     .withMessage('Invalid subscription status'),
   
-  body('next_billing_date')
+  body('nextBillingDate')
     .optional()
     .isISO8601()
     .withMessage('Invalid next billing date format'),
@@ -101,7 +101,7 @@ const updateSubscriptionValidation = [
     .isNumeric()
     .withMessage('Amount must be a number'),
   
-  body('billing_cycle')
+  body('billingCycle')
     .optional()
     .isIn(['monthly', 'yearly'])
     .withMessage('Invalid billing cycle'),
@@ -111,7 +111,7 @@ const updateSubscriptionValidation = [
     .isObject()
     .withMessage('Usage must be an object'),
   
-  body('payment_method')
+  body('paymentMethod')
     .optional()
     .isObject()
     .withMessage('Payment method must be an object'),
@@ -121,7 +121,7 @@ const updateSubscriptionValidation = [
  * Validation schema for creating a billing record
  */
 const createBillingRecordValidation = [
-  body('subscription_id')
+  body('subscriptionId')
     .notEmpty()
     .withMessage('Subscription ID is required')
     .isUUID()
@@ -141,11 +141,11 @@ const createBillingRecordValidation = [
     .optional()
     .trim(),
   
-  body('invoice_number')
+  body('invoiceNumber')
     .optional()
     .trim(),
   
-  body('tax_amount')
+  body('taxAmount')
     .optional()
     .isNumeric()
     .withMessage('Tax amount must be a number'),

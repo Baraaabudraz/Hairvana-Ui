@@ -5,7 +5,7 @@ const { commonRules } = require('./index');
  * Validation schema for updating user profile
  */
 const updateProfileValidation = [
-  body('first_name')
+  body('firstName')
     .optional()
     .trim()
     .isLength({ min: 2, max: 50 })
@@ -13,7 +13,7 @@ const updateProfileValidation = [
     .matches(/^[a-zA-Z\s]+$/)
     .withMessage('First name can only contain letters and spaces'),
   
-  body('last_name')
+  body('lastName')
     .optional()
     .trim()
     .isLength({ min: 2, max: 50 })
@@ -27,7 +27,7 @@ const updateProfileValidation = [
     .matches(/^\+?[\d\s\-\(\)]+$/)
     .withMessage('Invalid phone number format'),
   
-  body('date_of_birth')
+  body('dateOfBirth')
     .optional()
     .isISO8601()
     .withMessage('Invalid date format')
@@ -46,17 +46,17 @@ const updateProfileValidation = [
     .isIn(['male', 'female', 'other', 'prefer_not_to_say'])
     .withMessage('Invalid gender selection'),
   
-  body('hair_type')
+  body('hairType')
     .optional()
     .isIn(['straight', 'wavy', 'curly', 'coily', 'kinky'])
     .withMessage('Invalid hair type'),
   
-  body('hair_length')
+  body('hairLength')
     .optional()
     .isIn(['short', 'medium', 'long'])
     .withMessage('Invalid hair length'),
   
-  body('hair_color')
+  body('hairColor')
     .optional()
     .isString()
     .withMessage('Hair color must be a string'),
@@ -66,12 +66,12 @@ const updateProfileValidation = [
     .isObject()
     .withMessage('Preferences must be an object'),
   
-  body('notifications_enabled')
+  body('notificationsEnabled')
     .optional()
     .isBoolean()
     .withMessage('Notifications enabled must be a boolean'),
   
-  body('marketing_emails')
+  body('marketingEmails')
     .optional()
     .isBoolean()
     .withMessage('Marketing emails must be a boolean'),

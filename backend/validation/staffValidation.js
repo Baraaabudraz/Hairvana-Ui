@@ -5,7 +5,7 @@ const { commonRules } = require('./index');
  * Validation schema for creating a new staff member
  */
 const createStaffValidation = [
-  body('salon_id')
+  body('salonId')
     .notEmpty()
     .withMessage('Salon ID is required')
     .isUUID()
@@ -98,7 +98,7 @@ const bulkCreateStaffValidation = [
     .isArray()
     .withMessage('Request body must be an array of staff members'),
   
-  body('*.salon_id')
+  body('*.salonId')
     .notEmpty()
     .withMessage('Salon ID is required for each staff member')
     .isUUID()

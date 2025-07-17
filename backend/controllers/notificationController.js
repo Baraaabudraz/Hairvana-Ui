@@ -73,35 +73,6 @@ exports.getAllNotifications = async (req, res, next) => {
   }
 };
 
-// Helper to map camelCase to snake_case for DB
-function mapNotificationFields(data, req) {
-  const mapped = { ...data };
-  if ('id' in mapped) delete mapped.id;
-  if (mapped.template && typeof mapped.template === 'object' && 'id' in mapped.template) delete mapped.template.id;
-  if (mapped.targetAudience) {
-    mapped.target_audience = mapped.targetAudience;
-    delete mapped.targetAudience;
-  }
-  if (mapped.createdBy) {
-    mapped.created_by = mapped.createdBy;
-    delete mapped.createdBy;
-  }
-  if (!mapped.created_by) {
-    mapped.created_by = req.user.name || req.user.email;
-  }
-  if (mapped.scheduleType === 'now') {
-    mapped.status = 'sent';
-    mapped.sentAt = new Date();
-  } else if (mapped.scheduleType === 'later') {
-    mapped.status = 'scheduled';
-    mapped.scheduledAt = mapped.scheduledAt;
-  } else {
-    mapped.status = 'draft';
-  }
-  delete mapped.scheduleType;
-  return mapped;
-}
-
 // Helper to get users by target audience
 async function getTargetUsers(target_audience, req) {
   if (target_audience === 'all') {
@@ -120,11 +91,11 @@ async function getTargetUsers(target_audience, req) {
 
 exports.createNotification = async (req, res, next) => {
   try {
-    const notificationData = mapNotificationFields(req.body, req);
+    const notificationData = req.body;
     // Create the notification first
     const notification = await Notification.create(notificationData);
     // Determine target audience and create notification-user relationships
-    const users = await getTargetUsers(notificationData.target_audience, req);
+    const users = await getTargetUsers(notificationData.targetAudience, req);
     console.log('Found users for notification:', users.map(u => ({ id: u.id, idLength: u.id.length })));
     // Create notification-user relationships
     const notificationUsers = users.map(user => ({

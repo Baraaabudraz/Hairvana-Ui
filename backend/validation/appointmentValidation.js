@@ -5,25 +5,25 @@ const { commonRules } = require('./index');
  * Validation schema for creating a new appointment
  */
 const createAppointmentValidation = [
-  body('user_id')
+  body('userId')
     .notEmpty()
     .withMessage('User ID is required')
     .isUUID()
     .withMessage('User ID must be a valid UUID'),
   
-  body('salon_id')
+  body('salonId')
     .notEmpty()
     .withMessage('Salon ID is required')
     .isUUID()
     .withMessage('Salon ID must be a valid UUID'),
   
-  body('service_id')
+  body('serviceId')
     .notEmpty()
     .withMessage('Service ID is required')
     .isUUID()
     .withMessage('Service ID must be a valid UUID'),
   
-  body('staff_id')
+  body('staffId')
     .notEmpty()
     .withMessage('Staff ID is required')
     .isUUID()
@@ -102,7 +102,7 @@ const cancelAppointmentValidation = [
  * Validation schema for booking an appointment (mobile API)
  */
 const bookAppointmentValidation = [
-  body('salon_id')
+  body('salonId')
     .notEmpty()
     .withMessage('Salon ID is required')
     .isUUID()
@@ -121,7 +121,7 @@ const bookAppointmentValidation = [
     .isUUID()
     .withMessage('Each service ID must be a valid UUID'),
 
-  body('staff_id')
+  body('staffId')
     .notEmpty()
     .withMessage('Staff ID is required')
     .isUUID()

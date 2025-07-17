@@ -12,13 +12,25 @@ exports.getAllSalons = async (req, res, next) => {
     if (search) {
       where[Op.or] = [
         { name: { [Op.iLike]: `%${search}%` } },
-        { location: { [Op.iLike]: `%${search}%` } },
-        { owner_name: { [Op.iLike]: `%${search}%` } }
+        { location: { [Op.iLike]: `%${search}%` } }
+        // Removed owner_name from here
       ];
     }
     const salons = await Salon.findAll({
       where,
-      include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] }]
+      include: [
+        {
+          model: User,
+          as: 'owner',
+          attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'],
+          where: search ? {
+            [Op.or]: [
+              { name: { [Op.iLike]: `%${search}%` } },
+              { email: { [Op.iLike]: `%${search}%` } }
+            ]
+          } : undefined
+        }
+      ]
     });
     // Calculate revenue for each salon
     const serializedSalons = await Promise.all(salons.map(async salon => {
@@ -95,7 +107,23 @@ exports.getSalonById = async (req, res, next) => {
 exports.createSalon = async (req, res, next) => {
   try {
     const salonData = req.body;
-    console.log(salonData)
+    // Compose address and location from separate fields
+    const street = salonData.address || '';
+    const city = salonData.city || '';
+    const state = salonData.state || '';
+    const zip = salonData.zipCode || '';
+    const fullAddress = `${street}, ${city}, ${state} ${zip}`.replace(/\s+,/g, ',').trim();
+    const location = `${city}, ${state}`.replace(/\s+,/g, ',').trim();
+    // Assign composed fields
+    salonData.address = fullAddress;
+    salonData.location = location;
+    // Optionally remove the separate fields if not needed in DB
+    delete salonData.city;
+    delete salonData.state;
+    delete salonData.zipCode;
+    salonData.ownerId = req.user.userId;
+    console.log(salonData )
+    console.log(req.user)
     const newSalon = await Salon.create(salonData);
     res.status(201).json(serializeSalon(newSalon, { req }));
   } catch (error) {

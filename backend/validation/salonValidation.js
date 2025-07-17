@@ -39,7 +39,7 @@ const createSalonValidation = [
     .isLength({ min: 2, max: 50 })
     .withMessage('State must be between 2 and 50 characters'),
   
-  body('zip_code')
+  body('zipCode')
     .notEmpty()
     .withMessage('ZIP code is required')
     .trim()
@@ -141,7 +141,7 @@ const updateSalonValidation = [
     .isLength({ min: 2, max: 50 })
     .withMessage('State must be between 2 and 50 characters'),
   
-  body('zip_code')
+  body('zipCode')
     .optional()
     .trim()
     .isLength({ min: 5, max: 10 })

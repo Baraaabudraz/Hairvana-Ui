@@ -76,18 +76,6 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: DataTypes.NOW
     },
-    revenue: {
-      type: DataTypes.DECIMAL(10, 2),
-      defaultValue: 0
-    },
-    bookings: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0
-    },
-    rating: {
-      type: DataTypes.DECIMAL(3, 1),
-      defaultValue: 0
-    },
     hours: {
       type: DataTypes.JSONB,
       defaultValue: {}

@@ -17,9 +17,9 @@ function serializeSalon(salon, options = {}) {
     location: salon.location,
     status: salon.status,
     join_date: salon.join_date,
-    revenue: salon.revenue,
-    bookings: salon.bookings,
-    rating: salon.rating,
+    revenue: typeof salon.revenue !== 'undefined' ? salon.revenue : undefined,
+    bookings: typeof salon.bookings !== 'undefined' ? salon.bookings : undefined,
+    rating: typeof salon.rating !== 'undefined' ? salon.rating : undefined,
     hours: salon.hours,
     owner_id: salon.owner_id,
     // Include owner information

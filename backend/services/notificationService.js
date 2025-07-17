@@ -30,6 +30,7 @@ exports.sendToUsers = async (userIds, title, body, data) => {
       // --- TEST: Send minimal payload (only notification, no data) ---
       const response = await admin.messaging().sendEachForMulticast({
         notification: { title, body },
+        data,
         tokens: batchTokens,
       });
       // --- To restore full payload, use this instead: ---

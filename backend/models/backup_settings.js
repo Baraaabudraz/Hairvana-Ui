@@ -10,8 +10,7 @@ module.exports = (sequelize) => {
       primaryKey: true,
       allowNull: false,
     },
-    userId: {
-      field: 'user_id',
+    user_id: {
       type: DataTypes.UUID,
       allowNull: false,
       references: {
@@ -20,54 +19,43 @@ module.exports = (sequelize) => {
       },
       onDelete: 'CASCADE',
     },
-    autoBackup: {
-      field: 'auto_backup',
+    auto_backup: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    backupFrequency: {
-      field: 'backup_frequency',
+    backup_frequency: {
       type: DataTypes.TEXT,
       defaultValue: 'daily',
     },
-    backupTime: {
-      field: 'backup_time',
+    backup_time: {
       type: DataTypes.TIME,
       defaultValue: '00:00:00',
     },
-    retentionDays: {
-      field: 'retention_days',
+    retention_days: {
       type: DataTypes.INTEGER,
       defaultValue: 30,
     },
-    storageProvider: {
-      field: 'storage_provider',
+    storage_provider: {
       type: DataTypes.TEXT,
       defaultValue: 'local',
     },
-    storagePath: {
-      field: 'storage_path',
+    storage_path: {
       type: DataTypes.TEXT,
     },
-    cloudCredentials: {
-      field: 'cloud_credentials',
+    cloud_credentials: {
       type: DataTypes.JSONB,
     },
-    lastBackup: {
-      field: 'last_backup',
+    last_backup: {
       type: DataTypes.DATE,
     },
-    backupHistory: {
-      field: 'backup_history',
+    backup_history: {
       type: DataTypes.ARRAY(DataTypes.JSONB),
     },
-    createdAt: {
-      field: 'created_at',
+    created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
-      field: 'updated_at',
+    updated_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },

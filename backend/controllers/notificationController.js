@@ -73,6 +73,7 @@ exports.getAllNotifications = async (req, res, next) => {
   }
 };
 
+<<<<<<< HEAD
 // Helper to get users by target audience
 async function getTargetUsers(target_audience, req) {
   if (target_audience === 'all') {
@@ -92,19 +93,92 @@ async function getTargetUsers(target_audience, req) {
 exports.createNotification = async (req, res, next) => {
   try {
     const notificationData = req.body;
+=======
+// Create a new notification
+exports.createNotification = async (req, res, next) => {
+  try {
+    const notificationData = req.body;
+    // Remove id if present at top level
+    if ('id' in notificationData) {
+      delete notificationData.id;
+    }
+    // Remove id if present in template
+    if (notificationData.template && typeof notificationData.template === 'object' && 'id' in notificationData.template) {
+      delete notificationData.template.id;
+    }
+    // Map camelCase fields to snake_case for DB consistency
+    if (notificationData.targetAudience) {
+      notificationData.target_audience = notificationData.targetAudience;
+      delete notificationData.targetAudience;
+    }
+    if (notificationData.createdBy) {
+      notificationData.created_by = notificationData.createdBy;
+      delete notificationData.createdBy;
+    }
+    
+    // Set created_by if not present
+    if (!notificationData.created_by) {
+      notificationData.created_by = req.user.name || req.user.email;
+    }
+    
+    // Set status and dates based on schedule type
+    if (notificationData.scheduleType === 'now') {
+      notificationData.status = 'sent';
+      notificationData.sentAt = new Date();
+    } else if (notificationData.scheduleType === 'later') {
+      notificationData.status = 'scheduled';
+      notificationData.scheduledAt = notificationData.scheduledAt;
+    } else {
+      notificationData.status = 'draft';
+    }
+    delete notificationData.scheduleType;
+
+>>>>>>> parent of 50bc073 (inprogress)
     // Create the notification first
     const notification = await Notification.create(notificationData);
+
     // Determine target audience and create notification-user relationships
+<<<<<<< HEAD
     const users = await getTargetUsers(notificationData.targetAudience, req);
+=======
+    let users = [];
+    if (notificationData.target_audience === 'all') {
+      users = await User.findAll({ attributes: ['id'] });
+    } else if (notificationData.target_audience === 'customers') {
+      users = await User.findAll({ where: { role: 'user' }, attributes: ['id'] });
+    } else if (notificationData.target_audience === 'salons') {
+      users = await User.findAll({ where: { role: 'salon' }, attributes: ['id'] });
+    } else if (notificationData.target_audience === 'admins') {
+      users = await User.findAll({ where: { role: ['admin', 'super_admin'] }, attributes: ['id'] });
+    } else {
+      // For specific user or default case
+      const userId = req.user.userId || req.user.id;
+      users = [{ id: userId }];
+    }
+
+>>>>>>> parent of 50bc073 (inprogress)
     console.log('Found users for notification:', users.map(u => ({ id: u.id, idLength: u.id.length })));
-    // Create notification-user relationships
-    const notificationUsers = users.map(user => ({
-      notification_id: notification.id,
-      user_id: user.id.toString().trim(),
-      is_read: false
-    }));
+
+    // Create notification-user relationships with cleaned user IDs
+    const notificationUsers = users.map(user => {
+      const cleanUserId = user.id.toString().trim(); // Remove any whitespace
+      console.log('Creating notification-user relationship:', {
+        notification_id: notification.id,
+        user_id: cleanUserId,
+        original_user_id: user.id
+      });
+      
+      return {
+        notification_id: notification.id,
+        user_id: cleanUserId,
+        is_read: false
+      };
+    });
+
     console.log('Notification users to create:', notificationUsers);
+
     await NotificationUser.bulkCreate(notificationUsers);
+
     // Send push notifications to all users
     const userIds = users.map(u => u.id);
     await notificationService.sendToUsers(
@@ -113,6 +187,7 @@ exports.createNotification = async (req, res, next) => {
       notification.message || '',
       { notificationId: notification.id }
     );
+
     // Return the created notification with user relationships
     const createdNotification = await Notification.findByPk(notification.id, {
       include: [
@@ -129,10 +204,12 @@ exports.createNotification = async (req, res, next) => {
         }
       ]
     });
+
     // Transform the created notification to match frontend expectations
     const totalRecipients = createdNotification.notificationUsers?.length || 0;
     const sentCount = totalRecipients;
     const openedCount = createdNotification.notificationUsers?.filter(nu => nu.is_read).length || 0;
+    
     const transformedNotification = {
       id: createdNotification.id,
       title: createdNotification.title,
@@ -159,6 +236,7 @@ exports.createNotification = async (req, res, next) => {
         subscriptionPlan: []
       }
     };
+
     res.status(201).json(transformedNotification);
   } catch (error) {
     next(error);

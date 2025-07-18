@@ -7,19 +7,19 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // Review belongs to a User (customer who wrote the review)
       Review.belongsTo(models.User, {
-        foreignKey: 'userId',
+        foreignKey: 'user_id',
         as: 'user'
       });
       
       // Review belongs to a Salon (the salon being reviewed)
       Review.belongsTo(models.Salon, {
-        foreignKey: 'salonId',
+        foreignKey: 'salon_id',
         as: 'salon'
       });
       
       // Review belongs to an Appointment (optional - for appointment-specific reviews)
       Review.belongsTo(models.Appointment, {
-        foreignKey: 'appointmentId',
+        foreignKey: 'appointment_id',
         as: 'appointment'
       });
     }
@@ -32,10 +32,9 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false,
     },
-    userId: {
+    user_id: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'user_id',
       references: {
         model: 'users',
         key: 'id'
@@ -43,10 +42,9 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
     },
-    salonId: {
+    salon_id: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'salon_id',
       references: {
         model: 'salons',
         key: 'id'
@@ -54,10 +52,9 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
     },
-    appointmentId: {
+    appointment_id: {
       type: DataTypes.UUID,
       allowNull: true, // Optional - for general salon reviews
-      field: 'appointment_id',
       references: {
         model: 'appointments',
         key: 'id'
@@ -81,14 +78,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
-    serviceQuality: {
+    service_quality: {
       type: DataTypes.INTEGER,
       allowNull: true,
       validate: {
         min: 1,
         max: 5
-      },
-      field: 'service_quality'
+      }
     }
   }, {
     sequelize,

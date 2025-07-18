@@ -107,6 +107,7 @@ exports.getSalonById = async (req, res, next) => {
 exports.createSalon = async (req, res, next) => {
   try {
     const salonData = req.body;
+<<<<<<< HEAD
     // Compose address and location from separate fields
     const street = salonData.address || '';
     const city = salonData.city || '';
@@ -124,6 +125,8 @@ exports.createSalon = async (req, res, next) => {
     salonData.ownerId = req.user.userId;
     console.log(salonData )
     console.log(req.user)
+=======
+>>>>>>> parent of 50bc073 (inprogress)
     const newSalon = await Salon.create(salonData);
     res.status(201).json(serializeSalon(newSalon, { req }));
   } catch (error) {

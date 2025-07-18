@@ -10,8 +10,7 @@ module.exports = (sequelize) => {
       primaryKey: true,
       allowNull: false,
     },
-    userId: {
-      field: 'user_id',
+    user_id: {
       type: DataTypes.UUID,
       allowNull: false,
       references: {
@@ -20,40 +19,32 @@ module.exports = (sequelize) => {
       },
       onDelete: 'CASCADE',
     },
-    twoFactorEnabled: {
-      field: 'two_factor_enabled',
+    two_factor_enabled: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    passwordLastChanged: {
-      field: 'password_last_changed',
+    password_last_changed: {
       type: DataTypes.DATE,
     },
-    loginAttempts: {
-      field: 'login_attempts',
+    login_attempts: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
-    lastLoginIp: {
-      field: 'last_login_ip',
+    last_login_ip: {
       type: DataTypes.TEXT,
     },
-    allowedIps: {
-      field: 'allowed_ips',
+    allowed_ips: {
       type: DataTypes.ARRAY(DataTypes.TEXT),
     },
-    sessionTimeout: {
-      field: 'session_timeout',
+    session_timeout: {
       type: DataTypes.INTEGER,
       defaultValue: 30,
     },
-    createdAt: {
-      field: 'created_at',
+    created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
-      field: 'updated_at',
+    updated_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },

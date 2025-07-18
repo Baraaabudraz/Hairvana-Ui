@@ -29,15 +29,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false
     },
-    yearlyPrice: {
+    yearly_price: {
       type: DataTypes.DECIMAL(10, 2),
-      allowNull: false,
-      field: 'yearly_price'
+      allowNull: false
     },
-    billingPeriod: {
+    billing_period: {
       type: DataTypes.ENUM('monthly', 'yearly'),
-      defaultValue: 'monthly',
-      field: 'billing_period'
+      defaultValue: 'monthly'
     },
     features: {
       type: DataTypes.ARRAY(DataTypes.TEXT),

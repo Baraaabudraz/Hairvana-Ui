@@ -52,10 +52,9 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false,
     },
-    userId: {
+    user_id: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'user_id',
       references: {
         model: 'users',
         key: 'id'
@@ -63,10 +62,9 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
     },
-    salonId: {
+    salon_id: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'salon_id',
       references: {
         model: 'salons',
         key: 'id'
@@ -74,10 +72,9 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
     },
-    staffId: {
+    staff_id: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'staff_id',
       references: {
         model: 'staff',
         key: 'id'
@@ -85,15 +82,13 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
     },
-    startAt: {
+    start_at: {
       type: DataTypes.DATE,
-      allowNull: false,
-      field: 'start_at'
+      allowNull: false
     },
-    endAt: {
+    end_at: {
       type: DataTypes.DATE,
-      allowNull: false,
-      field: 'end_at'
+      allowNull: false
     },
     status: {
       type: DataTypes.ENUM('pending', 'booked', 'cancelled', 'completed'),
@@ -103,36 +98,31 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
-    totalPrice: {
+    total_price: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
-      defaultValue: 0,
-      field: 'total_price'
+      defaultValue: 0
     },
     duration: {
       type: DataTypes.INTEGER, // in minutes
       allowNull: false,
       defaultValue: 60
     },
-    specialRequests: {
+    special_requests: {
       type: DataTypes.TEXT,
-      allowNull: true,
-      field: 'special_requests'
+      allowNull: true
     },
-    cancellationReason: {
+    cancellation_reason: {
       type: DataTypes.TEXT,
-      allowNull: true,
-      field: 'cancellation_reason'
+      allowNull: true
     },
-    cancelledAt: {
+    cancelled_at: {
       type: DataTypes.DATE,
-      allowNull: true,
-      field: 'cancelled_at'
+      allowNull: true
     },
-    cancelledBy: {
+    cancelled_by: {
       type: DataTypes.UUID,
       allowNull: true,
-      field: 'cancelled_by',
       references: {
         model: 'users',
         key: 'id'

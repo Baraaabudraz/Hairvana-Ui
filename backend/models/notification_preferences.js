@@ -10,8 +10,7 @@ module.exports = (sequelize) => {
       primaryKey: true,
       allowNull: false,
     },
-    userId: {
-      field: 'user_id',
+    user_id: {
       type: DataTypes.UUID,
       allowNull: false,
       references: {
@@ -36,23 +35,19 @@ module.exports = (sequelize) => {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    marketingEmails: {
-      field: 'marketing_emails',
+    marketing_emails: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    systemNotifications: {
-      field: 'system_notifications',
+    system_notifications: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    createdAt: {
-      field: 'created_at',
+    created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
-    updatedAt: {
-      field: 'updated_at',
+    updated_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },

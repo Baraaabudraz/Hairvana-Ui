@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
   class BillingHistory extends Model {
     static associate(models) {
       BillingHistory.belongsTo(models.Subscription, {
-        foreignKey: 'subscriptionId',
+        foreignKey: 'subscription_id',
         as: 'subscription'
       });
     }
@@ -18,8 +18,7 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false,
     },
-    subscriptionId: {
-      field: 'subscription_id',
+    subscription_id: {
       type: DataTypes.UUID,
       allowNull: false
     },
@@ -39,13 +38,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
-    invoiceNumber: {
-      field: 'invoice_number',
+    invoice_number: {
       type: DataTypes.STRING,
       allowNull: true
     },
-    taxAmount: {
-      field: 'tax_amount',
+    tax_amount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true
     },
@@ -57,16 +54,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true
     },
-    createdAt: {
-      field: 'created_at',
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW
-    },
-    updatedAt: {
-      field: 'updated_at',
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW
-    }
   }, {
     sequelize,
     modelName: 'BillingHistory',

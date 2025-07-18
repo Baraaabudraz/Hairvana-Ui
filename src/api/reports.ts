@@ -1,8 +1,13 @@
 import { apiFetch } from '@/lib/api';
 
 // Reports CRUD
-export async function fetchReports() {
-  return apiFetch('/reports');
+export async function fetchReports(params: { page?: number; limit?: number; status?: string; search?: string } = {}) {
+  const queryParams = new URLSearchParams();
+  if (params.page) queryParams.append('page', params.page.toString());
+  if (params.limit) queryParams.append('limit', params.limit.toString());
+  if (params.status) queryParams.append('status', params.status);
+  if (params.search) queryParams.append('search', params.search);
+  return apiFetch(`/reports?${queryParams.toString()}`);
 }
 
 export async function createReport(data: any) {

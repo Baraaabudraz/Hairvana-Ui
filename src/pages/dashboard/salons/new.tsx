@@ -175,6 +175,7 @@ export default function NewSalonPage() {
       const fullAddress = `${data.address}, ${data.city}, ${data.state} ${data.zipCode}`;
 
       // 1. Upload images if any are selected
+      // Only store relative paths for images
       let imageUrls: string[] = [];
       if (selectedFiles.length > 0) {
         const token = localStorage.getItem('token');
@@ -189,10 +190,17 @@ export default function NewSalonPage() {
             body: formData,
           });
           const result = await response.json();
-          if (result.url) imageUrls.push(result.url);
+          if (result.url) {
+            try {
+              const url = new URL(result.url);
+              if (url.pathname.startsWith('/uploads/salons/')) imageUrls.push(url.pathname);
+              else imageUrls.push(url.pathname);
+            } catch {
+              imageUrls.push(result.url);
+            }
+          }
         }
       }
-
       const salonData = {
         name: data.name,
         email: data.email,
@@ -632,22 +640,28 @@ export default function NewSalonPage() {
 
             {uploadedImages.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {uploadedImages.map((image, index) => (
-                  <div key={index} className="relative">
-                    <img
-                      src={image}
-                      alt={`Salon image ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
+                {uploadedImages.map((image, index) => {
+                  let src = image;
+                  if (src && !src.startsWith('http')) {
+                    src = src.startsWith('/uploads/salons/') ? src : `/uploads/salons/${src.replace(/^\/+/, '')}`;
+                  }
+                  return (
+                    <div key={index} className="relative">
+                      <img
+                        src={src}
+                        alt={`Salon image ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </CardContent>

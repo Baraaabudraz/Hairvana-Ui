@@ -43,7 +43,7 @@ import {
   Eye,
   X
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 
 interface ReportSection {
   title: string;
@@ -109,7 +109,7 @@ export function ReportViewer({ reportData, onClose }: ReportViewerProps) {
 
   const handleEmail = () => {
     const subject = encodeURIComponent(reportData.title);
-    const body = encodeURIComponent(`Please find the ${reportData.title} report attached.\n\nGenerated on: ${format(new Date(reportData.metadata.generatedAt), 'MMMM dd, yyyy HH:mm')}\nReport Period: ${reportData.metadata.reportPeriod}`);
+    const body = encodeURIComponent(`Please find the ${reportData.title} report attached.\n\nGenerated on: ${safeFormatDate(reportData.metadata?.generatedAt)}\nReport Period: ${reportData.metadata?.reportPeriod}`);
     window.open(`mailto:?subject=${subject}&body=${body}`);
   };
 
@@ -318,7 +318,7 @@ export function ReportViewer({ reportData, onClose }: ReportViewerProps) {
           <div>
             <h2 className="text-2xl font-bold">{reportData.title}</h2>
             <p className="text-purple-100 text-sm">
-              Generated on {format(new Date(reportData.metadata.generatedAt), 'MMMM dd, yyyy HH:mm')} • 
+              Generated on {safeFormatDate(reportData.metadata?.generatedAt)} • 
               Period: {reportData.metadata.reportPeriod}
             </p>
           </div>
@@ -439,6 +439,12 @@ export function ReportViewer({ reportData, onClose }: ReportViewerProps) {
       </div>
     </div>
   );
+}
+
+function safeFormatDate(dateString: string | undefined, fmt: string = 'MMMM dd, yyyy HH:mm') {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return isValid(date) ? format(date, fmt) : 'N/A';
 }
 
 function generateReportHTML(reportData: ReportData): string {
@@ -567,7 +573,7 @@ function generateReportHTML(reportData: ReportData): string {
         <div class="report-container">
           <div class="header">
             <h1>${reportData.title}</h1>
-            <p>Generated on ${format(new Date(reportData.metadata.generatedAt), 'MMMM dd, yyyy HH:mm')} | Period: ${reportData.metadata.reportPeriod}</p>
+            <p>Generated on ${safeFormatDate(reportData.metadata?.generatedAt)} | Period: ${reportData.metadata.reportPeriod}</p>
           </div>
           
           ${reportData.sections.map(section => `

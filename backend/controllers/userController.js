@@ -1,50 +1,10 @@
-const bcrypt = require('bcryptjs');
-const { User, SalonOwner, Customer, Salon } = require('../models');
-const { serializeUser } = require('../serializers/userSerializer');
-const user = require('../models/user');
+const userService = require('../services/userService');
 
 // Get all users
 exports.getAllUsers = async (req, res, next) => {
   try {
-    const { role, status, search } = req.query;
-    const where = {};
-    if (role && role !== 'all') {
-      if (role === 'admin') {
-        where.role = ['admin', 'super_admin'];
-      } else {
-        where.role = role;
-      }
-    }
-    if (status && status !== 'all') {
-      where.status = status;
-    }
-    if (search) {
-      where[User.sequelize.Op.or] = [
-        { name: { [User.sequelize.Op.iLike]: `%${search}%` } },
-        { email: { [User.sequelize.Op.iLike]: `%${search}%` } }
-      ];
-    }
-    // Fetch users with associations
-    let users = await User.findAll({
-      where,
-      include: [
-        { model: SalonOwner, as: 'salonOwner', include: [{ model: Salon, as: 'salons' }] },
-        { model: Customer, as: 'customer' },
-        { model: Salon, as: 'salons' }
-      ]
-    });
-    users = users.map(user => serializeUser(user, { req }));
-    // Calculate stats
-    const stats = {
-      total: users.length,
-      admin: users.filter(u => u.role === 'admin' || u.role === 'super_admin').length,
-      salon: users.filter(u => u.role === 'salon').length,
-      user: users.filter(u => u.role === 'user').length,
-      active: users.filter(u => u.status === 'active').length,
-      pending: users.filter(u => u.status === 'pending').length,
-      suspended: users.filter(u => u.status === 'suspended').length,
-    };
-    res.json({ users, stats });
+    const result = await userService.getAllUsers(req.query, req);
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -53,18 +13,9 @@ exports.getAllUsers = async (req, res, next) => {
 // Get user by ID
 exports.getUserById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const user = await User.findOne({
-      where: { id },
-      include: [
-        { model: SalonOwner, as: 'salonOwner', include: [{ model: Salon, as: 'salons' }] },
-        { model: Customer, as: 'customer' }
-      ]
-    });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.json(serializeUser(user));
+    const result = await userService.getUserById(req.params.id, req);
+    if (!result) return res.status(404).json({ message: 'User not found' });
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -73,44 +24,8 @@ exports.getUserById = async (req, res, next) => {
 // Create a new user
 exports.createUser = async (req, res, next) => {
   try {
-    const userData = req.body;
-    // Hash the password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(userData.password, salt);
-    // Create user
-    userData.passwordHash=hashedPassword;
- 
-    userData.status="active";
-    const newUser = await User.create(userData);
-    // Create role-specific record
-    if (userData.role === 'salon') {
-      await SalonOwner.create({
-        userId: newUser.id,
-        totalSalons: 0,
-        totalRevenue: 0,
-        totalBookings: 0
-      });
-      // If salon data is provided, create a salon
-      if (userData.salonName) {
-        await Salon.create({
-          name: userData.salonName,
-          email: userData.email,
-          phone: userData.phone || null,
-          address: userData.salonAddress,
-          ownerId: newUser.id,
-          // owner_name, owner_email, business_license fields can be added if present in model
-          status: 'pending'
-        });
-      }
-    } else if (userData.role === 'user') {
-      await Customer.create({
-        userId: newUser.id,
-        totalSpent: 0,
-        totalBookings: 0,
-        favoriteServices: []
-      });
-    }
-    res.status(201).json(serializeUser(newUser));
+    const result = await userService.createUser(req.body, req);
+    res.status(201).json(result);
   } catch (error) {
     next(error);
   }
@@ -119,34 +34,13 @@ exports.createUser = async (req, res, next) => {
 // Update a user
 exports.updateUser = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const userData = req.body;
-    console.log('Updating user:', id, userData);
-    if (userData.password) {
-      const salt = await bcrypt.genSalt(10);
-      userData.password_hash = await bcrypt.hash(userData.password, salt);
-      delete userData.password;
-    }
-    try {
-      const [affectedRows, [updatedUser]] = await User.update(userData, {
-        where: { id },
-        returning: true
-      });
-      console.log('Update result:', affectedRows, updatedUser);
-      if (!updatedUser) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      res.json(serializeUser(updatedUser));
-    } catch (err) {
-      console.error('Sequelize update error:', err);
-      // If it's a Sequelize validation error, return the message
-      if (err.name && err.name === 'SequelizeValidationError') {
-        return res.status(422).json({ message: err.message, errors: err.errors });
-      }
-      // Otherwise, return a generic error
-      return res.status(422).json({ message: err.message || 'Unprocessable Entity' });
-    }
+    const result = await userService.updateUser(req.params.id, req.body, req);
+    if (!result) return res.status(404).json({ message: 'User not found' });
+    res.json(result);
   } catch (error) {
+    if (error.errors) {
+      return res.status(422).json({ message: error.message, errors: error.errors });
+    }
     next(error);
   }
 };
@@ -154,12 +48,9 @@ exports.updateUser = async (req, res, next) => {
 // Delete a user
 exports.deleteUser = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const deleted = await User.destroy({ where: { id } });
-    if (!deleted) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.json({ message: 'User deleted successfully' });
+    const result = await userService.deleteUser(req.params.id);
+    if (!result) return res.status(404).json({ message: 'User not found' });
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -168,17 +59,9 @@ exports.deleteUser = async (req, res, next) => {
 // Update user status
 exports.updateUserStatus = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { status } = req.body;
-    if (!['active', 'pending', 'suspended'].includes(status)) {
-      return res.status(400).json({ message: 'Invalid status' });
-    }
-    const [affectedRows] = await User.update({ status }, { where: { id } });
-    if (!affectedRows) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    const updatedUser = await User.findOne({ where: { id } });
-    res.json(serializeUser(updatedUser));
+    const result = await userService.updateUserStatus(req.params.id, req.body.status, req);
+    if (!result) return res.status(404).json({ message: 'User not found' });
+    res.json(result);
   } catch (error) {
     next(error);
   }

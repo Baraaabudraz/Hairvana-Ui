@@ -260,7 +260,19 @@ export default function EditSalonPage() {
       const fullAddress = `${data.address}, ${data.city}, ${data.state} ${data.zipCode}`;
 
       // 1. Upload new images if any are selected
-      let imageUrls: string[] = [...uploadedImages]; // keep existing images
+      // Only store relative paths for images
+      let imageUrls: string[] = uploadedImages.map(img => {
+        try {
+          const url = new URL(img);
+          // If the path starts with /uploads/salons, use that as the relative path
+          if (url.pathname.startsWith('/uploads/salons/')) return url.pathname;
+          // Otherwise, fallback to the full path
+          return url.pathname;
+        } catch {
+          // If not a valid URL, return as is (for already relative paths)
+          return img;
+        }
+      });
       if (selectedFiles.length > 0) {
         for (const file of selectedFiles) {
           const formData = new FormData();
@@ -274,7 +286,15 @@ export default function EditSalonPage() {
             body: formData,
           });
           const result = await response.json();
-          if (result.url) imageUrls.push(result.url);
+          if (result.url) {
+            try {
+              const url = new URL(result.url);
+              if (url.pathname.startsWith('/uploads/salons/')) imageUrls.push(url.pathname);
+              else imageUrls.push(url.pathname);
+            } catch {
+              imageUrls.push(result.url);
+            }
+          }
         }
       }
       // 2. Use all image URLs in salonData
@@ -680,22 +700,28 @@ export default function EditSalonPage() {
 
             {uploadedImages.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {uploadedImages.map((image, index) => (
-                  <div key={index} className="relative">
-                    <img
-                      src={image}
-                      alt={`Salon image ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
+                {uploadedImages.map((image, index) => {
+                  let src = image;
+                  if (src && !src.startsWith('http')) {
+                    src = src.startsWith('/uploads/salons/') ? src : `/uploads/salons/${src.replace(/^\/+/, '')}`;
+                  }
+                  return (
+                    <div key={index} className="relative">
+                      <img
+                        src={src}
+                        alt={`Salon image ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
             {selectedFiles.length > 0 && (

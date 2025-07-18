@@ -1,26 +1,18 @@
-const { Staff } = require('../models');
-const { Op } = require('sequelize');
+const staffService = require('../services/staffService');
 const { serializeStaff } = require('../serializers/staffSerializer');
 
-// Get all staff
 exports.getAllStaff = async (req, res, next) => {
   try {
-    const { salonId, serviceId } = req.query;
-    const where = {};
-    if (salonId) where.salon_id = salonId;
-    if (serviceId) where.services = { [Op.contains]: [serviceId] };
-    const staff = await Staff.findAll({ where });
+    const staff = await staffService.getAllStaff(req.query);
     res.json(staff.map(serializeStaff));
   } catch (error) {
     next(error);
   }
 };
 
-// Get staff by ID
 exports.getStaffById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const staff = await Staff.findOne({ where: { id } });
+    const staff = await staffService.getStaffById(req.params.id);
     if (!staff) {
       return res.status(404).json({ message: 'Staff member not found' });
     }
@@ -30,26 +22,18 @@ exports.getStaffById = async (req, res, next) => {
   }
 };
 
-// Create a new staff member
 exports.createStaff = async (req, res, next) => {
   try {
-    const staffData = req.body;
-    const newStaff = await Staff.create(staffData);
+    const newStaff = await staffService.createStaff(req.body);
     res.status(201).json(serializeStaff(newStaff));
   } catch (error) {
     next(error);
   }
 };
 
-// Update a staff member
 exports.updateStaff = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const staffData = req.body;
-    const [affectedRows, [updatedStaff]] = await Staff.update(staffData, {
-      where: { id },
-      returning: true
-    });
+    const updatedStaff = await staffService.updateStaff(req.params.id, req.body);
     if (!updatedStaff) {
       return res.status(404).json({ message: 'Staff member not found' });
     }
@@ -59,11 +43,9 @@ exports.updateStaff = async (req, res, next) => {
   }
 };
 
-// Delete a staff member
 exports.deleteStaff = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const deleted = await Staff.destroy({ where: { id } });
+    const deleted = await staffService.deleteStaff(req.params.id);
     if (!deleted) {
       return res.status(404).json({ message: 'Staff member not found' });
     }
@@ -73,38 +55,19 @@ exports.deleteStaff = async (req, res, next) => {
   }
 };
 
-// Assign service to staff
 exports.assignService = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { serviceId } = req.body;
-    const staff = await Staff.findOne({ where: { id } });
-    if (!staff) {
-      return res.status(404).json({ message: 'Staff member not found' });
-    }
-    const currentServices = staff.services || [];
-    if (!currentServices.includes(serviceId)) {
-      staff.services = [...currentServices, serviceId];
-      await staff.save();
-    }
-    res.json({ message: 'Service assigned successfully' });
+    const result = await staffService.assignService(req.params.id, req.body.serviceId);
+    res.json(result);
   } catch (error) {
     next(error);
   }
 };
 
-// Remove service from staff
 exports.removeService = async (req, res, next) => {
   try {
-    const { id, serviceId } = req.params;
-    const staff = await Staff.findOne({ where: { id } });
-    if (!staff) {
-      return res.status(404).json({ message: 'Staff member not found' });
-    }
-    const currentServices = staff.services || [];
-    staff.services = currentServices.filter(sid => sid !== serviceId);
-    await staff.save();
-    res.json({ message: 'Service removed successfully' });
+    const result = await staffService.removeService(req.params.id, req.params.serviceId);
+    res.json(result);
   } catch (error) {
     next(error);
   }

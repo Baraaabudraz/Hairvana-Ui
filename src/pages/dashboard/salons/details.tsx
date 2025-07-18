@@ -672,15 +672,21 @@ export default function SalonDetailsPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {(salon.images || []).map((image, index) => (
-                <div key={index} className="aspect-square rounded-lg overflow-hidden">
-                  <img
-                    src={image}
-                    alt={`${salon.name} image ${index + 1}`}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                  />
-                </div>
-              ))}
+              {(salon.images || []).map((image, index) => {
+                let src = image;
+                if (src && !src.startsWith('http')) {
+                  src = src.startsWith('/uploads/salons/') ? src : `/uploads/salons/${src.replace(/^\/+/, '')}`;
+                }
+                return (
+                  <div key={index} className="aspect-square rounded-lg overflow-hidden">
+                    <img
+                      src={src}
+                      alt={`${salon.name} image ${index + 1}`}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                    />
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

@@ -61,7 +61,7 @@ app.use('/backend/api/mobile/devices', require('./routes/Api/v0/customer/mobileD
 
 
 // Serve uploaded images statically
-app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 // Serve avatars from public/uploads/avatars
 app.use('/uploads/avatars', express.static(path.join(__dirname, '../public/uploads/avatars')));
 // Salon image upload route

@@ -1,12 +1,14 @@
 import { apiFetch } from '@/lib/api';
 
-export async function fetchSalons(params: { status?: string; search?: string; ownerId?: string } = {}) {
+export async function fetchSalons(params: { status?: string; search?: string; ownerId?: string; page?: number; limit?: number } = {}) {
   try {
     const queryParams = new URLSearchParams();
     
     if (params.status && params.status !== 'all') queryParams.append('status', params.status);
     if (params.search) queryParams.append('search', params.search);
     if (params.ownerId) queryParams.append('ownerId', params.ownerId);
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
     
     return await apiFetch(`/salons?${queryParams.toString()}`);
   } catch (error) {

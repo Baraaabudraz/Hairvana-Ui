@@ -127,9 +127,14 @@ export async function updatePaymentMethod(id: string, paymentData: any) {
   }
 }
 
-export async function fetchSubscriptionPlans() {
+export async function fetchSubscriptionPlans(params: { page?: number; limit?: number; status?: string; search?: string } = {}) {
   try {
-    return await apiFetch('/subscriptions/plans');
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.status) queryParams.append('status', params.status);
+    if (params.search) queryParams.append('search', params.search);
+    return await apiFetch(`/subscriptions/plans?${queryParams.toString()}`);
   } catch (error) {
     console.error('Error fetching subscription plans:', error);
     throw error;

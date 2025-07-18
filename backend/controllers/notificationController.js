@@ -73,38 +73,10 @@ exports.getAllNotifications = async (req, res, next) => {
   }
 };
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-// Helper to get users by target audience
-async function getTargetUsers(target_audience, req) {
-  if (target_audience === 'all') {
-    return await User.findAll({ attributes: ['id'] });
-  } else if (target_audience === 'customers') {
-    return await User.findAll({ where: { role: 'user' }, attributes: ['id'] });
-  } else if (target_audience === 'salons') {
-    return await User.findAll({ where: { role: 'salon' }, attributes: ['id'] });
-  } else if (target_audience === 'admins') {
-    return await User.findAll({ where: { role: ['admin', 'super_admin'] }, attributes: ['id'] });
-  } else {
-    const userId = req.user.userId || req.user.id;
-    return [{ id: userId }];
-  }
-}
-
-exports.createNotification = async (req, res, next) => {
-  try {
-    const notificationData = req.body;
-=======
 // Create a new notification
 exports.createNotification = async (req, res, next) => {
   try {
     const notificationData = req.body;
-=======
-// Create a new notification
-exports.createNotification = async (req, res, next) => {
-  try {
-    const notificationData = req.body;
->>>>>>> parent of 50bc073 (inprogress)
     // Remove id if present at top level
     if ('id' in notificationData) {
       delete notificationData.id;
@@ -140,20 +112,10 @@ exports.createNotification = async (req, res, next) => {
     }
     delete notificationData.scheduleType;
 
-<<<<<<< HEAD
->>>>>>> parent of 50bc073 (inprogress)
-=======
->>>>>>> parent of 50bc073 (inprogress)
     // Create the notification first
     const notification = await Notification.create(notificationData);
 
     // Determine target audience and create notification-user relationships
-<<<<<<< HEAD
-<<<<<<< HEAD
-    const users = await getTargetUsers(notificationData.targetAudience, req);
-=======
-=======
->>>>>>> parent of 50bc073 (inprogress)
     let users = [];
     if (notificationData.target_audience === 'all') {
       users = await User.findAll({ attributes: ['id'] });
@@ -169,10 +131,6 @@ exports.createNotification = async (req, res, next) => {
       users = [{ id: userId }];
     }
 
-<<<<<<< HEAD
->>>>>>> parent of 50bc073 (inprogress)
-=======
->>>>>>> parent of 50bc073 (inprogress)
     console.log('Found users for notification:', users.map(u => ({ id: u.id, idLength: u.id.length })));
 
     // Create notification-user relationships with cleaned user IDs

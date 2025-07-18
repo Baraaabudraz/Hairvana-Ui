@@ -1,6 +1,6 @@
 import { apiFetch } from '@/lib/api';
 
-export async function fetchUsers(params: { role?: string; status?: string; search?: string } = {}) {
+export async function fetchUsers(params: { role?: string; status?: string; search?: string; page?: number; limit?: number } = {}) {
   try {
     const queryParams = new URLSearchParams();
     
@@ -15,6 +15,9 @@ export async function fetchUsers(params: { role?: string; status?: string; searc
     if (params.search) {
       queryParams.append('search', params.search);
     }
+    
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
     
     return await apiFetch(`/users?${queryParams.toString()}`);
   } catch (error) {

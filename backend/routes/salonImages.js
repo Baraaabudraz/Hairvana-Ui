@@ -7,6 +7,7 @@ const router = express.Router();
 
 // Ensure upload directory exists
 const uploadDir = path.join(__dirname, '../public/uploads/salons');
+console.log('Salon image upload directory:', uploadDir); // DEBUG: Log upload directory
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 // File filter for images only
@@ -39,6 +40,8 @@ const upload = multer({
 // POST /backend/api/salons/upload-image
 router.post('/upload-image', upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  // DEBUG: Log uploaded file path
+  console.log('Uploaded file:', req.file.path);
   // Return the full public URL for the uploaded image
   const url = `${req.protocol}://${req.get('host')}/uploads/salons/${req.file.filename}`;
   res.json({ url });

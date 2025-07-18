@@ -74,6 +74,7 @@ exports.getAllNotifications = async (req, res, next) => {
 };
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 // Helper to get users by target audience
 async function getTargetUsers(target_audience, req) {
   if (target_audience === 'all') {
@@ -98,6 +99,12 @@ exports.createNotification = async (req, res, next) => {
 exports.createNotification = async (req, res, next) => {
   try {
     const notificationData = req.body;
+=======
+// Create a new notification
+exports.createNotification = async (req, res, next) => {
+  try {
+    const notificationData = req.body;
+>>>>>>> parent of 50bc073 (inprogress)
     // Remove id if present at top level
     if ('id' in notificationData) {
       delete notificationData.id;
@@ -133,14 +140,20 @@ exports.createNotification = async (req, res, next) => {
     }
     delete notificationData.scheduleType;
 
+<<<<<<< HEAD
+>>>>>>> parent of 50bc073 (inprogress)
+=======
 >>>>>>> parent of 50bc073 (inprogress)
     // Create the notification first
     const notification = await Notification.create(notificationData);
 
     // Determine target audience and create notification-user relationships
 <<<<<<< HEAD
+<<<<<<< HEAD
     const users = await getTargetUsers(notificationData.targetAudience, req);
 =======
+=======
+>>>>>>> parent of 50bc073 (inprogress)
     let users = [];
     if (notificationData.target_audience === 'all') {
       users = await User.findAll({ attributes: ['id'] });
@@ -156,6 +169,9 @@ exports.createNotification = async (req, res, next) => {
       users = [{ id: userId }];
     }
 
+<<<<<<< HEAD
+>>>>>>> parent of 50bc073 (inprogress)
+=======
 >>>>>>> parent of 50bc073 (inprogress)
     console.log('Found users for notification:', users.map(u => ({ id: u.id, idLength: u.id.length })));
 

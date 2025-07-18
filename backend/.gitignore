@@ -40,5 +40,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env
-
+config/up-lancer-fbcd320b3801.json
 /public

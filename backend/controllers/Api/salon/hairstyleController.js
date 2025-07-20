@@ -1,0 +1,117 @@
+const { Salon } = require('../../../models');
+const { getFileInfo } = require('../../../helpers/uploadHelper');
+const hairstyleService = require('../../../services/hairstyleService');
+const { body, validationResult } = require('express-validator');
+
+// Validation middleware for create/update
+exports.validateHairstyle = [
+  body('name')
+    .notEmpty().withMessage('Name is required')
+    .custom(async (value, { req }) => {
+      const salon = await require('../../../models').Salon.findOne({ where: { owner_id: req.user.id } });
+      if (!salon) throw new Error('Salon not found');
+      const existing = await hairstyleService.findAllBySalon(salon.id);
+      // On update, allow the same name if it's the same record
+      if (req.method === 'PUT' && req.params.id) {
+        const current = existing.find(h => h.id == req.params.id);
+        if (current && current.name.toLowerCase() === value.toLowerCase()) return true;
+      }
+      if (existing.some(h => h.name && h.name.toLowerCase() === value.toLowerCase())) {
+        throw new Error('A hairstyle with this name already exists.');
+      }
+      return true;
+    }),
+  body('gender').optional().isString(),
+  body('length').optional().isString(),
+  body('color').optional().isString(),
+  body('tags').optional(),
+  body('description').optional().isString(),
+];
+
+// Upload a new hairstyle
+exports.uploadHairstyle = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+  try {
+    const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
+    if (!salon) return res.status(404).json({ error: 'Salon not found' });
+    if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+    const { name, gender, length, color, tags, description } = req.body;
+    const imageInfo = getFileInfo(req.file, '/uploads/hairstyles/original');
+    const hairstyle = await hairstyleService.create({
+      name,
+      gender,
+      length,
+      color,
+      tags: hairstyleService.parseTags(tags),
+      description,
+      image_url: imageInfo.storedName,
+      ar_model_url: null,
+      segmented_image_url: null,
+      salon_id: salon.id
+    });
+    hairstyleService.triggerAIJobIfNeeded(imageInfo.storedName, hairstyle.id);
+    return res.status(201).json({ success: true, hairstyle: hairstyleService.mapHairstyleResponse(req, hairstyle) });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to upload hairstyle', details: err.message });
+  }
+};
+
+// List all hairstyles for the salon
+exports.getHairstyles = async (req, res) => {
+  try {
+    const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
+    if (!salon) return res.status(404).json({ error: 'Salon not found' });
+    const hairstyles = await hairstyleService.findAllBySalon(salon.id);
+    return res.json({ success: true, hairstyles: hairstyles.map(h => hairstyleService.mapHairstyleResponse(req, h)) });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to fetch hairstyles', details: err.message });
+  }
+};
+
+// Update a hairstyle
+exports.updateHairstyle = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+  try {
+    const { id } = req.params;
+    const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
+    if (!salon) return res.status(404).json({ error: 'Salon not found' });
+    const hairstyle = await hairstyleService.findByIdAndSalon(id, salon.id);
+    if (!hairstyle) return res.status(404).json({ error: 'Hairstyle not found' });
+    const { name, gender, length, color, tags, description } = req.body;
+    if (name) hairstyle.name = name;
+    if (gender) hairstyle.gender = gender;
+    if (length) hairstyle.length = length;
+    if (color) hairstyle.color = color;
+    if (tags) hairstyle.tags = hairstyleService.parseTags(tags);
+    if (description) hairstyle.description = description;
+    if (req.file) {
+      const imageInfo = getFileInfo(req.file, '/uploads/hairstyles/original');
+      hairstyle.image_url = imageInfo.storedName;
+      hairstyleService.triggerAIJobIfNeeded(imageInfo.storedName, hairstyle.id);
+    }
+    await hairstyle.save();
+    return res.json({ success: true, hairstyle: hairstyleService.mapHairstyleResponse(req, hairstyle) });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to update hairstyle', details: err.message });
+  }
+};
+
+// Delete a hairstyle
+exports.deleteHairstyle = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
+    if (!salon) return res.status(404).json({ error: 'Salon not found' });
+    const deleted = await hairstyleService.deleteByIdAndSalon(id, salon.id);
+    if (!deleted) return res.status(404).json({ error: 'Hairstyle not found' });
+    return res.json({ success: true, message: 'Hairstyle deleted' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to delete hairstyle', details: err.message });
+  }
+}; 

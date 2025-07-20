@@ -47,7 +47,7 @@ app.use('/backend/api/report-templates', require('./routes/reportTemplates'));
 app.use('/backend/api/reports', require('./routes/reports'));
 app.use('/backend/api/payments', require('./routes/payments'));
 
-// Mobile API Routes
+// Mobile API Routes for Customer
 app.use('/backend/api/mobile/auth', require('./routes/Api/v0/customer/mobileAuth'));
 app.use('/backend/api/mobile/user', require('./routes/Api/v0/customer/mobileUser'));
 app.use('/backend/api/mobile/salons', require('./routes/Api/v0/customer/salon'));
@@ -60,6 +60,12 @@ app.use('/backend/api/mobile/reviews', require('./routes/Api/v0/customer/mobileR
 app.use('/backend/api/mobile/devices', require('./routes/Api/v0/customer/mobileDevices'));
 app.use('/images', require('./routes/images'));
 
+
+// Mobile API Routes for Salon Owner
+app.use('/backend/api/v0/salon/owner-auth', require('./routes/Api/v0/salon/ownerAuth'));
+app.use('/backend/api/v0/salon/owner-profile', require('./routes/Api/v0/salon/ownerProfile'));
+app.use('/backend/api/v0/salon/salon-profile', require('./routes/Api/v0/salon/salonProfile'));
+app.use('/backend/api/v0/salon/hairstyle', require('./routes/Api/v0/salon/hairstyle'));
 
 // Serve uploaded images statically
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));

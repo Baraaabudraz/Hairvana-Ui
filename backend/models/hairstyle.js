@@ -26,6 +26,10 @@ module.exports = (sequelize, DataTypes) => {
     gender: DataTypes.STRING,
     length: DataTypes.STRING,
     color: DataTypes.STRING,
+    segmented_image_url: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     salon_id: {
       type: DataTypes.UUID,
       allowNull: false,

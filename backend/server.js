@@ -58,6 +58,7 @@ app.use('/backend/api/mobile/notifications', require('./routes/Api/v0/customer/n
 app.use('/backend/api/mobile/staff', require('./routes/Api/v0/customer/staff'));
 app.use('/backend/api/mobile/reviews', require('./routes/Api/v0/customer/mobileReviews'));
 app.use('/backend/api/mobile/devices', require('./routes/Api/v0/customer/mobileDevices'));
+app.use('/images', require('./routes/images'));
 
 
 // Serve uploaded images statically

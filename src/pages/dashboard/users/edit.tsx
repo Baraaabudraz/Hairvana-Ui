@@ -350,7 +350,10 @@ export default function EditUserPage() {
             {/* Avatar Section */}
             <div className="flex items-center gap-6">
               <Avatar className="h-24 w-24">
-                <AvatarImage src={uploadedAvatar || user.avatar} alt={user.name} />
+                <AvatarImage
+                  src={uploadedAvatar || (user.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/avatar/${user.avatar}` : undefined)}
+                  alt={user.name}
+                />
                 <AvatarFallback className="text-lg">
                   {user.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>

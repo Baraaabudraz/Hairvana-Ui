@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const userRepository = require('../repositories/userRepository');
 const { serializeUser } = require('../serializers/userSerializer');
+const { getFileInfo } = require('../helpers/uploadHelper');
 
 exports.getAllUsers = async (query, req) => {
   try {
@@ -65,9 +66,14 @@ exports.createUser = async (userData, req) => {
   if (!userData || typeof userData !== 'object') throw new Error('User data is required');
   if (!userData.password) throw new Error('Password is required');
   try {
+    // Handle avatar upload
+    if (req.file) {
+      userData.avatar = req.file.filename;
+    }
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(userData.password, salt);
-    userData.passwordHash = hashedPassword;
+    userData.password_hash = hashedPassword; // Use snake_case to match model
+    delete userData.password;
     userData.status = 'active';
     const newUser = await userRepository.create(userData);
     // Role-specific logic (still in service)
@@ -92,14 +98,17 @@ exports.createUser = async (userData, req) => {
     } else if (userData.role === 'user') {
       const { Customer } = require('../models');
       await Customer.create({
-        userId: newUser.id,
-        totalSpent: 0,
-        totalBookings: 0,
-        favoriteServices: []
+        user_id: newUser.id,
+        total_spent: 0,
+        total_bookings: 0,
+        favorite_services: []
       });
     }
-    return serializeUser(newUser, { req });
+    return serializeUser(newUser, { req, avatarFilenameOnly: true });
   } catch (err) {
+    if (err.name && err.name === 'SequelizeValidationError') {
+      throw Object.assign(new Error('Validation error'), { errors: err.errors });
+    }
     throw new Error('Failed to create user: ' + err.message);
   }
 };
@@ -108,6 +117,10 @@ exports.updateUser = async (id, userData, req) => {
   if (!id) throw new Error('User ID is required');
   if (!userData || typeof userData !== 'object') throw new Error('User data is required');
   try {
+    // Handle avatar upload
+    if (req.file) {
+      userData.avatar = req.file.filename;
+    }
     if (userData.password) {
       const salt = await bcrypt.genSalt(10);
       userData.password_hash = await bcrypt.hash(userData.password, salt);
@@ -115,7 +128,7 @@ exports.updateUser = async (id, userData, req) => {
     }
     const [affectedRows, [updatedUser]] = await userRepository.update(id, userData);
     if (!updatedUser) return null;
-    return serializeUser(updatedUser, { req });
+    return serializeUser(updatedUser, { req, avatarFilenameOnly: true });
   } catch (err) {
     if (err.name && err.name === 'SequelizeValidationError') {
       throw Object.assign(new Error('Validation error: ' + err.message), { errors: err.errors });

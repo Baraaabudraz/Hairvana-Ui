@@ -312,19 +312,12 @@ export default function SalonsPage() {
                 <div key={salon.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center space-x-4">
                     {/* Salon Image */}
-                    {imageList.length > 0 ? (
+                    {parseImages(salon.images).length > 0 && (
                       <img
-                        src={imageList[0].startsWith('http')
-                          ? imageList[0]
-                          : `${import.meta.env.VITE_BASE_URL || ''}${imageList[0].startsWith('/uploads') ? imageList[0] : `/uploads${imageList[0]}`}`}
+                        src={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${parseImages(salon.images)[0]}`}
                         alt={salon.name}
-                        className="h-12 w-12 rounded-full object-cover border"
+                        className="h-12 w-12 rounded object-cover mr-4"
                       />
-                    ) : (
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={salon.avatar} alt={salon.name} />
-                        <AvatarFallback>{salon.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                      </Avatar>
                     )}
                     <div>
                       <h3 className="font-semibold text-gray-900">{salon.name}</h3>

@@ -27,6 +27,9 @@ exports.createUser = async (req, res, next) => {
     const result = await userService.createUser(req.body, req);
     res.status(201).json(result);
   } catch (error) {
+    if (error.errors) {
+      return res.status(422).json({ message: error.message, errors: error.errors });
+    }
     next(error);
   }
 };

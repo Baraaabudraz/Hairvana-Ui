@@ -523,7 +523,10 @@ export default function UsersPage() {
                   <div className="flex items-center space-x-4">
                     <div className="relative">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarImage
+                          src={user.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/avatar/${user.avatar}` : undefined}
+                          alt={user.name}
+                        />
                         <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                       </Avatar>
                       <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1">

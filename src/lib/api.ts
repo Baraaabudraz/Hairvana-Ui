@@ -2,11 +2,15 @@ const BASE_API_URL = import.meta.env.VITE_BASE_API_URL;
 
 export async function apiFetch(url: string, options?: RequestInit) {
   const token = localStorage.getItem('token');
-  const headers = {
-    'Content-Type': 'application/json',
+  let headers: any = {
     ...(token && { 'Authorization': `Bearer ${token}` }),
     ...options?.headers,
   };
+
+  // If body is FormData, do not set Content-Type (browser will set it)
+  if (!(options?.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   // Prepend BASE_API_URL if url is relative (doesn't start with http)
   const fullUrl = url.startsWith('http') ? url : (url.startsWith(BASE_API_URL) ? url : `${BASE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`);

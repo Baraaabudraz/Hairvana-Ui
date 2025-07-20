@@ -49,10 +49,16 @@ export async function createUser(userData: any) {
 
 export async function updateUser(id: string, userData: any) {
   try {
-    const response = await apiFetch(`/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(userData),
-    });
+    let options: any = { method: 'PUT' };
+    if (userData instanceof FormData) {
+      options.body = userData;
+      // Do not set Content-Type, browser will set it for FormData
+      options.headers = {};
+    } else {
+      options.body = JSON.stringify(userData);
+      options.headers = { 'Content-Type': 'application/json' };
+    }
+    const response = await apiFetch(`/users/${id}`, options);
     return response;
   } catch (error: any) {
     // If the error is a 422 Unprocessable Entity, show validation messages

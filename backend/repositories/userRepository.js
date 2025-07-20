@@ -9,6 +9,7 @@ exports.findAll = async (query = {}) => {
       { model: Customer, as: 'customer' },
       { model: Salon, as: 'salons' }
     ],
+    order: [['createdAt', 'DESC']], // Sort by latest users first
     limit,
     offset
   });

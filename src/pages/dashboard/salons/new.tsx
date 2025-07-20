@@ -174,61 +174,42 @@ export default function NewSalonPage() {
       // Format address
       const fullAddress = `${data.address}, ${data.city}, ${data.state} ${data.zipCode}`;
 
-      // 1. Upload images if any are selected
-      // Only store relative paths for images
-      let imageUrls: string[] = [];
-      if (selectedFiles.length > 0) {
-        const token = localStorage.getItem('token');
-        for (const file of selectedFiles) {
-          const formData = new FormData();
-          formData.append('image', file);
-          const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/salons/upload-image`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          });
-          const result = await response.json();
-          if (result.url) {
-            try {
-              const url = new URL(result.url);
-              if (url.pathname.startsWith('/uploads/salons/')) imageUrls.push(url.pathname);
-              else imageUrls.push(url.pathname);
-            } catch {
-              imageUrls.push(result.url);
-            }
-          }
-        }
-      }
-      const salonData = {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        address: data.address, // street address only
-        city: data.city,
-        state: data.state,
-        zipCode: data.zipCode,
-        website: data.website || null,
-        description: data.description,
-        owner_id: data.owner_id,
-        owner_name: selectedOwner.name,
-        owner_email: selectedOwner.email,
-        business_license: data.businessLicense,
-        tax_id: data.taxId,
-        services: selectedServices,
-        hours: formattedHours,
-        images: imageUrls,
-        status: 'pending'
-      };
-
-      await createSalon(salonData);
-
+      // Build FormData for all fields and images
+      const formData = new FormData();
+      formData.append('name', data.name);
+      formData.append('email', data.email);
+      formData.append('phone', data.phone);
+      formData.append('address', data.address);
+      formData.append('city', data.city);
+      formData.append('state', data.state);
+      formData.append('zipCode', data.zipCode);
+      formData.append('website', data.website || '');
+      formData.append('description', data.description);
+      formData.append('owner_id', data.owner_id);
+      formData.append('owner_name', selectedOwner.name);
+      formData.append('owner_email', selectedOwner.email);
+      formData.append('business_license', data.businessLicense);
+      formData.append('tax_id', data.taxId);
+      formData.append('status', 'pending');
+      // Append services
+      selectedServices.forEach(service => formData.append('services', service));
+      // Append hours
+      Object.entries(formattedHours).forEach(([day, value]) => {
+        formData.append(`hours[${day}]`, value);
+      });
+      // Append images
+      selectedFiles.forEach(file => formData.append('images', file));
+      // Send request
+      const token = localStorage.getItem('token');
+      await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/backend/api/salons`, {
+        method: 'POST',
+        body: formData,
+        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+      });
       toast({
         title: 'Salon created successfully',
         description: 'The salon has been submitted for review and approval.',
       });
-
       navigate('/dashboard/salons');
     } catch (error) {
       toast({

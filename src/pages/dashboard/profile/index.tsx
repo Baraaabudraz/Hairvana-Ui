@@ -259,7 +259,7 @@ export default function ProfilePage() {
           <div className="flex items-center gap-6">
             <div className="relative">
               <Avatar className="h-24 w-24">
-                <AvatarImage src={uploadedAvatar || user?.avatar} alt={user?.name} />
+                <AvatarImage src={uploadedAvatar || (user?.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/avatar/${user.avatar}` : undefined)} alt={user?.name} />
                 <AvatarFallback className="text-xl">
                   {user?.name?.split(' ').map(n => n[0]).join('') || 'A'}
                 </AvatarFallback>
@@ -359,7 +359,7 @@ export default function ProfilePage() {
             <form onSubmit={handleSubmitProfile(onSubmitProfile)} className="space-y-4">
               <div className="flex items-center gap-4 mb-6">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={uploadedAvatar || user?.avatar} alt={user?.name} />
+                  <AvatarImage src={uploadedAvatar || (user?.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/avatar/${user.avatar}` : undefined)} alt={user?.name} />
                   <AvatarFallback className="text-lg">
                     {user?.name?.split(' ').map(n => n[0]).join('') || 'A'}
                   </AvatarFallback>

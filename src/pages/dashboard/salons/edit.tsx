@@ -259,68 +259,43 @@ export default function EditSalonPage() {
       // Format address
       const fullAddress = `${data.address}, ${data.city}, ${data.state} ${data.zipCode}`;
 
-      // 1. Upload new images if any are selected
-      // Only store relative paths for images
-      let imageUrls: string[] = uploadedImages.map(img => {
-        try {
-          const url = new URL(img);
-          // If the path starts with /uploads/salons, use that as the relative path
-          if (url.pathname.startsWith('/uploads/salons/')) return url.pathname;
-          // Otherwise, fallback to the full path
-          return url.pathname;
-        } catch {
-          // If not a valid URL, return as is (for already relative paths)
-          return img;
-        }
+      // Build FormData for all fields and images
+      const formData = new FormData();
+      formData.append('name', data.name);
+      formData.append('email', data.email);
+      formData.append('phone', data.phone);
+      formData.append('address', data.address);
+      formData.append('city', data.city);
+      formData.append('state', data.state);
+      formData.append('zipCode', data.zipCode);
+      formData.append('website', data.website || '');
+      formData.append('description', data.description || '');
+      formData.append('owner_name', data.ownerName || '');
+      formData.append('owner_email', data.ownerEmail || '');
+      formData.append('owner_phone', data.ownerPhone || '');
+      formData.append('business_license', data.businessLicense || '');
+      formData.append('tax_id', data.taxId || '');
+      // Append services
+      selectedServices.forEach(service => formData.append('services', service));
+      // Append hours
+      Object.entries(formattedHours).forEach(([day, value]) => {
+        formData.append(`hours[${day}]`, value);
       });
-      if (selectedFiles.length > 0) {
-        for (const file of selectedFiles) {
-          const formData = new FormData();
-          formData.append('image', file);
-          const token = localStorage.getItem('token');
-          const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/salons/upload-image`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          });
-          const result = await response.json();
-          if (result.url) {
-            try {
-              const url = new URL(result.url);
-              if (url.pathname.startsWith('/uploads/salons/')) imageUrls.push(url.pathname);
-              else imageUrls.push(url.pathname);
-            } catch {
-              imageUrls.push(result.url);
-            }
-          }
-        }
-      }
-      // 2. Use all image URLs in salonData
-      const salonData = {
-        ...data,
-        address: fullAddress,
-        services: selectedServices,
-        hours: formattedHours,
-        images: imageUrls,
-      };
-
+      // Append existing images (filenames)
+      uploadedImages.forEach(img => formData.append('images', img));
+      // Append new images
+      selectedFiles.forEach(file => formData.append('images', file));
+      // Send request
       const token = localStorage.getItem('token');
-      await fetch(`${import.meta.env.VITE_BASE_API_URL}/salons/${params.id}`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/backend/api/salons/${params.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(salonData),
+        body: formData,
+        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
       });
-
       toast({
         title: 'Salon updated successfully',
         description: 'The salon information has been updated.',
       });
-
       navigate(`/dashboard/salons/${params.id}`);
     } catch (error) {
       toast({
@@ -701,10 +676,7 @@ export default function EditSalonPage() {
             {uploadedImages.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {uploadedImages.map((image, index) => {
-                  let src = image;
-                  if (src && !src.startsWith('http')) {
-                    src = src.startsWith('/uploads/salons/') ? src : `/uploads/salons/${src.replace(/^\/+/, '')}`;
-                  }
+                  const src = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${image}`;
                   return (
                     <div key={index} className="relative">
                       <img

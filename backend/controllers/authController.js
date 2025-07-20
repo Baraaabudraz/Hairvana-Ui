@@ -2,14 +2,15 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User, SalonOwner, Customer } = require('../models');
 const authService = require('../services/authService');
-const { validateLogin, validateRegister, validateChangePassword } = require('../validation/authValidation');
+// Remove destructuring for validateLogin, validateRegister, validateChangePassword
+// const { validateLogin, validateRegister, validateChangePassword } = require('../validation/authValidation');
 // Placeholder for future Supabase client usage
 // const supabase = require('../lib/supabaseClient');
 
 // Login
 exports.login = async (req, res, next) => {
   try {
-    validateLogin(req.body);
+    // Validation handled by middleware
     const { user, token } = await authService.login(req.body);
     res.json({ user, token });
   } catch (error) {
@@ -20,7 +21,7 @@ exports.login = async (req, res, next) => {
 // Register
 exports.register = async (req, res, next) => {
   try {
-    validateRegister(req.body);
+    // Validation handled by middleware
     const { user, token } = await authService.register(req.body);
     res.status(201).json({ message: 'User registered successfully', user, token });
   } catch (error) {
@@ -52,7 +53,7 @@ exports.getCurrentUser = async (req, res, next) => {
 // Change password
 exports.changePassword = async (req, res, next) => {
   try {
-    validateChangePassword(req.body);
+    // Validation handled by middleware
     await authService.changePassword(req.user.userId, req.body);
     res.json({ message: 'Password updated successfully' });
   } catch (error) {

@@ -378,7 +378,7 @@ export default function SalonDetailsPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={salon.images?.[0]} alt={salon.name} />
+                <AvatarImage src={salon.images?.[0] ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${salon.images[0]}` : undefined} alt={salon.name} />
                 <AvatarFallback className="text-lg">
                   {salon.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
@@ -671,22 +671,15 @@ export default function SalonDetailsPage() {
             <CardTitle>Salon Images</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {(salon.images || []).map((image, index) => {
-                let src = image;
-                if (src && !src.startsWith('http')) {
-                  src = src.startsWith('/uploads/salons/') ? src : `/uploads/salons/${src.replace(/^\/+/, '')}`;
-                }
-                return (
-                  <div key={index} className="aspect-square rounded-lg overflow-hidden">
-                    <img
-                      src={src}
-                      alt={`${salon.name} image ${index + 1}`}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                    />
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
+              {salon.images.map((image, idx) => (
+                <img
+                  key={idx}
+                  src={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${image}`}
+                  alt={`Salon image ${idx + 1}`}
+                  className="w-full h-24 object-cover rounded-lg"
+                />
+              ))}
             </div>
           </CardContent>
         </Card>

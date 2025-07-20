@@ -1,50 +1,14 @@
 const express = require('express');
-const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const { createUploadMiddleware, getFileInfo, FILE_TYPE_MAP } = require('../helpers/uploadHelper');
 
 const router = express.Router();
 
-// Ensure upload directory exists
+// Directory for salon images
 const uploadDir = path.join(__dirname, '../public/uploads/salons');
-console.log('Salon image upload directory:', uploadDir); // DEBUG: Log upload directory
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const allowedTypes = Object.keys(FILE_TYPE_MAP).filter(type => type.startsWith('image/'));
+const upload = createUploadMiddleware({ uploadDir, maxSize: 10 * 1024 * 1024, allowedTypes });
 
-// File filter for images only
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif/;
-  const ext = path.extname(file.originalname).toLowerCase();
-  const mime = file.mimetype;
-  if (allowedTypes.test(ext) && allowedTypes.test(mime)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only image files are allowed (jpeg, jpg, png, gif)'));
-  }
-};
-
-// Configure multer
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const name = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    cb(null, name);
-  }
-});
-const upload = multer({ 
-  storage,
-  fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB max
-});
-
-// POST /backend/api/salons/upload-image
-router.post('/upload-image', upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  // DEBUG: Log uploaded file path
-  console.log('Uploaded file:', req.file.path);
-  // Return the full public URL for the uploaded image
-  const url = `${req.protocol}://${req.get('host')}/uploads/salons/${req.file.filename}`;
-  res.json({ url });
-});
+// Remove the /upload-image endpoint for salons
 
 module.exports = router; 

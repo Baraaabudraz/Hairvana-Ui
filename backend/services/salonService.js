@@ -22,16 +22,42 @@ exports.getSalonById = async (id, req) => {
   return serializeSalon({ ...salon.toJSON(), revenue, bookings, rating }, { req });
 };
 
-exports.createSalon = async (data, user, req) => {
-  const address = formatAddress(data);
-  const location = formatLocation(data);
-  const salonData = { ...data, address, location, ownerId: user.userId };
-  delete salonData.city; delete salonData.state; delete salonData.zipCode;
+exports.createSalon = async (req) => {
+  const salonData = req.body;
+  // Handle image uploads
+  let images = [];
+  if (req.files && req.files.length > 0) {
+    images = req.files.map(f => f.filename);
+  }
+  // Handle existing images from req.body (from form)
+  if (req.body.images) {
+    if (Array.isArray(req.body.images)) {
+      images = images.concat(req.body.images);
+    } else if (typeof req.body.images === 'string') {
+      images = images.concat([req.body.images]);
+    }
+  }
+  salonData.images = images;
+  const address = formatAddress(salonData);
+  const location = formatLocation(salonData);
   const newSalon = await salonRepository.create(salonData);
   return serializeSalon(newSalon, { req });
 };
 
 exports.updateSalon = async (id, data, req) => {
+  // Handle image uploads and existing images
+  let images = [];
+  if (req.files && req.files.length > 0) {
+    images = req.files.map(f => f.filename);
+  }
+  if (req.body.images) {
+    if (Array.isArray(req.body.images)) {
+      images = images.concat(req.body.images);
+    } else if (typeof req.body.images === 'string') {
+      images = images.concat([req.body.images]);
+    }
+  }
+  data.images = images;
   const updatedSalon = await salonRepository.update(id, data);
   return updatedSalon ? serializeSalon(updatedSalon, { req }) : null;
 };

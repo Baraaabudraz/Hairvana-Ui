@@ -35,7 +35,7 @@ exports.getSalonById = async (req, res, next) => {
 // Create a new salon
 exports.createSalon = async (req, res, next) => {
   try {
-    const salon = await salonService.createSalon(req.body, req.user, req);
+    const salon = await salonService.createSalon(req);
     res.status(201).json(salon);
   } catch (error) {
     next(error);

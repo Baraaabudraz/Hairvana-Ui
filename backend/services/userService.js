@@ -2,6 +2,8 @@ const bcrypt = require('bcryptjs');
 const userRepository = require('../repositories/userRepository');
 const { serializeUser } = require('../serializers/userSerializer');
 const { getFileInfo } = require('../helpers/uploadHelper');
+const fs = require('fs');
+const path = require('path');
 
 exports.getAllUsers = async (query, req) => {
   try {
@@ -117,9 +119,16 @@ exports.updateUser = async (id, userData, req) => {
   if (!id) throw new Error('User ID is required');
   if (!userData || typeof userData !== 'object') throw new Error('User data is required');
   try {
+    // Get the old user before updating
+    const oldUser = await userRepository.findById(id);
     // Handle avatar upload
     if (req.file) {
       userData.avatar = req.file.filename;
+      // Delete old avatar if changed
+      if (oldUser && oldUser.avatar && oldUser.avatar !== userData.avatar) {
+        const avatarPath = path.join(__dirname, '../public/uploads/avatars', oldUser.avatar);
+        fs.unlink(avatarPath, (err) => { /* ignore error if file doesn't exist */ });
+      }
     }
     if (userData.password) {
       const salt = await bcrypt.genSalt(10);
@@ -140,8 +149,16 @@ exports.updateUser = async (id, userData, req) => {
 exports.deleteUser = async (id) => {
   if (!id) throw new Error('User ID is required');
   try {
+    // Get the user before deleting
+    const user = await userRepository.findById(id);
+    // Delete the user
     const deleted = await userRepository.delete(id);
     if (!deleted) return null;
+    // Delete avatar file if it exists
+    if (user && user.avatar) {
+      const avatarPath = path.join(__dirname, '../public/uploads/avatars', user.avatar);
+      fs.unlink(avatarPath, (err) => { /* ignore error if file doesn't exist */ });
+    }
     return { message: 'User deleted successfully' };
   } catch (err) {
     throw new Error('Failed to delete user: ' + err.message);

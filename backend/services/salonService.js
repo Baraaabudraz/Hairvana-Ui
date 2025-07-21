@@ -1,6 +1,8 @@
 const salonRepository = require('../repositories/salonRepository');
 const { formatAddress, formatLocation } = require('../helpers/formatHelper');
 const { serializeSalon } = require('../serializers/salonSerializer');
+const fs = require('fs');
+const path = require('path');
 
 exports.getAllSalons = async (query, req) => {
   const { rows, count } = await salonRepository.findAll(query);
@@ -45,6 +47,8 @@ exports.createSalon = async (req) => {
 };
 
 exports.updateSalon = async (id, data, req) => {
+  // Get the old salon before updating
+  const oldSalon = await salonRepository.findById(id);
   // Handle image uploads and existing images
   let images = [];
   if (req.files && req.files.length > 0) {
@@ -57,13 +61,34 @@ exports.updateSalon = async (id, data, req) => {
       images = images.concat([req.body.images]);
     }
   }
+  // Delete images that are no longer referenced
+  if (oldSalon && Array.isArray(oldSalon.images)) {
+    oldSalon.images.forEach(img => {
+      if (!images.includes(img)) {
+        const imgPath = path.join(__dirname, '../public/uploads/salons', img);
+        fs.unlink(imgPath, (err) => { /* ignore error if file doesn't exist */ });
+      }
+    });
+  }
   data.images = images;
   const updatedSalon = await salonRepository.update(id, data);
   return updatedSalon ? serializeSalon(updatedSalon, { req }) : null;
 };
 
 exports.deleteSalon = async (id) => {
-  return salonRepository.delete(id);
+  // Get the salon before deleting
+  const salon = await salonRepository.findById(id);
+  // Delete the salon
+  const deleted = await salonRepository.delete(id);
+  if (!deleted) return null;
+  // Delete all images from disk
+  if (salon && Array.isArray(salon.images)) {
+    salon.images.forEach(img => {
+      const imgPath = path.join(__dirname, '../public/uploads/salons', img);
+      fs.unlink(imgPath, (err) => { /* ignore error if file doesn't exist */ });
+    });
+  }
+  return { message: 'Salon deleted successfully' };
 };
 
 exports.updateSalonStatus = async (id, status, req) => {

@@ -49,16 +49,28 @@ export async function createUser(userData: any) {
 
 export async function updateUser(id: string, userData: any) {
   try {
-    let options: any = { method: 'PUT' };
+    let formData = new FormData();
+    
+    // If userData is already FormData, use it directly
     if (userData instanceof FormData) {
-      options.body = userData;
-      // Do not set Content-Type, browser will set it for FormData
-      options.headers = {};
+      formData = userData;
     } else {
-      options.body = JSON.stringify(userData);
-      options.headers = { 'Content-Type': 'application/json' };
+      // Convert userData object to FormData
+      Object.keys(userData).forEach(key => {
+        if (key === 'avatar' && userData[key] instanceof File) {
+          formData.append('avatar', userData[key]);
+        } else if (userData[key] !== undefined && userData[key] !== null) {
+          formData.append(key, userData[key].toString());
+        }
+      });
     }
-    const response = await apiFetch(`/users/${id}`, options);
+
+    const response = await apiFetch(`/users/${id}`, {
+      method: 'PUT',
+      body: formData,
+      // Don't set Content-Type - browser will set it automatically with boundary
+      headers: {},
+    });
     return response;
   } catch (error: any) {
     // If the error is a 422 Unprocessable Entity, show validation messages

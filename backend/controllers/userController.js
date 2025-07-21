@@ -37,7 +37,13 @@ exports.createUser = async (req, res, next) => {
 // Update a user
 exports.updateUser = async (req, res, next) => {
   try {
-    const result = await userService.updateUser(req.params.id, req.body, req);
+    // Combine body data with file info if present
+    const userData = { ...req.body };
+    if (req.file) {
+      userData.avatar = req.file.filename;
+    }
+    
+    const result = await userService.updateUser(req.params.id, userData, req);
     if (!result) return res.status(404).json({ message: 'User not found' });
     res.json(result);
   } catch (error) {

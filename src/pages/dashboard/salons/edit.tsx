@@ -246,58 +246,50 @@ export default function EditSalonPage() {
   const onSubmit = async (data: SalonForm) => {
     setIsSubmitting(true);
     try {
-      // Format hours for API
-      const formattedHours: Record<string, string> = {};
-      Object.entries(hours).forEach(([day, timeData]) => {
-        if (timeData.closed) {
-          formattedHours[day] = 'Closed';
-        } else {
-          formattedHours[day] = `${convertTo12Hour(timeData.open)} - ${convertTo12Hour(timeData.close)}`;
+      // Create FormData for all fields and images
+      const formData = new FormData();
+      
+      // Add form fields
+      Object.keys(data).forEach(key => {
+        if (data[key as keyof SalonForm] !== undefined && data[key as keyof SalonForm] !== null) {
+          formData.append(key, data[key as keyof SalonForm].toString());
         }
       });
 
-      // Format address
-      const fullAddress = `${data.address}, ${data.city}, ${data.state} ${data.zipCode}`;
+      // Add services
+      selectedServices.forEach(service => {
+        formData.append('services[]', service);
+      });
 
-      // Build FormData for all fields and images
-      const formData = new FormData();
-      formData.append('name', data.name);
-      formData.append('email', data.email);
-      formData.append('phone', data.phone);
-      formData.append('address', data.address);
-      formData.append('city', data.city);
-      formData.append('state', data.state);
-      formData.append('zipCode', data.zipCode);
-      formData.append('website', data.website || '');
-      formData.append('description', data.description || '');
-      formData.append('owner_name', data.ownerName || '');
-      formData.append('owner_email', data.ownerEmail || '');
-      formData.append('owner_phone', data.ownerPhone || '');
-      formData.append('business_license', data.businessLicense || '');
-      formData.append('tax_id', data.taxId || '');
-      // Append services
-      selectedServices.forEach(service => formData.append('services', service));
-      // Append hours
-      Object.entries(formattedHours).forEach(([day, value]) => {
-        formData.append(`hours[${day}]`, value);
+      // Add hours
+      Object.entries(hours).forEach(([day, timeData]) => {
+        if (timeData.closed) {
+          formData.append(`hours[${day}]`, 'Closed');
+        } else {
+          formData.append(`hours[${day}]`, `${convertTo12Hour(timeData.open)} - ${convertTo12Hour(timeData.close)}`);
+        }
       });
-      // Append existing images (filenames)
-      uploadedImages.forEach(img => formData.append('images', img));
-      // Append new images
-      selectedFiles.forEach(file => formData.append('images', file));
+
+      // Add existing images
+      uploadedImages.forEach(img => {
+        formData.append('existingImages', img);
+      });
+
+      // Add new images
+      selectedFiles.forEach(file => {
+        formData.append('images', file);
+      });
+
       // Send request
-      const token = localStorage.getItem('token');
-      await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/backend/api/salons/${params.id}`, {
-        method: 'PUT',
-        body: formData,
-        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
-      });
+      await updateSalon(params.id as string, formData);
+      
       toast({
         title: 'Salon updated successfully',
         description: 'The salon information has been updated.',
       });
       navigate(`/dashboard/salons/${params.id}`);
     } catch (error) {
+      console.error('Error updating salon:', error);
       toast({
         title: 'Error updating salon',
         description: 'Please try again later.',

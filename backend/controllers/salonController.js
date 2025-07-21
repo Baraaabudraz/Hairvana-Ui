@@ -45,7 +45,23 @@ exports.createSalon = async (req, res, next) => {
 // Update a salon
 exports.updateSalon = async (req, res, next) => {
   try {
-    const salon = await salonService.updateSalon(req.params.id, req.body, req);
+    // Combine body data with file info if present
+    const salonData = { ...req.body };
+    
+    // Handle multiple images
+    if (req.files && req.files.length > 0) {
+      salonData.images = req.files.map(file => file.filename);
+    }
+    
+    // Handle existing images
+    if (req.body.existingImages) {
+      const existingImages = Array.isArray(req.body.existingImages) 
+        ? req.body.existingImages 
+        : [req.body.existingImages];
+      salonData.images = [...(salonData.images || []), ...existingImages];
+    }
+    
+    const salon = await salonService.updateSalon(req.params.id, salonData, req);
     if (!salon) return res.status(404).json({ message: 'Salon not found' });
     res.json(salon);
   } catch (error) {

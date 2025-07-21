@@ -40,9 +40,35 @@ export async function createSalon(salonData: any) {
 
 export async function updateSalon(id: string, salonData: any) {
   try {
+    let formData: FormData;
+    
+    // If salonData is already FormData, use it directly
+    if (salonData instanceof FormData) {
+      formData = salonData;
+    } else {
+      // Convert salonData object to FormData
+      formData = new FormData();
+      Object.keys(salonData).forEach(key => {
+        if (key === 'images' && Array.isArray(salonData[key])) {
+          // Handle multiple images
+          salonData[key].forEach((image: File | string) => {
+            if (image instanceof File) {
+              formData.append('images', image);
+            } else {
+              formData.append('existingImages', image);
+            }
+          });
+        } else if (salonData[key] !== undefined && salonData[key] !== null) {
+          formData.append(key, salonData[key].toString());
+        }
+      });
+    }
+
     return await apiFetch(`/salons/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(salonData),
+      body: formData,
+      // Don't set Content-Type - browser will set it automatically with boundary
+      headers: {},
     });
   } catch (error) {
     console.error(`Error updating salon with ID ${id}:`, error);

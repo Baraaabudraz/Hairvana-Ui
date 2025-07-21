@@ -243,7 +243,22 @@ export default function EditUserPage() {
     if (!user) return;
     try {
       setSaving(true);
-      await updateUser(user.id, data);
+      
+      // Create FormData to include the avatar file
+      const formData = new FormData();
+      
+      // Add form fields
+      Object.keys(data).forEach(key => {
+        formData.append(key, data[key as keyof UserForm].toString());
+      });
+      
+      // Add avatar file if one was selected
+      const avatarInput = document.getElementById('avatar') as HTMLInputElement;
+      if (avatarInput && avatarInput.files && avatarInput.files[0]) {
+        formData.append('avatar', avatarInput.files[0]);
+      }
+      
+      await updateUser(user.id, formData);
       toast({
         title: 'Success',
         description: 'User updated successfully.',

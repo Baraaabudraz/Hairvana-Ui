@@ -80,7 +80,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSONB,
       defaultValue: {}
     },
-    images: {
+    avatar: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    gallery: {
       type: DataTypes.ARRAY(DataTypes.STRING),
       allowNull: true
     }

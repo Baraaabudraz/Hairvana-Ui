@@ -307,18 +307,21 @@ export default function SalonsPage() {
         <CardContent>
           <div className="space-y-4">
             {salons.map((salon) => {
-              const imageList = parseImages(salon.images);
               return (
                 <div key={salon.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center space-x-4">
                     {/* Salon Image */}
-                    {parseImages(salon.images).length > 0 && (
-                      <img
-                        src={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${parseImages(salon.images)[0]}`}
+                    <Avatar className="h-12 w-12 mr-4">
+                      <AvatarImage
+                        src={
+                          salon.avatar
+                            ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${salon.avatar}`
+                            : '/default-salon.png'
+                        }
                         alt={salon.name}
-                        className="h-12 w-12 rounded object-cover mr-4"
                       />
-                    )}
+                      <AvatarFallback>{salon.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    </Avatar>
                     <div>
                       <h3 className="font-semibold text-gray-900">{salon.name}</h3>
                       <p className="text-sm text-gray-600">{salon.location}</p>

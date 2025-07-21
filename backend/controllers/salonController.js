@@ -35,7 +35,19 @@ exports.getSalonById = async (req, res, next) => {
 // Create a new salon
 exports.createSalon = async (req, res, next) => {
   try {
-    const salon = await salonService.createSalon(req);
+    const salonData = { ...req.body };
+
+    // Handle avatar upload
+    if (req.files && req.files['avatar'] && req.files['avatar'][0]) {
+      salonData.avatar = req.files['avatar'][0].filename;
+    }
+
+    // Handle gallery upload
+    if (req.files && req.files['gallery']) {
+      salonData.gallery = req.files['gallery'].map(file => file.filename);
+    }
+
+    const salon = await salonService.createSalon({ ...req, body: salonData });
     res.status(201).json(salon);
   } catch (error) {
     next(error);
@@ -47,20 +59,17 @@ exports.updateSalon = async (req, res, next) => {
   try {
     // Combine body data with file info if present
     const salonData = { ...req.body };
-    
-    // Handle multiple images
-    if (req.files && req.files.length > 0) {
-      salonData.images = req.files.map(file => file.filename);
+
+    // Handle avatar upload
+    if (req.files && req.files['avatar'] && req.files['avatar'][0]) {
+      salonData.avatar = req.files['avatar'][0].filename;
     }
-    
-    // Handle existing images
-    if (req.body.existingImages) {
-      const existingImages = Array.isArray(req.body.existingImages) 
-        ? req.body.existingImages 
-        : [req.body.existingImages];
-      salonData.images = [...(salonData.images || []), ...existingImages];
+
+    // Handle gallery upload
+    if (req.files && req.files['gallery']) {
+      salonData.gallery = req.files['gallery'].map(file => file.filename);
     }
-    
+
     const salon = await salonService.updateSalon(req.params.id, salonData, req);
     if (!salon) return res.status(404).json({ message: 'Salon not found' });
     res.json(salon);

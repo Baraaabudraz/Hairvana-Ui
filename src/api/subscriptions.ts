@@ -6,6 +6,8 @@ export interface SubscriptionParams {
   ownerId?: string;
   search?: string;
   includePlans?: boolean;
+  page?: number;
+  limit?: number;
 }
 
 export async function fetchSubscriptions(params: SubscriptionParams = {}) {

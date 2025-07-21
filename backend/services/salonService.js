@@ -27,19 +27,17 @@ exports.getSalonById = async (id, req) => {
 exports.createSalon = async (req) => {
   const salonData = req.body;
   // Handle image uploads
-  let images = [];
-  if (req.files && req.files.length > 0) {
-    images = req.files.map(f => f.filename);
+  let avatar = null;
+  let gallery = [];
+  if (req.files && req.files['avatar'] && req.files['avatar'][0]) {
+    avatar = req.files['avatar'][0].filename;
   }
-  // Handle existing images from req.body (from form)
-  if (req.body.images) {
-    if (Array.isArray(req.body.images)) {
-      images = images.concat(req.body.images);
-    } else if (typeof req.body.images === 'string') {
-      images = images.concat([req.body.images]);
-    }
+  if (req.files && req.files['gallery']) {
+    gallery = req.files['gallery'].map(f => f.filename);
   }
-  salonData.images = images;
+  // Do NOT merge with req.body.gallery for creation
+  salonData.avatar = avatar;
+  salonData.gallery = gallery;
   const address = formatAddress(salonData);
   const location = formatLocation(salonData);
   const newSalon = await salonRepository.create(salonData);
@@ -49,28 +47,37 @@ exports.createSalon = async (req) => {
 exports.updateSalon = async (id, data, req) => {
   // Get the old salon before updating
   const oldSalon = await salonRepository.findById(id);
-  // Handle image uploads and existing images
-  let images = [];
-  if (req.files && req.files.length > 0) {
-    images = req.files.map(f => f.filename);
+  // Handle image uploads and existing gallery
+  let avatar = oldSalon ? oldSalon.avatar : null;
+  let gallery = oldSalon && Array.isArray(oldSalon.gallery) ? [...oldSalon.gallery] : [];
+  if (req.files && req.files['avatar'] && req.files['avatar'][0]) {
+    // Delete old avatar if it exists
+    if (avatar) {
+      const oldAvatarPath = path.join(__dirname, '../public/uploads/salons', avatar);
+      fs.unlink(oldAvatarPath, (err) => { /* ignore error if file doesn't exist */ });
+    }
+    avatar = req.files['avatar'][0].filename;
   }
-  if (req.body.images) {
-    if (Array.isArray(req.body.images)) {
-      images = images.concat(req.body.images);
-    } else if (typeof req.body.images === 'string') {
-      images = images.concat([req.body.images]);
+  if (req.files && req.files['gallery']) {
+    gallery = req.files['gallery'].map(f => f.filename);
+  }
+  if (req.body.gallery) {
+    if (Array.isArray(req.body.gallery)) {
+      gallery = gallery.concat(req.body.gallery);
+    } else if (typeof req.body.gallery === 'string') {
+      gallery = gallery.concat([req.body.gallery]);
     }
   }
-  // Delete images that are no longer referenced
-  if (oldSalon && Array.isArray(oldSalon.images)) {
-    oldSalon.images.forEach(img => {
-      if (!images.includes(img)) {
-        const imgPath = path.join(__dirname, '../public/uploads/salons', img);
-        fs.unlink(imgPath, (err) => { /* ignore error if file doesn't exist */ });
-      }
+  // Delete removed gallery images from disk
+  if (oldSalon && Array.isArray(oldSalon.gallery)) {
+    const removedImages = oldSalon.gallery.filter(img => !gallery.includes(img));
+    removedImages.forEach(img => {
+      const imgPath = path.join(__dirname, '../public/uploads/salons', img);
+      fs.unlink(imgPath, (err) => { /* ignore error if file doesn't exist */ });
     });
   }
-  data.images = images;
+  data.avatar = avatar;
+  data.gallery = gallery;
   const updatedSalon = await salonRepository.update(id, data);
   return updatedSalon ? serializeSalon(updatedSalon, { req }) : null;
 };

@@ -111,6 +111,7 @@ interface Subscription {
   usage: Usage;
   paymentMethod: PaymentMethod | null;
   billingHistory: BillingHistory[];
+  salonImage?: string; // Added for new avatar image
 }
 
 interface Plan {
@@ -704,8 +705,8 @@ export default function SubscriptionsPage() {
                   <div className="flex items-center space-x-4">
                     <div className="relative">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2'} alt={subscription.salonName} />
-                        <AvatarFallback>{subscription.salonName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        <AvatarImage src={subscription.salonImage || '/default-salon.png'} alt={subscription.salonName} />
+                        <AvatarFallback>{(subscription.salonName ? subscription.salonName.split(' ').map(n => n[0]).join('') : '?')}</AvatarFallback>
                       </Avatar>
                       <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1">
                         {PlanIcon ? <PlanIcon className="h-3 w-3 text-gray-600" /> : <span className="h-3 w-3">?</span>}

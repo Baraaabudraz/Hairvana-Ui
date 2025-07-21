@@ -61,6 +61,9 @@ export default function NewSalonPage() {
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  // Add state for avatar
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const {
     register,
@@ -198,7 +201,12 @@ export default function NewSalonPage() {
         formData.append(`hours[${day}]`, value);
       });
       // Append images
-      selectedFiles.forEach(file => formData.append('images', file));
+      if (avatarFile) {
+        formData.append('avatar', avatarFile);
+      }
+      selectedFiles.forEach(file => {
+        formData.append('gallery', file);
+      });
       // Send request
       const token = localStorage.getItem('token');
       await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/backend/api/salons`, {
@@ -246,6 +254,44 @@ export default function NewSalonPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Avatar Upload */}
+            <div className="flex flex-col items-center gap-4 mb-6">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                  {avatarPreview && (
+                    <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                  )}
+                </div>
+                {avatarPreview && (
+                  <button
+                    type="button"
+                    onClick={() => { setAvatarFile(null); setAvatarPreview(null); }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+              <Label htmlFor="avatar" className="cursor-pointer">
+                <div className="flex items-center gap-2 text-purple-600 hover:text-purple-700">
+                  <Upload className="h-4 w-4" />
+                  Upload Avatar
+                </div>
+              </Label>
+              <Input
+                id="avatar"
+                type="file"
+                accept="image/*"
+                onChange={e => {
+                  if (e.target.files && e.target.files[0]) {
+                    setAvatarFile(e.target.files[0]);
+                    setAvatarPreview(URL.createObjectURL(e.target.files[0]));
+                  }
+                }}
+                className="hidden"
+              />
+              <p className="text-xs text-gray-500 mt-1">JPG, PNG up to 2MB</p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Salon Name *</Label>
@@ -614,8 +660,8 @@ export default function NewSalonPage() {
               <img
                 key={idx}
                 src={URL.createObjectURL(file)}
-                alt="Preview"
-                style={{ width: 100, height: 100, objectFit: 'cover' }}
+                alt={idx === 0 ? 'Avatar Preview' : 'Gallery Preview'}
+                style={{ width: 100, height: 100, objectFit: 'cover', border: idx === 0 ? '2px solid #6366f1' : undefined }}
               />
             ))}
 
@@ -630,9 +676,11 @@ export default function NewSalonPage() {
                     <div key={index} className="relative">
                       <img
                         src={src}
-                        alt={`Salon image ${index + 1}`}
+                        alt={index === 0 ? 'Avatar' : `Gallery image ${index}`}
                         className="w-full h-24 object-cover rounded-lg"
+                        style={{ border: index === 0 ? '2px solid #6366f1' : undefined }}
                       />
+                      <span className={index === 0 ? 'absolute top-1 left-1 bg-blue-600 text-white text-xs px-2 py-1 rounded' : 'hidden'}>Avatar</span>
                       <button
                         type="button"
                         onClick={() => removeImage(index)}

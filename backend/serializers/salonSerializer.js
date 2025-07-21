@@ -39,9 +39,8 @@ function serializeSalon(salon, options = {}) {
     description: salon.description,
     business_license: salon.business_license,
     tax_id: salon.tax_id,
-    images: Array.isArray(salon.images)
-      ? salon.images.map(img => typeof img === 'string' ? img.split('/').pop() : img)
-      : (salon.images ? [typeof salon.images === 'string' ? salon.images.split('/').pop() : salon.images] : []),
+    avatar: salon.avatar,
+    gallery: Array.isArray(salon.gallery) ? salon.gallery : [],
     created_at: salon.created_at,
     updated_at: salon.updated_at
   };

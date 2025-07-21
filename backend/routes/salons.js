@@ -21,11 +21,11 @@ router.get('/:id', salonController.getSalonById);
 // POST a new salon with validation
 router.post('/',
   authorize('admin', 'super_admin'),
-  upload.array('images', 5), // Accept up to 5 images in the 'images' field
+  upload.fields([
+    { name: 'avatar', maxCount: 1 },
+    { name: 'gallery', maxCount: 5 }
+  ]),
   (req, res, next) => {
-    if (req.body.images && !Array.isArray(req.body.images)) {
-      req.body.images = [req.body.images];
-    }
     next();
   },
   createSalonValidation,
@@ -35,11 +35,11 @@ router.post('/',
 
 // PUT (update) a salon by ID with validation
 router.put('/:id',
-  upload.array('images', 5), // Accept up to 5 images in the 'images' field
+  upload.fields([
+    { name: 'avatar', maxCount: 1 },
+    { name: 'gallery', maxCount: 5 }
+  ]),
   (req, res, next) => {
-    if (req.body.images && !Array.isArray(req.body.images)) {
-      req.body.images = [req.body.images];
-    }
     next();
   },
   updateSalonValidation,

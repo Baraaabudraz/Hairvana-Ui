@@ -11,7 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Upload, X, Plus, Save } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { fetchSalonById, updateSalon, uploadSalonImage } from '@/api/salons';
+import { fetchSalonById, updateSalon } from '@/api/salons';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useRef } from 'react';
 
 const salonSchema = z.object({
   name: z.string().min(2, 'Salon name must be at least 2 characters'),
@@ -87,7 +89,13 @@ export default function EditSalonPage() {
   const [customService, setCustomService] = useState('');
   const [hours, setHours] = useState<Record<string, { open: string; close: string; closed: boolean }>>({});
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [uploadedImages, setUploadedImages] = useState<(string | File)[]>([]);
+  // Add state for avatar
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Add state for full salon data
+  const [salonData, setSalonData] = useState<any>(null);
 
   const {
     register,
@@ -103,14 +111,16 @@ export default function EditSalonPage() {
       try {
         setLoading(true);
         const data = await fetchSalonById(params.id as string);
+        setSalonData(data);
         
         // Parse address into components
+        if (!data || !data.address) return;
         const addressParts = data.address.split(', ');
         const streetAddress = addressParts[0];
         const city = addressParts[1];
-        const stateZip = addressParts[2]?.split(' ');
-        const state = stateZip?.[0];
-        const zipCode = stateZip?.[1];
+        const stateZip = addressParts[2] ? addressParts[2].split(' ') : [];
+        const state = stateZip[0] || '';
+        const zipCode = stateZip[1] || '';
         
         // Populate form with existing data
         reset({
@@ -156,7 +166,7 @@ export default function EditSalonPage() {
         
         setSelectedServices(serviceNames);
         setHours(formattedHours);
-        setUploadedImages(data.images || []);
+        setUploadedImages(data.gallery || []); // Only set once on load
       } catch (error) {
         console.error('Error fetching salon:', error);
         toast({
@@ -172,6 +182,7 @@ export default function EditSalonPage() {
     if (params.id) {
       fetchSalon();
     }
+    // eslint-disable-next-line
   }, [params.id, reset, toast]);
 
   const convertTo24Hour = (time12h: string) => {
@@ -235,11 +246,19 @@ export default function EditSalonPage() {
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      setSelectedFiles(Array.from(files).slice(0, 5 - uploadedImages.length));
+      setUploadedImages(prev => {
+        const existingNames = prev.map(img => typeof img === 'string' ? img : img.name);
+        const newFiles = Array.from(files).filter(f => !existingNames.includes(f.name));
+        return [...prev, ...newFiles];
+      });
     }
   };
 
   const removeImage = (index: number) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveGalleryImage = (index: number) => {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -272,13 +291,17 @@ export default function EditSalonPage() {
 
       // Add existing images
       uploadedImages.forEach(img => {
-        formData.append('existingImages', img);
+        if (typeof img === 'string') {
+          formData.append('existingImages', img);
+        } else {
+          formData.append('gallery', img);
+        }
       });
 
-      // Add new images
-      selectedFiles.forEach(file => {
-        formData.append('images', file);
-      });
+      // Add avatar
+      if (avatarFile) {
+        formData.append('avatar', avatarFile);
+      }
 
       // Send request
       await updateSalon(params.id as string, formData);
@@ -637,6 +660,53 @@ export default function EditSalonPage() {
           </CardContent>
         </Card>
 
+        {/* Salon Avatar */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle>Salon Avatar</CardTitle>
+            <CardDescription>
+              Upload a main image for your salon (avatar)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col items-center mb-8">
+              <Avatar className="h-28 w-28 mb-2">
+                <AvatarImage
+                  src={avatarPreview
+                    ? avatarPreview
+                    : avatarFile
+                      ? URL.createObjectURL(avatarFile)
+                      : salonData?.avatar
+                        ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${salonData.avatar}`
+                        : '/default-salon.png'}
+                  alt="Salon Avatar"
+                />
+                <AvatarFallback>AV</AvatarFallback>
+              </Avatar>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => {
+                  if (e.target.files && e.target.files[0]) {
+                    setAvatarFile(e.target.files[0]);
+                    setAvatarPreview(URL.createObjectURL(e.target.files[0]));
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-2"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-4 w-4 mr-2" /> Edit Salon Avatar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Images */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
@@ -666,37 +736,26 @@ export default function EditSalonPage() {
             </div>
 
             {uploadedImages.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {uploadedImages.map((image, index) => {
-                  const src = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${image}`;
-                  return (
-                    <div key={index} className="relative">
-                      <img
-                        src={src}
-                        alt={`Salon image ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {selectedFiles.length > 0 && (
               <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                {selectedFiles.map((file, idx) => (
-                  <img
-                    key={idx}
-                    src={URL.createObjectURL(file)}
-                    alt="Preview"
-                    style={{ width: 100, height: 100, objectFit: 'cover' }}
-                  />
+                {uploadedImages.map((file, idx) => (
+                  <div key={typeof file === 'string' ? file : file.name} className="relative">
+                    <img
+                      src={
+                        file instanceof File
+                          ? URL.createObjectURL(file)
+                          : `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${file}`
+                      }
+                      alt="Preview"
+                      style={{ width: 100, height: 100, objectFit: 'cover' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveGalleryImage(idx)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}

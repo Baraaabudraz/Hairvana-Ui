@@ -67,6 +67,8 @@ interface Salon {
   business_license?: string;
   tax_id?: string;
   images?: string[];
+  avatar?: string;
+  gallery?: string[];
   created_at?: string;
   updated_at?: string;
 }
@@ -122,7 +124,9 @@ export default function SalonDetailsPage() {
             ...data,
             services: data.services || [],
             hours: data.hours || {},
-            images: data.images || []
+            images: data.images || [],
+            avatar: data.avatar || undefined,
+            gallery: data.gallery || undefined
           };
           console.log('Processed salon data:', salonData);
           setSalon(salonData);
@@ -171,6 +175,11 @@ export default function SalonDetailsPage() {
               images: [
                 'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=800',
                 'https://images.pexels.com/photos/3993450/pexels-photo-3993450.jpeg?auto=compress&cs=tinysrgb&w=800'
+              ],
+              avatar: 'https://via.placeholder.com/150',
+              gallery: [
+                'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=800',
+                'https://images.pexels.com/photos/3993450/pexels-photo-3993450.jpeg?auto=compress&cs=tinysrgb&w=800'
               ]
             },
             '2': {
@@ -210,6 +219,10 @@ export default function SalonDetailsPage() {
               tax_id: '98-7654321',
               images: [
                 'https://images.pexels.com/photos/3993451/pexels-photo-3993451.jpeg?auto=compress&cs=tinysrgb&w=800'
+              ],
+              avatar: 'https://via.placeholder.com/150',
+              gallery: [
+                'https://images.pexels.com/photos/3993451/pexels-photo-3993451.jpeg?auto=compress&cs=tinysrgb&w=800'
               ]
             },
             '3': {
@@ -245,7 +258,10 @@ export default function SalonDetailsPage() {
               owner_email: 'lisa@beautyhaven.com',
               owner_phone: '+1 (555) 567-8901',
               business_license: 'CA456789123',
-              images: []
+              tax_id: '12-3456789',
+              images: [],
+              avatar: 'https://via.placeholder.com/150',
+              gallery: []
             }
           };
           
@@ -378,7 +394,10 @@ export default function SalonDetailsPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={salon.images?.[0] ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${salon.images[0]}` : undefined} alt={salon.name} />
+                <AvatarImage
+                  src={salon.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${salon.avatar}` : '/default-salon.png'}
+                  alt={salon.name}
+                />
                 <AvatarFallback className="text-lg">
                   {salon.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
@@ -665,24 +684,20 @@ export default function SalonDetailsPage() {
       </Card>
 
       {/* Images */}
-      {salon.images && salon.images.length > 0 && (
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle>Salon Images</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
-              {salon.images.map((image, idx) => (
-                <img
-                  key={idx}
-                  src={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${image}`}
-                  alt={`Salon image ${idx + 1}`}
-                  className="w-full h-24 object-cover rounded-lg"
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {salon.gallery && salon.gallery.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold mb-2">Gallery</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {salon.gallery.map((img, idx) => (
+              <img
+                key={idx}
+                src={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${img}`}
+                alt={`Gallery image ${idx + 1}`}
+                className="w-full h-24 object-cover rounded-lg"
+              />
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -62,8 +62,8 @@ module.exports = {
       tax_id: {
         type: Sequelize.TEXT
       },
-      images: {
-        type: Sequelize.ARRAY(Sequelize.TEXT)
+      avatar: {
+        type: Sequelize.STRING
       },
       owner_id: {
         type: Sequelize.UUID,

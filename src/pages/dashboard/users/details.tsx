@@ -299,7 +299,7 @@ export default function UserDetailsPage() {
             <div className="flex items-center gap-6">
               <div className="relative">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarImage src={user.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/avatar/${user.avatar}` : undefined} alt={user.name} />
                   <AvatarFallback className="text-xl">
                     {user.name.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>

@@ -61,6 +61,9 @@ export default function NewSalonPage() {
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  // Add state for avatar
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const {
     register,
@@ -174,51 +177,47 @@ export default function NewSalonPage() {
       // Format address
       const fullAddress = `${data.address}, ${data.city}, ${data.state} ${data.zipCode}`;
 
-      // 1. Upload images if any are selected
-      let imageUrls: string[] = [];
-      if (selectedFiles.length > 0) {
-        const token = localStorage.getItem('token');
-        for (const file of selectedFiles) {
-          const formData = new FormData();
-          formData.append('image', file);
-          const response = await fetch(`${import.meta.env.VITE_BASE_API_URL}/salons/upload-image`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          });
-          const result = await response.json();
-          if (result.url) imageUrls.push(result.url);
-        }
+      // Build FormData for all fields and images
+      const formData = new FormData();
+      formData.append('name', data.name);
+      formData.append('email', data.email);
+      formData.append('phone', data.phone);
+      formData.append('address', data.address);
+      formData.append('city', data.city);
+      formData.append('state', data.state);
+      formData.append('zipCode', data.zipCode);
+      formData.append('website', data.website || '');
+      formData.append('description', data.description);
+      formData.append('owner_id', data.owner_id);
+      formData.append('owner_name', selectedOwner.name);
+      formData.append('owner_email', selectedOwner.email);
+      formData.append('business_license', data.businessLicense);
+      formData.append('tax_id', data.taxId);
+      formData.append('status', 'pending');
+      // Append services
+      selectedServices.forEach(service => formData.append('services', service));
+      // Append hours
+      Object.entries(formattedHours).forEach(([day, value]) => {
+        formData.append(`hours[${day}]`, value);
+      });
+      // Append images
+      if (avatarFile) {
+        formData.append('avatar', avatarFile);
       }
-
-      const salonData = {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        address: fullAddress,
-        location: `${data.city}, ${data.state}`,
-        website: data.website || null,
-        description: data.description,
-        owner_id: data.owner_id,
-        owner_name: selectedOwner.name,
-        owner_email: selectedOwner.email,
-        business_license: data.businessLicense,
-        tax_id: data.taxId,
-        services: selectedServices,
-        hours: formattedHours,
-        images: imageUrls,
-        status: 'pending'
-      };
-
-      await createSalon(salonData);
-
+      selectedFiles.forEach(file => {
+        formData.append('gallery', file);
+      });
+      // Send request
+      const token = localStorage.getItem('token');
+      await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/backend/api/salons`, {
+        method: 'POST',
+        body: formData,
+        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+      });
       toast({
         title: 'Salon created successfully',
         description: 'The salon has been submitted for review and approval.',
       });
-
       navigate('/dashboard/salons');
     } catch (error) {
       toast({
@@ -255,6 +254,44 @@ export default function NewSalonPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Avatar Upload */}
+            <div className="flex flex-col items-center gap-4 mb-6">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                  {avatarPreview && (
+                    <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                  )}
+                </div>
+                {avatarPreview && (
+                  <button
+                    type="button"
+                    onClick={() => { setAvatarFile(null); setAvatarPreview(null); }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+              <Label htmlFor="avatar" className="cursor-pointer">
+                <div className="flex items-center gap-2 text-purple-600 hover:text-purple-700">
+                  <Upload className="h-4 w-4" />
+                  Upload Avatar
+                </div>
+              </Label>
+              <Input
+                id="avatar"
+                type="file"
+                accept="image/*"
+                onChange={e => {
+                  if (e.target.files && e.target.files[0]) {
+                    setAvatarFile(e.target.files[0]);
+                    setAvatarPreview(URL.createObjectURL(e.target.files[0]));
+                  }
+                }}
+                className="hidden"
+              />
+              <p className="text-xs text-gray-500 mt-1">JPG, PNG up to 2MB</p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Salon Name *</Label>
@@ -623,29 +660,37 @@ export default function NewSalonPage() {
               <img
                 key={idx}
                 src={URL.createObjectURL(file)}
-                alt="Preview"
-                style={{ width: 100, height: 100, objectFit: 'cover' }}
+                alt={idx === 0 ? 'Avatar Preview' : 'Gallery Preview'}
+                style={{ width: 100, height: 100, objectFit: 'cover', border: idx === 0 ? '2px solid #6366f1' : undefined }}
               />
             ))}
 
             {uploadedImages.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {uploadedImages.map((image, index) => (
-                  <div key={index} className="relative">
-                    <img
-                      src={image}
-                      alt={`Salon image ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
+                {uploadedImages.map((image, index) => {
+                  let src = image;
+                  if (src && !src.startsWith('http')) {
+                    src = src.startsWith('/uploads/salons/') ? src : `/uploads/salons/${src.replace(/^\/+/, '')}`;
+                  }
+                  return (
+                    <div key={index} className="relative">
+                      <img
+                        src={src}
+                        alt={index === 0 ? 'Avatar' : `Gallery image ${index}`}
+                        className="w-full h-24 object-cover rounded-lg"
+                        style={{ border: index === 0 ? '2px solid #6366f1' : undefined }}
+                      />
+                      <span className={index === 0 ? 'absolute top-1 left-1 bg-blue-600 text-white text-xs px-2 py-1 rounded' : 'hidden'}>Avatar</span>
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </CardContent>

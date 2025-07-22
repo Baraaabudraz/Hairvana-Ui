@@ -1,12 +1,14 @@
 import { apiFetch } from '@/lib/api';
 
-export async function fetchSalons(params: { status?: string; search?: string; ownerId?: string } = {}) {
+export async function fetchSalons(params: { status?: string; search?: string; ownerId?: string; page?: number; limit?: number } = {}) {
   try {
     const queryParams = new URLSearchParams();
     
     if (params.status && params.status !== 'all') queryParams.append('status', params.status);
     if (params.search) queryParams.append('search', params.search);
     if (params.ownerId) queryParams.append('ownerId', params.ownerId);
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
     
     return await apiFetch(`/salons?${queryParams.toString()}`);
   } catch (error) {
@@ -38,9 +40,35 @@ export async function createSalon(salonData: any) {
 
 export async function updateSalon(id: string, salonData: any) {
   try {
+    let formData: FormData;
+    
+    // If salonData is already FormData, use it directly
+    if (salonData instanceof FormData) {
+      formData = salonData;
+    } else {
+      // Convert salonData object to FormData
+      formData = new FormData();
+      Object.keys(salonData).forEach(key => {
+        if (key === 'images' && Array.isArray(salonData[key])) {
+          // Handle multiple images
+          salonData[key].forEach((image: File | string) => {
+            if (image instanceof File) {
+              formData.append('images', image);
+            } else {
+              formData.append('existingImages', image);
+            }
+          });
+        } else if (salonData[key] !== undefined && salonData[key] !== null) {
+          formData.append(key, salonData[key].toString());
+        }
+      });
+    }
+
     return await apiFetch(`/salons/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(salonData),
+      body: formData,
+      // Don't set Content-Type - browser will set it automatically with boundary
+      headers: {},
     });
   } catch (error) {
     console.error(`Error updating salon with ID ${id}:`, error);
@@ -102,22 +130,4 @@ export async function updateSalonStatus(id: string, status: 'active' | 'pending'
     console.error(`Error updating status for salon with ID ${id}:`, error);
     throw error;
   }
-}
-
-export async function uploadSalonImage(file: File) {
-  const formData = new FormData();
-  formData.append('image', file);
-  // Use fetch directly because apiFetch sets Content-Type to application/json, which breaks FormData
-  const BASE_API_URL = import.meta.env.VITE_BASE_API_URL || '';
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${BASE_API_URL}/salons/upload-image`, {
-    method: 'POST',
-    headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
-    body: formData,
-  });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred' }));
-    throw new Error(errorData.error || errorData.message || 'Failed to upload image');
-  }
-  return response.json();
 }

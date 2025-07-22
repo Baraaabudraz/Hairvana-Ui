@@ -8,7 +8,6 @@ const protect = (req, res, next) => {
   if (!token) return res.status(401).json({ error: 'Invalid token format' });
   jwt.verify(token, config.jwtSecret || process.env.JWT_SECRET, (err, decoded) => {
     if (err) return res.status(401).json({ error: 'Invalid token' });
-    console.log('Decoded JWT:', decoded); // Debug log
     req.user = decoded;
     next();
   });
@@ -26,4 +25,14 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { authenticateToken: protect, authorize };
+// Add authenticateOwner middleware
+const authenticateOwner = (req, res, next) => {
+  protect(req, res, function() {
+    if (req.user && req.user.role === 'salon') {
+      return next();
+    }
+    return res.status(403).json({ error: 'Only salon owners can access this endpoint.' });
+  });
+};
+
+module.exports = { authenticateToken: protect, authorize, authenticateOwner };

@@ -63,6 +63,8 @@ import {
   fetchReportById
 } from '@/api/reports';
 import * as LucideIcons from 'lucide-react';
+import { Tabs, TabList, Tab, TabPanel } from 'react-tabs';
+import 'react-tabs/style/react-tabs.css';
 
 interface Report {
   id: string;
@@ -121,6 +123,10 @@ export default function ReportsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'financial' | 'operational' | 'user' | 'salon' | 'custom'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'generating' | 'scheduled' | 'failed'>('all');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate | null>(null);
   const [reportForm, setReportForm] = useState({
@@ -137,17 +143,35 @@ export default function ReportsPage() {
   const [viewingReport, setViewingReport] = useState<any>(null);
   const { toast } = useToast();
   const [reportTemplates, setReportTemplates] = useState<ReportTemplate[]>([]);
+  const [createMode, setCreateMode] = useState<'template' | 'manual'>('template');
+  const [manualForm, setManualForm] = useState({
+    name: '',
+    description: '',
+    sectionTitle: '',
+    sectionData: '',
+    note: '',
+    type: 'analytics',
+    period: 'monthly',
+  });
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
 
   useEffect(() => {
     fetchAll();
-  }, []);
+    // eslint-disable-next-line
+  }, [page, limit, typeFilter, statusFilter, searchTerm]);
+
+  useEffect(() => {
+    if (selectedTemplate) {
+      setSelectedFields(selectedTemplate.fields);
+    }
+  }, [selectedTemplate]);
 
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [templates, reports] = await Promise.all([
+      const [templates, reportData] = await Promise.all([
         fetchReportTemplatesApi(),
-        fetchReportsApi(),
+        fetchReportsApi({ page, limit, status: statusFilter !== 'all' ? statusFilter : undefined, search: searchTerm || undefined }),
       ]);
       setReportTemplates(
         templates.map((tpl: any) => ({
@@ -155,33 +179,15 @@ export default function ReportsPage() {
           icon: LucideIcons[tpl.icon as keyof typeof LucideIcons] || LucideIcons.FileText,
         }))
       );
-      setReports(reports);
-    } catch (error) {
+      setReports(reportData.reports || reportData);
+      setTotalPages(reportData.totalPages || 1);
+      setTotal(reportData.total || (reportData.reports ? reportData.reports.length : (reportData.length || 0)));
+    } catch (error: any) {
       toast({ title: 'Error', description: 'Failed to fetch data', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
-
-  const fetchReports = async () => {
-    setLoading(true);
-    try {
-      const reports = await fetchReportsApi();
-      setReports(reports);
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to fetch reports. Please try again.', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredReports = reports.filter(report => {
-    const matchesSearch = report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         report.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === 'all' || report.type === typeFilter;
-    const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
-    return matchesSearch && matchesType && matchesStatus;
-  });
 
   const handleCreateReport = async () => {
     if (!selectedTemplate) return;
@@ -198,6 +204,7 @@ export default function ReportsPage() {
           format: reportForm.format,
           filters: reportForm.filters,
           schedule: reportForm.schedule,
+          fields: selectedFields, // <-- send selected fields
         }
       };
       await createReportApi(reportData);
@@ -215,8 +222,39 @@ export default function ReportsPage() {
         schedule: 'once',
       });
       fetchAll();
-    } catch (error) {
+    } catch (error: any) {
       toast({ title: 'Error creating report', description: 'Please try again later.', variant: 'destructive' });
+    }
+  };
+
+  const handleManualCreateReport = async () => {
+    let customSectionData = {};
+    if (manualForm.sectionData) {
+      try {
+        customSectionData = JSON.parse(manualForm.sectionData);
+      } catch {
+        customSectionData = { value: manualForm.sectionData };
+      }
+    }
+    try {
+      await createReportApi({
+        ...manualForm,
+        sectionData: customSectionData,
+      });
+      toast({ title: 'Manual report created successfully' });
+      setCreateDialogOpen(false);
+      setManualForm({
+        name: '',
+        description: '',
+        sectionTitle: '',
+        sectionData: '',
+        note: '',
+        type: 'analytics',
+        period: 'monthly',
+      });
+      fetchAll();
+    } catch (error: any) {
+      toast({ title: 'Error creating manual report', description: error.response?.data?.error || error.message, variant: 'destructive' });
     }
   };
 
@@ -322,7 +360,7 @@ export default function ReportsPage() {
           <p className="text-gray-600">Generate, manage, and download comprehensive business reports</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchReports}>
+          <Button variant="outline" onClick={fetchAll}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -337,179 +375,243 @@ export default function ReportsPage() {
               <DialogHeader>
                 <DialogTitle>Create New Report</DialogTitle>
                 <DialogDescription>
-                  Choose a template and configure your report parameters
+                  Choose a template or create a custom report manually
                 </DialogDescription>
               </DialogHeader>
-              
-              {!selectedTemplate ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {reportTemplates.map((template) => {
-                      const Icon = template.icon;
-                      return (
-                        <div
-                          key={template.id}
-                          onClick={() => setSelectedTemplate(template)}
-                          className={`p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-purple-200 hover:bg-purple-50 ${
-                            template.popular ? 'border-blue-200 bg-blue-50' : 'border-gray-200'
-                          }`}
-                        >
-                          {template.popular && (
-                            <Badge className="mb-2 bg-blue-600 text-white">Popular</Badge>
+              <Tabs selectedIndex={createMode === 'template' ? 0 : 1} onSelect={i => setCreateMode(i === 0 ? 'template' : 'manual')} className="w-full">
+                <TabList className="mb-4">
+                  <Tab>From Template</Tab>
+                  <Tab>Manual</Tab>
+                </TabList>
+                <TabPanel>
+                  {!selectedTemplate ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {reportTemplates.map((template) => {
+                          const Icon = template.icon;
+                          return (
+                            <div
+                              key={template.id}
+                              onClick={() => setSelectedTemplate(template)}
+                              className={`p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-purple-200 hover:bg-purple-50 ${
+                                template.popular ? 'border-blue-200 bg-blue-50' : 'border-gray-200'
+                              }`}
+                            >
+                              {template.popular && (
+                                <Badge className="mb-2 bg-blue-600 text-white">Popular</Badge>
+                              )}
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className={`p-2 rounded-lg bg-gradient-to-r ${template.color}`}>
+                                  <Icon className="h-5 w-5 text-white" />
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold text-gray-900">{template.name}</h3>
+                                  <Badge className={typeColors[template.type]}>{template.type}</Badge>
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-3">{template.description}</p>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-gray-700">Includes:</p>
+                                {template.fields.slice(0, 3).map((field) => (
+                                  <p key={field} className="text-xs text-gray-600">• {field}</p>
+                                ))}
+                                {template.fields.length > 3 && (
+                                  <p className="text-xs text-gray-500">+{template.fields.length - 3} more</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg bg-gradient-to-r ${selectedTemplate.color}`}>
+                            <selectedTemplate.icon className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{selectedTemplate.name}</h3>
+                            <p className="text-sm text-gray-600">{selectedTemplate.description}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="reportName">Report Name</Label>
+                            <Input
+                              id="reportName"
+                              placeholder={selectedTemplate.name}
+                              value={reportForm.name}
+                              onChange={(e) => setReportForm(prev => ({ ...prev, name: e.target.value }))}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="reportDescription">Description</Label>
+                            <textarea
+                              id="reportDescription"
+                              rows={3}
+                              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                              placeholder={selectedTemplate.description}
+                              value={reportForm.description}
+                              onChange={(e) => setReportForm(prev => ({ ...prev, description: e.target.value }))}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="dateRange">Date Range</Label>
+                            <Select value={reportForm.dateRange} onValueChange={(value) => setReportForm(prev => ({ ...prev, dateRange: value }))}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="7d">Last 7 days</SelectItem>
+                                <SelectItem value="30d">Last 30 days</SelectItem>
+                                <SelectItem value="90d">Last 90 days</SelectItem>
+                                <SelectItem value="1y">Last year</SelectItem>
+                                <SelectItem value="custom">Custom range</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {reportForm.dateRange === 'custom' && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="startDate">Start Date</Label>
+                                <Input
+                                  id="startDate"
+                                  type="date"
+                                  value={reportForm.startDate}
+                                  onChange={(e) => setReportForm(prev => ({ ...prev, startDate: e.target.value }))}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="endDate">End Date</Label>
+                                <Input
+                                  id="endDate"
+                                  type="date"
+                                  value={reportForm.endDate}
+                                  onChange={(e) => setReportForm(prev => ({ ...prev, endDate: e.target.value }))}
+                                />
+                              </div>
+                            </div>
                           )}
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className={`p-2 rounded-lg bg-gradient-to-r ${template.color}`}>
-                              <Icon className="h-5 w-5 text-white" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold text-gray-900">{template.name}</h3>
-                              <Badge className={typeColors[template.type]}>{template.type}</Badge>
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-3">{template.description}</p>
-                          <div className="space-y-1">
-                            <p className="text-xs font-medium text-gray-700">Includes:</p>
-                            {template.fields.slice(0, 3).map((field) => (
-                              <p key={field} className="text-xs text-gray-600">• {field}</p>
-                            ))}
-                            {template.fields.length > 3 && (
-                              <p className="text-xs text-gray-500">+{template.fields.length - 3} more</p>
-                            )}
-                          </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg bg-gradient-to-r ${selectedTemplate.color}`}>
-                        <selectedTemplate.icon className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{selectedTemplate.name}</h3>
-                        <p className="text-sm text-gray-600">{selectedTemplate.description}</p>
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="reportName">Report Name</Label>
-                        <Input
-                          id="reportName"
-                          placeholder={selectedTemplate.name}
-                          value={reportForm.name}
-                          onChange={(e) => setReportForm(prev => ({ ...prev, name: e.target.value }))}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="reportDescription">Description</Label>
-                        <textarea
-                          id="reportDescription"
-                          rows={3}
-                          className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                          placeholder={selectedTemplate.description}
-                          value={reportForm.description}
-                          onChange={(e) => setReportForm(prev => ({ ...prev, description: e.target.value }))}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="dateRange">Date Range</Label>
-                        <Select value={reportForm.dateRange} onValueChange={(value) => setReportForm(prev => ({ ...prev, dateRange: value }))}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="7d">Last 7 days</SelectItem>
-                            <SelectItem value="30d">Last 30 days</SelectItem>
-                            <SelectItem value="90d">Last 90 days</SelectItem>
-                            <SelectItem value="1y">Last year</SelectItem>
-                            <SelectItem value="custom">Custom range</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {reportForm.dateRange === 'custom' && (
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="startDate">Start Date</Label>
-                            <Input
-                              id="startDate"
-                              type="date"
-                              value={reportForm.startDate}
-                              onChange={(e) => setReportForm(prev => ({ ...prev, startDate: e.target.value }))}
-                            />
+                            <Label htmlFor="format">Export Format</Label>
+                            <Select value={reportForm.format} onValueChange={(value: 'pdf' | 'excel' | 'csv') => setReportForm(prev => ({ ...prev, format: value }))}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pdf">PDF Document</SelectItem>
+                                <SelectItem value="excel">Excel Spreadsheet</SelectItem>
+                                <SelectItem value="csv">CSV File</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
+
                           <div className="space-y-2">
-                            <Label htmlFor="endDate">End Date</Label>
-                            <Input
-                              id="endDate"
-                              type="date"
-                              value={reportForm.endDate}
-                              onChange={(e) => setReportForm(prev => ({ ...prev, endDate: e.target.value }))}
-                            />
+                            <Label htmlFor="schedule">Schedule</Label>
+                            <Select value={reportForm.schedule} onValueChange={(value: 'once' | 'daily' | 'weekly' | 'monthly') => setReportForm(prev => ({ ...prev, schedule: value }))}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="once">Generate once</SelectItem>
+                                <SelectItem value="daily">Daily</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Report Fields</Label>
+                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                              {selectedTemplate.fields.map((field) => (
+                                <div key={field} className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    id={field}
+                                    checked={selectedFields.includes(field)}
+                                    onChange={e => {
+                                      setSelectedFields(prev =>
+                                        e.target.checked ? [...prev, field] : prev.filter(f => f !== field)
+                                      );
+                                    }}
+                                    className="rounded"
+                                  />
+                                  <Label htmlFor={field} className="text-sm">{field}</Label>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      )}
+                      </div>
                     </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="format">Export Format</Label>
-                        <Select value={reportForm.format} onValueChange={(value: 'pdf' | 'excel' | 'csv') => setReportForm(prev => ({ ...prev, format: value }))}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pdf">PDF Document</SelectItem>
-                            <SelectItem value="excel">Excel Spreadsheet</SelectItem>
-                            <SelectItem value="csv">CSV File</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="schedule">Schedule</Label>
-                        <Select value={reportForm.schedule} onValueChange={(value: 'once' | 'daily' | 'weekly' | 'monthly') => setReportForm(prev => ({ ...prev, schedule: value }))}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="once">Generate once</SelectItem>
-                            <SelectItem value="daily">Daily</SelectItem>
-                            <SelectItem value="weekly">Weekly</SelectItem>
-                            <SelectItem value="monthly">Monthly</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Report Fields</Label>
-                        <div className="space-y-2 max-h-32 overflow-y-auto">
-                          {selectedTemplate.fields.map((field) => (
-                            <div key={field} className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                id={field}
-                                defaultChecked
-                                className="rounded"
-                              />
-                              <Label htmlFor={field} className="text-sm">{field}</Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                  )}
+                </TabPanel>
+                <TabPanel>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="manualReportName">Report Title</Label>
+                      <Input
+                        id="manualReportName"
+                        placeholder="Enter report title"
+                        value={manualForm.name}
+                        onChange={e => setManualForm(prev => ({ ...prev, name: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="manualReportDescription">Description</Label>
+                      <textarea
+                        id="manualReportDescription"
+                        rows={2}
+                        className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        placeholder="Enter description"
+                        value={manualForm.description}
+                        onChange={e => setManualForm(prev => ({ ...prev, description: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="manualSectionTitle">Section Title</Label>
+                      <Input
+                        id="manualSectionTitle"
+                        placeholder="Section title (optional)"
+                        value={manualForm.sectionTitle}
+                        onChange={e => setManualForm(prev => ({ ...prev, sectionTitle: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="manualSectionData">Section Data (JSON or text)</Label>
+                      <textarea
+                        id="manualSectionData"
+                        rows={3}
+                        className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        placeholder='Example: {"customMetric": 42}'
+                        value={manualForm.sectionData}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setManualForm(prev => ({ ...prev, sectionData: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="manualNote">Note/Metadata</Label>
+                      <Input
+                        id="manualNote"
+                        placeholder="Optional note or metadata"
+                        value={manualForm.note}
+                        onChange={e => setManualForm(prev => ({ ...prev, note: e.target.value }))}
+                      />
                     </div>
                   </div>
-                </div>
-              )}
-
+                </TabPanel>
+              </Tabs>
               <DialogFooter>
                 <Button variant="outline" onClick={() => {
                   setSelectedTemplate(null);
@@ -517,9 +619,14 @@ export default function ReportsPage() {
                 }}>
                   Cancel
                 </Button>
-                {selectedTemplate && (
+                {createMode === 'template' && selectedTemplate && (
                   <Button onClick={handleCreateReport} className="bg-purple-600 hover:bg-purple-700">
                     Create Report
+                  </Button>
+                )}
+                {createMode === 'manual' && (
+                  <Button onClick={handleManualCreateReport} className="bg-purple-600 hover:bg-purple-700">
+                    Create Manual Report
                   </Button>
                 )}
               </DialogFooter>
@@ -646,7 +753,7 @@ export default function ReportsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredReports.map((report) => {
+            {reports.map((report) => {
               const StatusIcon = statusIcons[report.status];
               return (
                 <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
@@ -738,7 +845,7 @@ export default function ReportsPage() {
             })}
           </div>
 
-          {filteredReports.length === 0 && (
+          {reports.length === 0 && (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No reports found</h3>
@@ -756,6 +863,24 @@ export default function ReportsPage() {
         </CardContent>
       </Card>
 
+      {/* Pagination Controls */}
+      <div className="flex justify-center items-center gap-4 mt-6">
+        <Button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} variant="outline">Previous</Button>
+        <span>Page {page} of {totalPages} ({total} reports)</span>
+        <Button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} variant="outline">Next</Button>
+        <select
+          className="ml-4 border rounded px-2 py-1"
+          value={limit}
+          onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
+        >
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={20}>20</option>
+          <option value={50}>50</option>
+        </select>
+        <span className="ml-2 text-sm text-gray-500">per page</span>
+      </div>
+
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="border-0 shadow-sm">
@@ -763,7 +888,7 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Reports</p>
-                <p className="text-2xl font-bold text-gray-900">{reports.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{total}</p>
               </div>
               <FileText className="h-8 w-8 text-blue-500" />
             </div>

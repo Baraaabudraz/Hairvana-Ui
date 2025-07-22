@@ -1,56 +1,52 @@
 const { ReportTemplate } = require('../models');
+const reportTemplateService = require('../services/reportTemplateService');
 
-// List all report templates
-exports.getAllReportTemplates = async (req, res) => {
+exports.getAllReportTemplates = async (req, res, next) => {
   try {
-    const templates = await ReportTemplate.findAll();
+    const templates = await reportTemplateService.getAllReportTemplates();
     res.json(templates);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch report templates.' });
+    next(error);
   }
 };
 
-// Get a single report template by ID
-exports.getReportTemplateById = async (req, res) => {
+exports.getReportTemplateById = async (req, res, next) => {
   try {
-    const template = await ReportTemplate.findByPk(req.params.id);
+    const template = await reportTemplateService.getReportTemplateById(req.params.id);
     if (!template) return res.status(404).json({ error: 'Not found' });
     res.json(template);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch report template.' });
+    next(error);
   }
 };
 
-// Create a new report template
-exports.createReportTemplate = async (req, res) => {
+exports.createReportTemplate = async (req, res, next) => {
   try {
-    const template = await ReportTemplate.create(req.body);
+    validateReportTemplate(req.body);
+    const template = await reportTemplateService.createReportTemplate(req.body);
     res.status(201).json(template);
   } catch (error) {
-    res.status(400).json({ error: 'Failed to create report template.' });
+    next(error);
   }
 };
 
-// Update a report template
-exports.updateReportTemplate = async (req, res) => {
+exports.updateReportTemplate = async (req, res, next) => {
   try {
-    const template = await ReportTemplate.findByPk(req.params.id);
-    if (!template) return res.status(404).json({ error: 'Not found' });
-    await template.update(req.body);
-    res.json(template);
+    validateReportTemplate(req.body, true);
+    const updated = await reportTemplateService.updateReportTemplate(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ error: 'Not found' });
+    res.json(updated);
   } catch (error) {
-    res.status(400).json({ error: 'Failed to update report template.' });
+    next(error);
   }
 };
 
-// Delete a report template
-exports.deleteReportTemplate = async (req, res) => {
+exports.deleteReportTemplate = async (req, res, next) => {
   try {
-    const template = await ReportTemplate.findByPk(req.params.id);
-    if (!template) return res.status(404).json({ error: 'Not found' });
-    await template.destroy();
+    const deleted = await reportTemplateService.deleteReportTemplate(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Deleted' });
   } catch (error) {
-    res.status(400).json({ error: 'Failed to delete report template.' });
+    next(error);
   }
 }; 

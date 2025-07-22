@@ -139,16 +139,21 @@ export default function UsersPage() {
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
     loadUsers();
-  }, [roleFilter, statusFilter, searchTerm]);
+    // eslint-disable-next-line
+  }, [roleFilter, statusFilter, searchTerm, page, limit]);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const params: any = {};
+      const params: any = { page, limit };
       
       if (roleFilter !== 'all') {
         params.role = roleFilter;
@@ -165,6 +170,8 @@ export default function UsersPage() {
       const data = await fetchUsers(params);
       setUsers(data.users);
       setStats(data.stats);
+      setTotalPages(data.totalPages || 1);
+      setTotal(data.total || 0);
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
@@ -516,7 +523,10 @@ export default function UsersPage() {
                   <div className="flex items-center space-x-4">
                     <div className="relative">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarImage
+                          src={user.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/avatar/${user.avatar}` : undefined}
+                          alt={user.name}
+                        />
                         <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                       </Avatar>
                       <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1">
@@ -617,6 +627,23 @@ export default function UsersPage() {
                 </div>
               );
             })}
+          </div>
+          {/* Pagination Controls */}
+          <div className="flex justify-center items-center gap-4 mt-6">
+            <Button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} variant="outline">Previous</Button>
+            <span>Page {page} of {totalPages} ({total} users)</span>
+            <Button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} variant="outline">Next</Button>
+            <select
+              className="ml-4 border rounded px-2 py-1"
+              value={limit}
+              onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+            <span className="ml-2 text-sm text-gray-500">per page</span>
           </div>
         </CardContent>
       </Card>

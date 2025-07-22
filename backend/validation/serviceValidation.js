@@ -5,7 +5,7 @@ const { commonRules } = require('./index');
  * Validation schema for creating a new service
  */
 const createServiceValidation = [
-  body('salon_id')
+  body('salonId')
     .notEmpty()
     .withMessage('Salon ID is required')
     .isUUID()
@@ -79,7 +79,7 @@ const bulkCreateServicesValidation = [
     .isArray()
     .withMessage('Request body must be an array of services'),
   
-  body('*.salon_id')
+  body('*.salonId')
     .notEmpty()
     .withMessage('Salon ID is required for each service')
     .isUUID()

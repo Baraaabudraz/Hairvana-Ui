@@ -1,5 +1,49 @@
-const { query, param } = require('express-validator');
-const { commonRules } = require('./index');
+const { body, param, query } = require('express-validator');
+const hairstyleService = require('../services/hairstyleService');
+const { Salon } = require('../models');
+
+const createHairstyleValidation = [
+  body('name')
+    .notEmpty().withMessage('Name is required')
+    .custom(async (value, { req }) => {
+      const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
+      if (!salon) throw new Error('Salon not found');
+      const existing = await hairstyleService.findAllBySalon(salon.id);
+      if (existing.some(h => h.name && h.name.toLowerCase() === value.toLowerCase())) {
+        throw new Error('A hairstyle with this name already exists.');
+      }
+      return true;
+    }),
+  body('gender').optional().isString(),
+  body('length').optional().isString(),
+  body('color').optional().isString(),
+  body('tags').optional(),
+  body('description').optional().isString(),
+];
+
+const updateHairstyleValidation = [
+  body('name')
+    .notEmpty().withMessage('Name is required')
+    .custom(async (value, { req }) => {
+      const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
+      if (!salon) throw new Error('Salon not found');
+      const existing = await hairstyleService.findAllBySalon(salon.id);
+      // On update, allow the same name if it's the same record
+      if (req.method === 'PUT' && req.params.id) {
+        const current = existing.find(h => h.id == req.params.id);
+        if (current && current.name.toLowerCase() === value.toLowerCase()) return true;
+      }
+      if (existing.some(h => h.name && h.name.toLowerCase() === value.toLowerCase())) {
+        throw new Error('A hairstyle with this name already exists.');
+      }
+      return true;
+    }),
+  body('gender').optional().isString(),
+  body('length').optional().isString(),
+  body('color').optional().isString(),
+  body('tags').optional(),
+  body('description').optional().isString(),
+];
 
 /**
  * Validation schema for getting hairstyles with filters
@@ -50,6 +94,8 @@ const getHairstyleByIdValidation = [
 ];
 
 module.exports = {
+  createHairstyleValidation,
+  updateHairstyleValidation,
   getHairstylesValidation,
   getHairstyleByIdValidation,
 }; 

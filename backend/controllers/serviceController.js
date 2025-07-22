@@ -1,15 +1,10 @@
-const { Service } = require('../models');
-const { Op } = require('sequelize');
+const serviceService = require('../services/serviceService');
 const { serializeService } = require('../serializers/serviceSerializer');
 
 // Get all services
 exports.getAllServices = async (req, res, next) => {
   try {
-    const { salonId, category } = req.query;
-    const where = {};
-    if (salonId) where.salon_id = salonId;
-    if (category) where.category = category;
-    const services = await Service.findAll({ where });
+    const services = await serviceService.getAllServices(req.query);
     res.json(services.map(serializeService));
   } catch (error) {
     next(error);
@@ -19,8 +14,7 @@ exports.getAllServices = async (req, res, next) => {
 // Get service by ID
 exports.getServiceById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const service = await Service.findOne({ where: { id } });
+    const service = await serviceService.getServiceById(req.params.id);
     if (!service) {
       return res.status(404).json({ message: 'Service not found' });
     }
@@ -33,8 +27,7 @@ exports.getServiceById = async (req, res, next) => {
 // Create a new service
 exports.createService = async (req, res, next) => {
   try {
-    const serviceData = req.body;
-    const newService = await Service.create(serviceData);
+    const newService = await serviceService.createService(req.body);
     res.status(201).json(serializeService(newService));
   } catch (error) {
     next(error);
@@ -44,12 +37,7 @@ exports.createService = async (req, res, next) => {
 // Update a service
 exports.updateService = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const serviceData = req.body;
-    const [affectedRows, [updatedService]] = await Service.update(serviceData, {
-      where: { id },
-      returning: true
-    });
+    const updatedService = await serviceService.updateService(req.params.id, req.body);
     if (!updatedService) {
       return res.status(404).json({ message: 'Service not found' });
     }
@@ -62,8 +50,7 @@ exports.updateService = async (req, res, next) => {
 // Delete a service
 exports.deleteService = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const deleted = await Service.destroy({ where: { id } });
+    const deleted = await serviceService.deleteService(req.params.id);
     if (!deleted) {
       return res.status(404).json({ message: 'Service not found' });
     }
@@ -76,21 +63,7 @@ exports.deleteService = async (req, res, next) => {
 // Get service categories
 exports.getServiceCategories = async (req, res, next) => {
   try {
-    // In a real app, you might have a categories table
-    // For this demo, we'll return a predefined list
-    const categories = [
-      'Haircut',
-      'Hair Color',
-      'Hair Styling',
-      'Hair Treatment',
-      'Beard Trim',
-      'Eyebrow Threading',
-      'Facial',
-      'Manicure',
-      'Pedicure',
-      'Massage'
-    ];
-    
+    const categories = await serviceService.getServiceCategories();
     res.json(categories);
   } catch (error) {
     next(error);

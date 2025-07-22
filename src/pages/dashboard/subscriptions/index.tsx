@@ -111,6 +111,7 @@ interface Subscription {
   usage: Usage;
   paymentMethod: PaymentMethod | null;
   billingHistory: BillingHistory[];
+  salonImage?: string; // Added for new avatar image
 }
 
 interface Plan {
@@ -171,6 +172,10 @@ export default function SubscriptionsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | SubscriptionStatus>('all');
   const [planFilter, setPlanFilter] = useState<'all' | PlanType>('all');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
@@ -210,30 +215,28 @@ export default function SubscriptionsPage() {
 
   useEffect(() => {
     loadSubscriptions();
-  }, [statusFilter, planFilter, searchTerm]);
+    // eslint-disable-next-line
+  }, [statusFilter, planFilter, searchTerm, page, limit]);
 
   const loadSubscriptions = async () => {
     try {
       setLoading(true);
-      const params: SubscriptionParams = {};
-      
+      const params: SubscriptionParams = { page, limit };
       if (statusFilter !== 'all') {
         params.status = statusFilter;
       }
-      
       if (planFilter !== 'all') {
         (params as any).plan = planFilter;
       }
-      
       if (searchTerm) {
         params.search = searchTerm;
       }
-      
       params.includePlans = true;
-      
       const data = await fetchSubscriptions(params);
       setSubscriptions(data.subscriptions);
       setStats(data.stats);
+      setTotalPages(data.totalPages || 1);
+      setTotal(data.total || (data.subscriptions ? data.subscriptions.length : (data.length || 0)));
     } catch (error) {
       console.error('Error loading subscriptions:', error);
       toast({
@@ -245,15 +248,6 @@ export default function SubscriptionsPage() {
       setLoading(false);
     }
   };
-
-  const filteredSubscriptions = subscriptions.filter(subscription => {
-    const matchesSearch = subscription.salonName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         subscription.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         subscription.ownerEmail.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPlan = planFilter === 'all' || subscription.plan === planFilter;
-    const matchesStatus = statusFilter === 'all' || subscription.status === statusFilter;
-    return matchesSearch && matchesPlan && matchesStatus;
-  });
 
   const handleCancelSubscription = async (subscriptionId: string) => {
     try {
@@ -696,7 +690,7 @@ export default function SubscriptionsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredSubscriptions.map((subscription) => {
+            {subscriptions.map((subscription) => {
               const PlanIcon = planIcons[subscription.plan];
               const usage = subscription.usage || {};
               const bookings = usage.bookings ?? 0;
@@ -711,8 +705,8 @@ export default function SubscriptionsPage() {
                   <div className="flex items-center space-x-4">
                     <div className="relative">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2'} alt={subscription.salonName} />
-                        <AvatarFallback>{subscription.salonName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        <AvatarImage src={subscription.salonImage || '/default-salon.png'} alt={subscription.salonName} />
+                        <AvatarFallback>{(subscription.salonName ? subscription.salonName.split(' ').map(n => n[0]).join('') : '?')}</AvatarFallback>
                       </Avatar>
                       <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1">
                         {PlanIcon ? <PlanIcon className="h-3 w-3 text-gray-600" /> : <span className="h-3 w-3">?</span>}
@@ -725,7 +719,11 @@ export default function SubscriptionsPage() {
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-3 w-3 text-gray-400" />
                         <span className="text-xs text-gray-500">
-                          Next billing: {format(new Date(subscription.nextBillingDate), 'MMM dd, yyyy')}
+                          Next billing: {(() => {
+                            if (!subscription.nextBillingDate) return 'N/A';
+                            const date = new Date(subscription.nextBillingDate);
+                            return isNaN(date.getTime()) ? 'N/A' : format(date, 'MMM dd, yyyy');
+                          })()}
                         </span>
                       </div>
                     </div>
@@ -841,6 +839,24 @@ export default function SubscriptionsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pagination Controls */}
+      <div className="flex justify-center items-center gap-4 mt-6">
+        <Button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} variant="outline">Previous</Button>
+        <span>Page {page} of {totalPages} ({total} subscriptions)</span>
+        <Button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} variant="outline">Next</Button>
+        <select
+          className="ml-4 border rounded px-2 py-1"
+          value={limit}
+          onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
+        >
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={20}>20</option>
+          <option value={50}>50</option>
+        </select>
+        <span className="ml-2 text-sm text-gray-500">per page</span>
+      </div>
 
       {/* Cancel Confirmation Dialog */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>

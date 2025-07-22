@@ -2,11 +2,15 @@
 
 function serializeSalon(salon, options = {}) {
   if (!salon) return null;
-  // Helper to build full URL
-  const buildUrl = (img) =>
-    img && !img.startsWith('http')
-      ? `${options.req?.protocol || 'http'}://${options.req?.get ? options.req.get('host') : 'localhost:5000'}${img}`
-      : img;
+  // Helper to build full URL from relative path
+  const buildUrl = (img) => {
+    if (!img) return img;
+    // If already absolute URL, return as is
+    if (img.startsWith('http')) return img;
+    // If starts with '/', treat as relative to server root
+    const base = `${options.req?.protocol || 'http'}://${options.req?.get ? options.req.get('host') : 'localhost:5000'}`;
+    return img.startsWith('/') ? `${base}${img}` : `${base}/uploads/salons/${img}`;
+  };
 
   const salonData = {
     id: salon.id,
@@ -35,9 +39,8 @@ function serializeSalon(salon, options = {}) {
     description: salon.description,
     business_license: salon.business_license,
     tax_id: salon.tax_id,
-    images: Array.isArray(salon.images)
-      ? salon.images.map(buildUrl)
-      : (salon.images ? [buildUrl(salon.images)] : []),
+    avatar: salon.avatar,
+    gallery: Array.isArray(salon.gallery) ? salon.gallery : [],
     created_at: salon.created_at,
     updated_at: salon.updated_at
   };

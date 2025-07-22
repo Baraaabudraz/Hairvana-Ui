@@ -1,6 +1,6 @@
 import { apiFetch } from '@/lib/api';
 
-export async function fetchUsers(params: { role?: string; status?: string; search?: string } = {}) {
+export async function fetchUsers(params: { role?: string; status?: string; search?: string; page?: number; limit?: number } = {}) {
   try {
     const queryParams = new URLSearchParams();
     
@@ -15,6 +15,9 @@ export async function fetchUsers(params: { role?: string; status?: string; searc
     if (params.search) {
       queryParams.append('search', params.search);
     }
+    
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
     
     return await apiFetch(`/users?${queryParams.toString()}`);
   } catch (error) {
@@ -46,9 +49,27 @@ export async function createUser(userData: any) {
 
 export async function updateUser(id: string, userData: any) {
   try {
+    let formData = new FormData();
+    
+    // If userData is already FormData, use it directly
+    if (userData instanceof FormData) {
+      formData = userData;
+    } else {
+      // Convert userData object to FormData
+      Object.keys(userData).forEach(key => {
+        if (key === 'avatar' && userData[key] instanceof File) {
+          formData.append('avatar', userData[key]);
+        } else if (userData[key] !== undefined && userData[key] !== null) {
+          formData.append(key, userData[key].toString());
+        }
+      });
+    }
+
     const response = await apiFetch(`/users/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(userData),
+      body: formData,
+      // Don't set Content-Type - browser will set it automatically with boundary
+      headers: {},
     });
     return response;
   } catch (error: any) {

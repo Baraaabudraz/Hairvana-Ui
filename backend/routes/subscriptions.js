@@ -2,6 +2,21 @@ const express = require('express');
 const router = express.Router();
 const subscriptionController = require('../controllers/subscriptionController');
 const { authenticateToken, authorize } = require('../middleware/authMiddleware');
+const {
+  createSubscriptionValidation,
+  updateSubscriptionValidation,
+  createBillingRecordValidation
+} = require('../validation/subscriptionValidation');
+const { validationResult } = require('express-validator');
+
+// Helper middleware to handle validation errors
+function handleValidationErrors(req, res, next) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+  next();
+}
 
 // Protect all routes
 router.use(authenticateToken);
@@ -20,16 +35,16 @@ router.get('/', subscriptionController.getAllSubscriptions);
 router.get('/:id', subscriptionController.getSubscriptionById);
 
 // POST a new subscription
-router.post('/', subscriptionController.createSubscription);
+router.post('/', createSubscriptionValidation, handleValidationErrors, subscriptionController.createSubscription);
 
 // PUT (update) a subscription by ID
-router.put('/:id', subscriptionController.updateSubscription);
+router.put('/:id', updateSubscriptionValidation, handleValidationErrors, subscriptionController.updateSubscription);
 
 // PATCH cancel a subscription
 router.patch('/:id/cancel', subscriptionController.cancelSubscription);
 
 // POST create a billing record
-router.post('/billing', subscriptionController.createBillingRecord);
+router.post('/billing', createBillingRecordValidation, handleValidationErrors, subscriptionController.createBillingRecord);
 
 // POST sync billing data
 router.post('/:id/sync', subscriptionController.syncBilling);

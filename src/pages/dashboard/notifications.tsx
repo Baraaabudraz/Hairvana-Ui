@@ -110,6 +110,10 @@ export default function NotificationsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | Notification['type']>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | Notification['status']>('all');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<NotificationTemplate | null>(null);
   const [notificationForm, setNotificationForm] = useState({
@@ -132,28 +136,26 @@ export default function NotificationsPage() {
   useEffect(() => {
     loadNotifications();
     loadTemplates();
-  }, []);
+    // eslint-disable-next-line
+  }, [typeFilter, statusFilter, searchTerm, page, limit]);
 
   const loadNotifications = async () => {
     try {
       setLoading(true);
-      const params: any = {};
-      
+      const params: any = { page, limit };
       if (typeFilter !== 'all') {
         params.type = typeFilter;
       }
-      
       if (statusFilter !== 'all') {
         params.status = statusFilter;
       }
-      
       if (searchTerm) {
         params.search = searchTerm;
       }
-      
       const data = await fetchNotifications(params);
-      console.log('Fetched notifications:', data); // Debug log
-      setNotifications(data);
+      setNotifications(data.notifications || data);
+      setTotalPages(data.totalPages || 1);
+      setTotal(data.total || (data.notifications ? data.notifications.length : (data.length || 0)));
     } catch (error) {
       console.error('Error fetching notifications:', error);
       toast({
@@ -180,13 +182,14 @@ export default function NotificationsPage() {
     }
   };
 
-  const filteredNotifications = (notifications || []).filter(notification => {
-    const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         notification.message.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === 'all' || notification.type === typeFilter;
-    const matchesStatus = statusFilter === 'all' || notification.status === statusFilter;
-    return matchesSearch && matchesType && matchesStatus;
-  });
+  // Remove client-side filtering
+  // const filteredNotifications = (notifications || []).filter(notification => {
+  //   const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //                        notification.message.toLowerCase().includes(searchTerm.toLowerCase());
+  //   const matchesType = typeFilter === 'all' || notification.type === typeFilter;
+  //   const matchesStatus = statusFilter === 'all' || notification.status === statusFilter;
+  //   return matchesSearch && matchesType && matchesStatus;
+  // });
 
   const handleCreateNotification = async () => {
     try {
@@ -758,7 +761,7 @@ export default function NotificationsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {(filteredNotifications || []).filter((n): n is Notification => !!n && typeof n.id === 'string').map((notification) => {
+            {(notifications || []).filter((n): n is Notification => !!n && typeof n.id === 'string').map((notification) => {
               const notificationType = notificationTypes[notification.type] || { color: 'bg-gray-100 text-gray-800', icon: Info };
               const TypeIcon = notificationType.icon;
               return (
@@ -870,7 +873,7 @@ export default function NotificationsPage() {
             })}
           </div>
 
-          {filteredNotifications.length === 0 && (
+          {notifications.length === 0 && (
             <div className="text-center py-12">
               <Bell className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications found</h3>
@@ -887,6 +890,24 @@ export default function NotificationsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination Controls */}
+      <div className="flex justify-center items-center gap-4 mt-6">
+        <Button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} variant="outline">Previous</Button>
+        <span>Page {page} of {totalPages} ({total} notifications)</span>
+        <Button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} variant="outline">Next</Button>
+        <select
+          className="ml-4 border rounded px-2 py-1"
+          value={limit}
+          onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
+        >
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={20}>20</option>
+          <option value={50}>50</option>
+        </select>
+        <span className="ml-2 text-sm text-gray-500">per page</span>
+      </div>
     </div>
   );
 }

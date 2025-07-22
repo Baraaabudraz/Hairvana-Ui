@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Upload, X, Plus, Save, Users, Building2, Shield, Crown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createUser } from '@/api/users';
+import { apiFetch } from '@/lib/api';
 
 const baseUserSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -76,6 +77,7 @@ export default function NewUserPage() {
   const [selectedRole, setSelectedRole] = useState<'admin' | 'super_admin' | 'salon' | 'user'>('user');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [uploadedAvatar, setUploadedAvatar] = useState<string>('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null); // Store selected file
 
   const {
     register,
@@ -119,31 +121,43 @@ export default function NewUserPage() {
   const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // In a real app, you would upload this to a storage service
-      // For demo purposes, we'll use a placeholder URL
-      setUploadedAvatar('https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2');
+      setUploadedAvatar(URL.createObjectURL(file));
+      setAvatarFile(file); // Store file for upload
     }
   };
 
   const onSubmit = async (data: UserForm) => {
     setIsSubmitting(true);
     try {
-      const userData = {
-        ...data,
-        avatar: uploadedAvatar || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
-        ...(data.role === 'admin' || data.role === 'super_admin' ? { permissions: selectedPermissions } : {}),
-      };
-
-      // Remove confirmPassword before sending
-      const { confirmPassword, ...submitData } = userData;
-
-      await createUser(submitData);
-
+      const formData = new FormData();
+      // Append all user fields
+      Object.entries(data).forEach(([key, value]) => {
+        if (key !== 'confirmPassword') {
+          formData.append(key, value as string);
+        }
+      });
+      // Append permissions if admin or super_admin
+      if ((data.role === 'admin' || data.role === 'super_admin') && selectedPermissions.length > 0) {
+        selectedPermissions.forEach((perm) => formData.append('permissions', perm));
+      }
+      // Append avatar file if selected
+      if (avatarFile) {
+        formData.append('avatar', avatarFile);
+      }
+      // Default avatar if none selected
+      if (!avatarFile) {
+        formData.append('avatar', '');
+      }
+      const token = localStorage.getItem('token');
+      await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/backend/api/users`, {
+        method: 'POST',
+        body: formData,
+        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+      });
       toast({
         title: 'User created successfully',
         description: `${data.name} has been added to the platform.`,
       });
-
       navigate('/dashboard/users');
     } catch (error) {
       toast({
@@ -249,10 +263,12 @@ export default function NewUserPage() {
             <div className="flex items-center gap-4">
               <div className="relative">
                 <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                  {uploadedAvatar ? (
-                    <img src={uploadedAvatar} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <Users className="h-8 w-8 text-gray-400" />
+                  {uploadedAvatar && (
+                    uploadedAvatar.startsWith('blob:') ? (
+                      <img src={uploadedAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/avatar/${uploadedAvatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                    )
                   )}
                 </div>
                 {uploadedAvatar && (

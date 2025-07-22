@@ -1,103 +1,60 @@
-const { BillingHistory, Subscription } = require('../models');
+const billingHistoryService = require('../services/billingHistoryService');
 
-// Get all billing histories
-exports.getAllBillingHistories = async (req, res) => {
+exports.getAllBillingHistories = async (req, res, next) => {
   try {
-    const histories = await BillingHistory.findAll({ include: [{ model: Subscription, as: 'subscription' }] });
+    const histories = await billingHistoryService.getAllBillingHistories();
     res.json(histories);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-// Get billing history by ID
-exports.getBillingHistoryById = async (req, res) => {
+exports.getBillingHistoryById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const history = await BillingHistory.findByPk(id, { include: [{ model: Subscription, as: 'subscription' }] });
+    const history = await billingHistoryService.getBillingHistoryById(req.params.id);
     if (!history) return res.status(404).json({ error: 'Billing history not found' });
     res.json(history);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-// Get billing histories by subscription
-exports.getBillingHistoriesBySubscription = async (req, res) => {
+exports.getBillingHistoriesBySubscription = async (req, res, next) => {
   try {
-    const { subscriptionId } = req.params;
-    const histories = await BillingHistory.findAll({
-      where: { subscription_id: subscriptionId },
-      order: [['date', 'DESC']]
-    });
+    const histories = await billingHistoryService.getBillingHistoriesBySubscription(req.params.subscriptionId);
     res.json(histories);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-// Create a billing history
-exports.createBillingHistory = async (req, res) => {
+exports.createBillingHistory = async (req, res, next) => {
   try {
-    const data = req.body;
-    const amount = Number(data.amount);
-    const taxAmount = Number(data.tax_amount) || 0;
-    if (isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ error: 'Amount must be a positive number' });
-    }
-    if (isNaN(taxAmount) || taxAmount < 0) {
-      return res.status(400).json({ error: 'Tax must be a non-negative number' });
-    }
-    if (taxAmount > amount) {
-      return res.status(400).json({ error: 'Tax cannot exceed amount' });
-    }
-    const subtotal = Number((amount).toFixed(2));
-    const total = Number((amount + taxAmount).toFixed(2));
-    // Auto-generate invoice_number if not provided
-    let invoice_number = data.invoice_number;
-    if (!invoice_number) {
-      const year = new Date().getFullYear();
-      const random = Math.floor(1000 + Math.random() * 9000);
-      invoice_number = `INV-${year}-${random}`;
-    }
-    const history = await BillingHistory.create({
-      ...data,
-      amount,
-      tax_amount: taxAmount,
-      subtotal,
-      total,
-      invoice_number,
-    });
+    validateBillingHistory(req.body);
+    const history = await billingHistoryService.createBillingHistory(req.body);
     res.status(201).json(history);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-// Update a billing history
-exports.updateBillingHistory = async (req, res) => {
+exports.updateBillingHistory = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const data = req.body;
-    const [updatedCount, updatedRows] = await BillingHistory.update(data, {
-      where: { id },
-      returning: true
-    });
-    if (updatedCount === 0) return res.status(404).json({ error: 'Billing history not found' });
-    res.json(updatedRows[0]);
+    validateBillingHistory(req.body, true);
+    const updated = await billingHistoryService.updateBillingHistory(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ error: 'Billing history not found' });
+    res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-// Delete a billing history
-exports.deleteBillingHistory = async (req, res) => {
+exports.deleteBillingHistory = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const deleted = await BillingHistory.destroy({ where: { id } });
+    const deleted = await billingHistoryService.deleteBillingHistory(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Billing history not found' });
     res.json({ message: 'Billing history deleted' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 }; 

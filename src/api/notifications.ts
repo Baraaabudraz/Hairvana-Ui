@@ -45,6 +45,8 @@ export async function fetchNotifications(params: {
   type?: string; 
   status?: string; 
   search?: string;
+  page?: number;
+  limit?: number;
 } = {}) {
   try {
     const queryParams = new URLSearchParams();
@@ -52,6 +54,8 @@ export async function fetchNotifications(params: {
     if (params.type && params.type !== 'all') queryParams.append('type', params.type);
     if (params.status && params.status !== 'all') queryParams.append('status', params.status);
     if (params.search) queryParams.append('search', params.search);
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
     
     return await apiFetch(`/notifications?${queryParams.toString()}`);
   } catch (error) {

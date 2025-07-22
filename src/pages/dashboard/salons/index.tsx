@@ -80,6 +80,10 @@ export default function SalonsPage() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const { toast } = useToast();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -87,12 +91,13 @@ export default function SalonsPage() {
 
   useEffect(() => {
     loadSalons();
-  }, [statusFilter, searchTerm]);
+    // eslint-disable-next-line
+  }, [statusFilter, searchTerm, page, limit]);
 
   const loadSalons = async () => {
     try {
       setLoading(true);
-      const params: any = {};
+      const params: any = { page, limit };
       
       if (statusFilter !== 'all') {
         params.status = statusFilter;
@@ -108,6 +113,8 @@ export default function SalonsPage() {
       
       const data = await fetchSalons(params);
       setSalons(data.salons);
+      setTotalPages(data.totalPages || 1);
+      setTotal(data.total || 0);
     } catch (error) {
       console.error('Error loading salons:', error);
       toast({
@@ -119,13 +126,6 @@ export default function SalonsPage() {
       setLoading(false);
     }
   };
-
-  const filteredSalons = salons.filter(salon => {
-    const matchesSearch = salon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         salon.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || salon.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
 
   const handleStatusChange = async (salonId: number, newStatus: SalonStatus) => {
     try {
@@ -306,26 +306,22 @@ export default function SalonsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredSalons.map((salon) => {
-              const imageList = parseImages(salon.images);
+            {salons.map((salon) => {
               return (
                 <div key={salon.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center space-x-4">
                     {/* Salon Image */}
-                    {imageList.length > 0 ? (
-                      <img
-                        src={imageList[0].startsWith('http')
-                          ? imageList[0]
-                          : `${import.meta.env.VITE_BASE_URL || ''}${imageList[0].startsWith('/uploads') ? imageList[0] : `/uploads${imageList[0]}`}`}
+                    <Avatar className="h-12 w-12 mr-4">
+                      <AvatarImage
+                        src={
+                          salon.avatar
+                            ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${salon.avatar}`
+                            : '/default-salon.png'
+                        }
                         alt={salon.name}
-                        className="h-12 w-12 rounded-full object-cover border"
                       />
-                    ) : (
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={salon.avatar} alt={salon.name} />
-                        <AvatarFallback>{salon.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                      </Avatar>
-                    )}
+                      <AvatarFallback>{salon.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    </Avatar>
                     <div>
                       <h3 className="font-semibold text-gray-900">{salon.name}</h3>
                       <p className="text-sm text-gray-600">{salon.location}</p>
@@ -440,6 +436,23 @@ export default function SalonsPage() {
                 </div>
               );
             })}
+          </div>
+          {/* Pagination Controls */}
+          <div className="flex justify-center items-center gap-4 mt-6">
+            <Button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} variant="outline">Previous</Button>
+            <span>Page {page} of {totalPages} ({total} salons)</span>
+            <Button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} variant="outline">Next</Button>
+            <select
+              className="ml-4 border rounded px-2 py-1"
+              value={limit}
+              onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+            <span className="ml-2 text-sm text-gray-500">per page</span>
           </div>
         </CardContent>
       </Card>

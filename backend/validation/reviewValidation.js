@@ -1,7 +1,7 @@
 const { body, param, query } = require('express-validator');
 
 const createReviewValidation = [
-  body('salon_id')
+  body('salonId')
     .isUUID()
     .withMessage('Valid salon ID is required'),
   
@@ -19,7 +19,7 @@ const createReviewValidation = [
     .isLength({ max: 1000 })
     .withMessage('Comment must be less than 1000 characters'),
   
-  body('service_quality')
+  body('serviceQuality')
     .optional()
     .isInt({ min: 1, max: 5 })
     .withMessage('Service quality must be between 1 and 5'),
@@ -29,37 +29,37 @@ const createReviewValidation = [
     .isInt({ min: 1, max: 5 })
     .withMessage('Cleanliness must be between 1 and 5'),
   
-  body('staff_friendliness')
+  body('staffFriendliness')
     .optional()
     .isInt({ min: 1, max: 5 })
     .withMessage('Staff friendliness must be between 1 and 5'),
   
-  body('value_for_money')
+  body('valueForMoney')
     .optional()
     .isInt({ min: 1, max: 5 })
     .withMessage('Value for money must be between 1 and 5'),
   
-  body('overall_experience')
+  body('overallExperience')
     .optional()
     .isInt({ min: 1, max: 5 })
     .withMessage('Overall experience must be between 1 and 5'),
   
-  body('review_type')
+  body('reviewType')
     .optional()
     .isIn(['general', 'appointment', 'staff'])
     .withMessage('Invalid review type'),
   
-  body('is_anonymous')
+  body('isAnonymous')
     .optional()
     .isBoolean()
-    .withMessage('is_anonymous must be a boolean'),
+    .withMessage('isAnonymous must be a boolean'),
   
-  body('appointment_id')
+  body('appointmentId')
     .optional()
     .isUUID()
     .withMessage('Valid appointment ID is required'),
   
-  body('staff_id')
+  body('staffId')
     .optional()
     .isUUID()
     .withMessage('Valid staff ID is required')
@@ -85,7 +85,7 @@ const updateReviewValidation = [
     .isLength({ max: 1000 })
     .withMessage('Comment must be less than 1000 characters'),
   
-  body('service_quality')
+  body('serviceQuality')
     .optional()
     .isInt({ min: 1, max: 5 })
     .withMessage('Service quality must be between 1 and 5'),
@@ -95,17 +95,17 @@ const updateReviewValidation = [
     .isInt({ min: 1, max: 5 })
     .withMessage('Cleanliness must be between 1 and 5'),
   
-  body('staff_friendliness')
+  body('staffFriendliness')
     .optional()
     .isInt({ min: 1, max: 5 })
     .withMessage('Staff friendliness must be between 1 and 5'),
   
-  body('value_for_money')
+  body('valueForMoney')
     .optional()
     .isInt({ min: 1, max: 5 })
     .withMessage('Value for money must be between 1 and 5'),
   
-  body('overall_experience')
+  body('overallExperience')
     .optional()
     .isInt({ min: 1, max: 5 })
     .withMessage('Overall experience must be between 1 and 5')

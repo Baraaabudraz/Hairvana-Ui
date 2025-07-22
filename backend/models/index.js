@@ -41,6 +41,7 @@ const SecuritySettings = require('./security_settings');
 const IntegrationSettings = require('./integration_settings')(sequelize);
 const Review = require('./review');
 const MobileDevice = require('./mobile_device');
+const OwnerDocument = require('./owner_document');
 
 // Initialize models in dependency order
 const models = {
@@ -67,7 +68,8 @@ const models = {
   SecuritySettings: SecuritySettings(sequelize, Sequelize.DataTypes),
   IntegrationSettings: IntegrationSettings,
   Review: Review(sequelize, Sequelize.DataTypes),
-  MobileDevice: MobileDevice(sequelize, Sequelize.DataTypes)
+  MobileDevice: MobileDevice(sequelize, Sequelize.DataTypes),
+  OwnerDocument: OwnerDocument(sequelize, Sequelize.DataTypes)
 };
 
 // Initialize associations
@@ -109,7 +111,8 @@ async function syncOrdered(options = {}) {
       'billing_settings',
       'reports',
       'security_settings',
-      'reviews'
+      'reviews',
+      'owner_documents'
     ];
     
     for (const tableName of tableOrder) {

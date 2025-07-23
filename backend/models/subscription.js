@@ -1,8 +1,6 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
-const { v4: uuidv4 } = require('uuid');
+"use strict";
+const { Model } = require("sequelize");
+const { v4: uuidv4 } = require("uuid");
 
 module.exports = (sequelize, DataTypes) => {
   class Subscription extends Model {
@@ -13,77 +11,90 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       Subscription.belongsTo(models.Salon, {
-        foreignKey: 'salon_id',
-        as: 'salon'
+        foreignKey: "salon_id",
+        as: "salon",
       });
       Subscription.belongsTo(models.SubscriptionPlan, {
-        foreignKey: 'plan_id',
-        as: 'plan'
+        foreignKey: "plan_id",
+        as: "plan",
       });
     }
   }
-  Subscription.init({
-    id: {
-      type: DataTypes.UUID,
-      defaultValue: () => uuidv4(),
-      primaryKey: true,
-      allowNull: false,
+  Subscription.init(
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: () => uuidv4(),
+        primaryKey: true,
+        allowNull: false,
+      },
+      salonId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "salons",
+          key: "id",
+        },
+        field: "salon_id",
+      },
+      planId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "subscription_plans",
+          key: "id",
+        },
+        field: "plan_id",
+      },
+      status: {
+        type: DataTypes.ENUM("active", "cancelled", "expired"),
+        defaultValue: "active",
+      },
+      startDate: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        field: "start_date",
+      },
+      endDate: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: "end_date",
+      },
+      billingPeriod: {
+        type: DataTypes.ENUM("monthly", "yearly"),
+        defaultValue: "monthly",
+        field: "billing_period",
+      },
+      nextBillingDate: {
+        type: DataTypes.DATE,
+        field: "next_billing_date",
+      },
+      amount: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+      },
+      billingCycle: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          isIn: [["monthly", "yearly"]],
+        },
+        field: "billing_cycle",
+      },
+      usage: {
+        type: DataTypes.JSONB,
+      },
+      paymentMethod: {
+        type: DataTypes.JSONB,
+        field: "payment_method",
+      },
     },
-    salon_id: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      references: {
-        model: 'salons',
-        key: 'id'
-      }
-    },
-    plan_id: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      references: {
-        model: 'subscription_plans',
-        key: 'id'
-      }
-    },
-    status: {
-      type: DataTypes.ENUM('active', 'cancelled', 'expired'),
-      defaultValue: 'active'
-    },
-    start_date: {
-      type: DataTypes.DATE,
-      allowNull: false
-    },
-    end_date: {
-      type: DataTypes.DATE,
-      allowNull: true
-    },
-    billing_period: {
-      type: DataTypes.ENUM('monthly', 'yearly'),
-      defaultValue: 'monthly'
-    },
-    next_billing_date: DataTypes.DATE,
-    amount: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: false
-    },
-    billing_cycle: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        isIn: [['monthly', 'yearly']]
-      }
-    },
-    usage: {
-      type: DataTypes.JSONB
-    },
-    payment_method: {
-      type: DataTypes.JSONB
+    {
+      sequelize,
+      modelName: "Subscription",
+      timestamps: true,
+      underscored: true,
     }
-  }, {
-    sequelize,
-    modelName: 'Subscription',
-    timestamps: true,
-    underscored: true
-  });
+  );
   return Subscription;
 };

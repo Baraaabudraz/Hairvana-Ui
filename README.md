@@ -47,8 +47,8 @@ A modern admin dashboard for managing the Hairvana platform, built with React, T
 
 3. **Set up environment variables**
    ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
+   cp ..env.example ..env
+   # Edit ..env with your configuration
    ```
 
 4. **Set up the database**

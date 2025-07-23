@@ -1,19 +1,25 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useToast } from '@/hooks/use-toast';
-import { 
-  ArrowLeft, 
-  Search, 
-  CreditCard, 
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import {
+  ArrowLeft,
+  Search,
+  CreditCard,
   Calendar,
   CheckCircle,
   Crown,
@@ -26,26 +32,31 @@ import {
   Save,
   User,
   Mail,
-  Phone
-} from 'lucide-react';
-import { fetchSalons } from '@/api/salons';
-import { createSubscription, fetchSubscriptionPlans } from '@/api/subscriptions';
+  Phone,
+} from "lucide-react";
+import { fetchSalons } from "@/api/salons";
+import {
+  createSubscription,
+  fetchSubscriptionPlans,
+} from "@/api/subscriptions";
 
 const subscriptionSchema = z.object({
-  salon_id: z.string().min(1, 'Please select a salon'),
-  plan_id: z.string().min(1, 'Please select a plan'),
-  billing_cycle: z.enum(['monthly', 'yearly']),
-  start_date: z.string().min(1, 'Start date is required'),
+  salon_id: z.string().min(1, "Please select a salon"),
+  plan_id: z.string().min(1, "Please select a plan"),
+  billing_cycle: z.enum(["monthly", "yearly"]),
+  start_date: z.string().min(1, "Start date is required"),
   next_billing_date: z.string().optional(),
-  amount: z.number().min(0, 'Amount must be positive'),
-  status: z.enum(['active', 'trial', 'cancelled', 'past_due']).default('active'),
+  amount: z.number().min(0, "Amount must be positive"),
+  status: z
+    .enum(["active", "trial", "cancelled", "past_due"])
+    .default("active"),
   payment_method: z.object({
-    type: z.literal('card'),
-    cardNumber: z.string().min(16, 'Card number must be 16 digits'),
-    expiryMonth: z.string().min(1, 'Expiry month is required'),
-    expiryYear: z.string().min(1, 'Expiry year is required'),
-    cvv: z.string().min(3, 'CVV must be at least 3 digits'),
-    cardholderName: z.string().min(2, 'Cardholder name is required'),
+    type: z.literal("card"),
+    cardNumber: z.string().min(16, "Card number must be 16 digits"),
+    expiryMonth: z.string().min(1, "Expiry month is required"),
+    expiryYear: z.string().min(1, "Expiry year is required"),
+    cvv: z.string().min(3, "CVV must be at least 3 digits"),
+    cardholderName: z.string().min(2, "Cardholder name is required"),
   }),
   trial_days: z.number().min(0).max(30).optional(),
   auto_renew: z.boolean().default(true),
@@ -55,15 +66,15 @@ type SubscriptionForm = z.infer<typeof subscriptionSchema>;
 
 interface Plan {
   id: string;
-  name: 'Basic' | 'Standard' | 'Premium';
+  name: "Basic" | "Standard" | "Premium";
   price: number;
   yearlyPrice: number;
   description: string;
   features: string[];
   limits: {
-    bookings: number | 'unlimited';
-    staff: number | 'unlimited';
-    locations: number | 'unlimited';
+    bookings: number | "unlimited";
+    staff: number | "unlimited";
+    locations: number | "unlimited";
   };
   popular: boolean;
 }
@@ -85,9 +96,9 @@ const planIcons = {
 };
 
 const planColors = {
-  Basic: 'from-gray-600 to-gray-700',
-  Standard: 'from-blue-600 to-blue-700',
-  Premium: 'from-purple-600 to-purple-700',
+  Basic: "from-gray-600 to-gray-700",
+  Standard: "from-blue-600 to-blue-700",
+  Premium: "from-purple-600 to-purple-700",
 };
 
 export default function CreateSubscriptionPage() {
@@ -96,10 +107,12 @@ export default function CreateSubscriptionPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [salons, setSalons] = useState<Salon[]>([]);
   const [filteredSalons, setFilteredSalons] = useState<Salon[]>([]);
-  const [salonSearch, setSalonSearch] = useState('');
+  const [salonSearch, setSalonSearch] = useState("");
   const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">(
+    "monthly"
+  );
   const [showSalonSearch, setShowSalonSearch] = useState(false);
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -115,21 +128,21 @@ export default function CreateSubscriptionPage() {
   } = useForm<SubscriptionForm>({
     resolver: zodResolver(subscriptionSchema),
     defaultValues: {
-      billing_cycle: 'monthly',
-      start_date: new Date().toISOString().split('T')[0],
+      billing_cycle: "monthly",
+      start_date: new Date().toISOString().split("T")[0],
       auto_renew: true,
       trial_days: 14,
-      salon_id: '',
-      plan_id: '',
+      salon_id: "",
+      plan_id: "",
       amount: 0,
-      status: 'active',
+      status: "active",
       payment_method: {
-        type: 'card',
-        cardNumber: '',
-        expiryMonth: '',
-        expiryYear: '',
-        cvv: '',
-        cardholderName: '',
+        type: "card",
+        cardNumber: "",
+        expiryMonth: "",
+        expiryYear: "",
+        cvv: "",
+        cardholderName: "",
       },
     },
   });
@@ -139,7 +152,7 @@ export default function CreateSubscriptionPage() {
       try {
         setLoading(true);
         const response = await fetchSalons();
-        console.log('Loaded salons:', response);
+        console.log("Loaded salons:", response);
         if (response && response.salons) {
           setSalons(response.salons);
           setFilteredSalons(response.salons);
@@ -148,13 +161,13 @@ export default function CreateSubscriptionPage() {
           setFilteredSalons([]);
         }
       } catch (error) {
-        console.error('Error loading salons:', error);
+        console.error("Error loading salons:", error);
         setSalons([]);
         setFilteredSalons([]);
         toast({
-          title: 'Error',
-          description: 'Failed to load salons. Please try again.',
-          variant: 'destructive',
+          title: "Error",
+          description: "Failed to load salons. Please try again.",
+          variant: "destructive",
         });
       } finally {
         setLoading(false);
@@ -164,82 +177,95 @@ export default function CreateSubscriptionPage() {
   }, [toast]);
 
   useEffect(() => {
-    const filtered = salons.filter(salon =>
-      salon.name.toLowerCase().includes(salonSearch.toLowerCase()) ||
-      salon.location.toLowerCase().includes(salonSearch.toLowerCase()) ||
-      salon.ownerName.toLowerCase().includes(salonSearch.toLowerCase())
+    const filtered = salons.filter(
+      (salon) =>
+        salon.name.toLowerCase().includes(salonSearch.toLowerCase()) ||
+        salon.location.toLowerCase().includes(salonSearch.toLowerCase()) ||
+        salon.ownerName.toLowerCase().includes(salonSearch.toLowerCase())
     );
     setFilteredSalons(filtered);
   }, [salonSearch, salons]);
 
   const handleSalonSelect = (salon: Salon) => {
     setSelectedSalon(salon);
-    setValue('salon_id', salon.id);
+    setValue("salon_id", salon.id);
     setShowSalonSearch(false);
-    setSalonSearch('');
+    setSalonSearch("");
   };
 
   const handlePlanSelect = (plan: Plan) => {
     setSelectedPlan(plan);
-    setValue('plan_id', plan.id);
+    setValue("plan_id", plan.id);
   };
 
-  const handleBillingCycleChange = (cycle: 'monthly' | 'yearly') => {
+  const handleBillingCycleChange = (cycle: "monthly" | "yearly") => {
     setBillingCycle(cycle);
-    setValue('billing_cycle', cycle);
+    setValue("billing_cycle", cycle);
   };
 
   const calculatePrice = () => {
     if (!selectedPlan) return 0;
-    if (billingCycle === 'yearly') {
-      return typeof selectedPlan.yearlyPrice === 'number' && !isNaN(selectedPlan.yearlyPrice) ? selectedPlan.yearlyPrice : 0;
+    if (billingCycle === "yearly") {
+      return typeof selectedPlan.yearlyPrice === "number" &&
+        !isNaN(selectedPlan.yearlyPrice)
+        ? selectedPlan.yearlyPrice
+        : 0;
     }
     return selectedPlan.price;
   };
 
   const calculateSavings = () => {
-    if (!selectedPlan || billingCycle === 'monthly') return 0;
-    return (selectedPlan.price * 12) - selectedPlan.yearlyPrice;
+    if (!selectedPlan || billingCycle === "monthly") return 0;
+    return selectedPlan.price * 12 - selectedPlan.yearlyPrice;
   };
 
   const onSubmit = async (data: SubscriptionForm) => {
-    console.log('Form data:', data);
-    console.log('Selected salon:', selectedSalon);
-    console.log('Selected plan:', selectedPlan);
-    
+    console.log("Form data:", data);
+    console.log("Selected salon:", selectedSalon);
+    console.log("Selected plan:", selectedPlan);
+
     setIsSubmitting(true);
     try {
       // Use selected salon and plan, or fallback to first available
       const salonToUse = selectedSalon || salons[0];
       const planToUse = selectedPlan || plans[0];
-      
+
       if (!salonToUse || !planToUse) {
-        throw new Error('Please select a salon and plan');
+        throw new Error("Please select a salon and plan");
       }
 
       // Calculate next billing date
       const startDate = new Date(data.start_date);
       const nextBillingDate = new Date(startDate);
-      
-      if (data.billing_cycle === 'monthly') {
+
+      if (data.billing_cycle === "monthly") {
         nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
       } else {
         nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
       }
 
+      const cardNumberSanitized = data.payment_method.cardNumber.replace(
+        /\s/g,
+        ""
+      );
+      const last4 = cardNumberSanitized.slice(-4);
+      const brand = data.payment_method.brand || "Visa"; // Replace with actual brand detection if available
+
       const subscriptionData = {
-        salon_id: salonToUse.id,
-        plan_id: planToUse.id,
-        status: data.trial_days && data.trial_days > 0 ? 'trial' : 'active',
-        start_date: data.start_date,
-        next_billing_date: nextBillingDate.toISOString(),
+        salonId: salonToUse.id,
+        planId: planToUse.id,
+        status: data.trial_days && data.trial_days > 0 ? "trial" : "active",
+        startDate: data.start_date,
+        nextBillingDate: nextBillingDate.toISOString(),
         amount: calculatePrice(),
-        billing_cycle: data.billing_cycle,
-        payment_method: {
-          type: 'card',
-          cardNumber: data.payment_method.cardNumber.replace(/\s/g, ''),
-          expiryMonth: data.payment_method.expiryMonth,
-          expiryYear: data.payment_method.expiryYear,
+        billingCycle: data.billing_cycle,
+        paymentMethod: {
+          type: "card",
+          cardNumber: cardNumberSanitized,
+          last4,
+          brand,
+          expiryMonth: Number(data.payment_method.expiryMonth),
+          expiryYear: Number(data.payment_method.expiryYear),
           cvv: data.payment_method.cvv,
           cardholderName: data.payment_method.cardholderName,
         },
@@ -251,27 +277,28 @@ export default function CreateSubscriptionPage() {
           staffLimit: planToUse.limits.staff || 0,
           locationsLimit: planToUse.limits.locations || 0,
         },
-        trial_days: data.trial_days || 0,
-        auto_renew: data.auto_renew,
+        trialDays: data.trial_days || 0,
+        autoRenew: data.auto_renew,
       };
 
-      console.log('Sending subscription data:', subscriptionData);
+      console.log("Sending subscription data:", subscriptionData);
 
       await createSubscription(subscriptionData);
 
       toast({
-        title: 'Subscription created successfully',
+        title: "Subscription created successfully",
         description: `${salonToUse.name} has been subscribed to the ${planToUse.name} plan.`,
       });
 
-      navigate('/dashboard/subscriptions');
+      navigate("/dashboard/subscriptions");
     } catch (error) {
-      console.error('Error creating subscription:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Please try again later.';
+      console.error("Error creating subscription:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Please try again later.";
       toast({
-        title: 'Error creating subscription',
+        title: "Error creating subscription",
         description: errorMessage,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -296,11 +323,11 @@ export default function CreateSubscriptionPage() {
       }));
       setPlans(mappedPlans);
     } catch (error: any) {
-      setPlansError('Failed to load plans');
+      setPlansError("Failed to load plans");
       toast({
-        title: 'Error',
-        description: 'Failed to load subscription plans. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load subscription plans. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setPlansLoading(false);
@@ -324,8 +351,12 @@ export default function CreateSubscriptionPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create New Subscription</h1>
-          <p className="text-gray-600">Set up a new subscription plan for a salon</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Create New Subscription
+          </h1>
+          <p className="text-gray-600">
+            Set up a new subscription plan for a salon
+          </p>
         </div>
       </div>
 
@@ -350,7 +381,7 @@ export default function CreateSubscriptionPage() {
                     className="pl-10"
                   />
                 </div>
-                
+
                 <div className="max-h-64 overflow-y-auto space-y-2">
                   {filteredSalons.map((salon) => (
                     <div
@@ -360,23 +391,36 @@ export default function CreateSubscriptionPage() {
                     >
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={salon.avatar} alt={salon.name} />
-                        <AvatarFallback>{salon.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        <AvatarFallback>
+                          {salon.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">{salon.name}</h4>
-                        <p className="text-sm text-gray-600">{salon.location}</p>
-                        <p className="text-xs text-gray-500">{salon.ownerName} • {salon.ownerEmail}</p>
+                        <h4 className="font-semibold text-gray-900">
+                          {salon.name}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {salon.location}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {salon.ownerName} • {salon.ownerEmail}
+                        </p>
                       </div>
                       <Badge variant="outline">Available</Badge>
                     </div>
                   ))}
                 </div>
-                
+
                 {filteredSalons.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     <Building2 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p>No available salons found</p>
-                    <p className="text-sm">All salons may already have active subscriptions</p>
+                    <p className="text-sm">
+                      All salons may already have active subscriptions
+                    </p>
                   </div>
                 )}
               </div>
@@ -384,13 +428,27 @@ export default function CreateSubscriptionPage() {
               <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-center gap-4">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={selectedSalon.avatar} alt={selectedSalon.name} />
-                    <AvatarFallback>{selectedSalon.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    <AvatarImage
+                      src={selectedSalon.avatar}
+                      alt={selectedSalon.name}
+                    />
+                    <AvatarFallback>
+                      {selectedSalon.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h4 className="font-semibold text-gray-900">{selectedSalon.name}</h4>
-                    <p className="text-sm text-gray-600">{selectedSalon.location}</p>
-                    <p className="text-xs text-gray-500">{selectedSalon.ownerName} • {selectedSalon.ownerEmail}</p>
+                    <h4 className="font-semibold text-gray-900">
+                      {selectedSalon.name}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {selectedSalon.location}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {selectedSalon.ownerName} • {selectedSalon.ownerEmail}
+                    </p>
                   </div>
                 </div>
                 <Button
@@ -398,7 +456,7 @@ export default function CreateSubscriptionPage() {
                   variant="outline"
                   onClick={() => {
                     setSelectedSalon(null);
-                    setValue('salon_id', '');
+                    setValue("salon_id", "");
                   }}
                 >
                   Change Salon
@@ -425,26 +483,28 @@ export default function CreateSubscriptionPage() {
               <div className="bg-gray-100 p-1 rounded-lg">
                 <button
                   type="button"
-                  onClick={() => handleBillingCycleChange('monthly')}
+                  onClick={() => handleBillingCycleChange("monthly")}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    billingCycle === 'monthly'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                    billingCycle === "monthly"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-600 hover:text-gray-900"
                   }`}
                 >
                   Monthly
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleBillingCycleChange('yearly')}
+                  onClick={() => handleBillingCycleChange("yearly")}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    billingCycle === 'yearly'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                    billingCycle === "yearly"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-600 hover:text-gray-900"
                   }`}
                 >
                   Yearly
-                  <Badge className="ml-2 bg-green-100 text-green-800">Save up to 17%</Badge>
+                  <Badge className="ml-2 bg-green-100 text-green-800">
+                    Save up to 17%
+                  </Badge>
                 </button>
               </div>
             </div>
@@ -463,56 +523,81 @@ export default function CreateSubscriptionPage() {
                 plans.map((plan) => {
                   const PlanIcon = planIcons[plan.name];
                   const isSelected = selectedPlan?.id === plan.id;
-                  const price = billingCycle === 'yearly' ? (typeof plan.yearlyPrice === 'number' && !isNaN(plan.yearlyPrice) ? plan.yearlyPrice : 0) : plan.price;
-                  const savings = billingCycle === 'yearly' ? (plan.price * 12) - plan.yearlyPrice : 0;
-                  
+                  const price =
+                    billingCycle === "yearly"
+                      ? typeof plan.yearlyPrice === "number" &&
+                        !isNaN(plan.yearlyPrice)
+                        ? plan.yearlyPrice
+                        : 0
+                      : plan.price;
+                  const savings =
+                    billingCycle === "yearly"
+                      ? plan.price * 12 - plan.yearlyPrice
+                      : 0;
+
                   return (
                     <div
                       key={plan.id}
                       onClick={() => handlePlanSelect(plan)}
                       className={`relative p-6 rounded-lg border-2 cursor-pointer transition-all ${
                         isSelected
-                          ? 'border-purple-200 bg-purple-50 shadow-lg'
+                          ? "border-purple-200 bg-purple-50 shadow-lg"
                           : plan.popular
-                          ? 'border-blue-200 bg-blue-50'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
+                          ? "border-blue-200 bg-blue-50"
+                          : "border-gray-200 bg-white hover:border-gray-300"
                       }`}
                     >
                       {plan.popular && !isSelected && (
                         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                          <Badge className="bg-blue-600 text-white">Most Popular</Badge>
+                          <Badge className="bg-blue-600 text-white">
+                            Most Popular
+                          </Badge>
                         </div>
                       )}
                       {isSelected && (
                         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                          <Badge className="bg-purple-600 text-white">Selected</Badge>
+                          <Badge className="bg-purple-600 text-white">
+                            Selected
+                          </Badge>
                         </div>
                       )}
-                      
+
                       <div className="text-center">
                         <div className="flex justify-center mb-4">
-                          <div className={`p-3 rounded-lg bg-gradient-to-r ${planColors[plan.name]}`}>
+                          <div
+                            className={`p-3 rounded-lg bg-gradient-to-r ${
+                              planColors[plan.name]
+                            }`}
+                          >
                             <PlanIcon className="h-6 w-6 text-white" />
                           </div>
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
+                        <h3 className="text-xl font-bold text-gray-900">
+                          {plan.name}
+                        </h3>
                         <p className="text-gray-600 mt-2">{plan.description}</p>
                         <div className="mt-4">
-                          <span className="text-3xl font-bold text-gray-900">${price}</span>
-                          <span className="text-gray-600">/{billingCycle === 'yearly' ? 'year' : 'month'}</span>
+                          <span className="text-3xl font-bold text-gray-900">
+                            ${price}
+                          </span>
+                          <span className="text-gray-600">
+                            /{billingCycle === "yearly" ? "year" : "month"}
+                          </span>
                         </div>
-                        {billingCycle === 'yearly' && savings > 0 && (
+                        {billingCycle === "yearly" && savings > 0 && (
                           <p className="text-sm text-green-600 mt-1">
                             Save ${savings.toFixed(2)} per year
                           </p>
                         )}
                       </div>
-                      
+
                       <ul className="mt-6 space-y-3">
                         {plan.features.map((feature, index) => (
                           <li key={index} className="flex items-center gap-2">
                             <CheckCircle className="h-4 w-4 text-green-500" />
-                            <span className="text-sm text-gray-700">{feature}</span>
+                            <span className="text-sm text-gray-700">
+                              {feature}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -522,7 +607,9 @@ export default function CreateSubscriptionPage() {
               )}
             </div>
             {errors.plan_id && (
-              <p className="text-sm text-red-500 mt-4">{errors.plan_id.message}</p>
+              <p className="text-sm text-red-500 mt-4">
+                {errors.plan_id.message}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -542,10 +629,12 @@ export default function CreateSubscriptionPage() {
                 <Input
                   id="start_date"
                   type="date"
-                  {...register('start_date')}
+                  {...register("start_date")}
                 />
                 {errors.start_date && (
-                  <p className="text-sm text-red-500">{errors.start_date.message}</p>
+                  <p className="text-sm text-red-500">
+                    {errors.start_date.message}
+                  </p>
                 )}
               </div>
               <div className="space-y-2">
@@ -556,7 +645,7 @@ export default function CreateSubscriptionPage() {
                   min="0"
                   max="30"
                   placeholder="14"
-                  {...register('trial_days', { valueAsNumber: true })}
+                  {...register("trial_days", { valueAsNumber: true })}
                 />
                 <p className="text-xs text-gray-500">0-30 days trial period</p>
               </div>
@@ -566,7 +655,7 @@ export default function CreateSubscriptionPage() {
               <input
                 type="checkbox"
                 id="auto_renew"
-                {...register('auto_renew')}
+                {...register("auto_renew")}
                 className="rounded"
               />
               <Label htmlFor="auto_renew" className="text-sm">
@@ -593,10 +682,12 @@ export default function CreateSubscriptionPage() {
               <Input
                 id="cardholderName"
                 placeholder="John Doe"
-                {...register('payment_method.cardholderName')}
+                {...register("payment_method.cardholderName")}
               />
               {errors.payment_method?.cardholderName && (
-                <p className="text-sm text-red-500">{errors.payment_method.cardholderName.message}</p>
+                <p className="text-sm text-red-500">
+                  {errors.payment_method.cardholderName.message}
+                </p>
               )}
             </div>
 
@@ -606,10 +697,12 @@ export default function CreateSubscriptionPage() {
                 id="cardNumber"
                 placeholder="1234 5678 9012 3456"
                 maxLength={19}
-                {...register('payment_method.cardNumber')}
+                {...register("payment_method.cardNumber")}
               />
               {errors.payment_method?.cardNumber && (
-                <p className="text-sm text-red-500">{errors.payment_method.cardNumber.message}</p>
+                <p className="text-sm text-red-500">
+                  {errors.payment_method.cardNumber.message}
+                </p>
               )}
             </div>
 
@@ -620,10 +713,12 @@ export default function CreateSubscriptionPage() {
                   id="expiryMonth"
                   placeholder="MM"
                   maxLength={2}
-                  {...register('payment_method.expiryMonth')}
+                  {...register("payment_method.expiryMonth")}
                 />
                 {errors.payment_method?.expiryMonth && (
-                  <p className="text-sm text-red-500">{errors.payment_method.expiryMonth.message}</p>
+                  <p className="text-sm text-red-500">
+                    {errors.payment_method.expiryMonth.message}
+                  </p>
                 )}
               </div>
               <div className="space-y-2">
@@ -632,10 +727,12 @@ export default function CreateSubscriptionPage() {
                   id="expiryYear"
                   placeholder="YYYY"
                   maxLength={4}
-                  {...register('payment_method.expiryYear')}
+                  {...register("payment_method.expiryYear")}
                 />
                 {errors.payment_method?.expiryYear && (
-                  <p className="text-sm text-red-500">{errors.payment_method.expiryYear.message}</p>
+                  <p className="text-sm text-red-500">
+                    {errors.payment_method.expiryYear.message}
+                  </p>
                 )}
               </div>
               <div className="space-y-2">
@@ -644,10 +741,12 @@ export default function CreateSubscriptionPage() {
                   id="cvv"
                   placeholder="123"
                   maxLength={4}
-                  {...register('payment_method.cvv')}
+                  {...register("payment_method.cvv")}
                 />
                 {errors.payment_method?.cvv && (
-                  <p className="text-sm text-red-500">{errors.payment_method.cvv.message}</p>
+                  <p className="text-sm text-red-500">
+                    {errors.payment_method.cvv.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -675,12 +774,16 @@ export default function CreateSubscriptionPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Amount:</span>
-                <span className="font-semibold text-lg">${calculatePrice()}</span>
+                <span className="font-semibold text-lg">
+                  ${calculatePrice()}
+                </span>
               </div>
-              {billingCycle === 'yearly' && calculateSavings() > 0 && (
+              {billingCycle === "yearly" && calculateSavings() > 0 && (
                 <div className="flex items-center justify-between text-green-600">
                   <span>Annual Savings:</span>
-                  <span className="font-semibold">${calculateSavings().toFixed(2)}</span>
+                  <span className="font-semibold">
+                    ${calculateSavings().toFixed(2)}
+                  </span>
                 </div>
               )}
             </CardContent>
@@ -694,7 +797,7 @@ export default function CreateSubscriptionPage() {
               Cancel
             </Button>
           </Link>
-          
+
           {/* Test Button for Debugging */}
           <Button
             type="button"
@@ -702,20 +805,22 @@ export default function CreateSubscriptionPage() {
             onClick={async () => {
               try {
                 const testData = {
-                  salon_id: '1',
-                  plan_id: 'basic',
-                  status: 'active',
-                  start_date: new Date().toISOString().split('T')[0],
-                  next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                  salonId: "1",
+                  planId: "basic",
+                  status: "active",
+                  startDate: new Date().toISOString().split("T")[0],
+                  nextBillingDate: new Date(
+                    Date.now() + 30 * 24 * 60 * 60 * 1000
+                  ).toISOString(),
                   amount: 19.99,
-                  billing_cycle: 'monthly',
-                  payment_method: {
-                    type: 'card',
-                    cardNumber: '1234567890123456',
-                    expiryMonth: '12',
-                    expiryYear: '2025',
-                    cvv: '123',
-                    cardholderName: 'Test User',
+                  billingCycle: "monthly",
+                  paymentMethod: {
+                    type: "card",
+                    cardNumber: "1234567890123456",
+                    expiryMonth: "12",
+                    expiryYear: "2025",
+                    cvv: "123",
+                    cardholderName: "Test User",
                   },
                   usage: {
                     bookingsUsed: 0,
@@ -725,36 +830,37 @@ export default function CreateSubscriptionPage() {
                     staffLimit: 3,
                     locationsLimit: 1,
                   },
-                  trial_days: 0,
-                  auto_renew: true,
+                  trialDays: 0,
+                  autoRenew: true,
                 };
-                
-                console.log('Testing with data:', testData);
+
+                console.log("Testing with data:", testData);
                 await createSubscription(testData);
                 toast({
-                  title: 'Test successful',
-                  description: 'Subscription created successfully!',
+                  title: "Test successful",
+                  description: "Subscription created successfully!",
                 });
               } catch (error) {
-                console.error('Test failed:', error);
+                console.error("Test failed:", error);
                 toast({
-                  title: 'Test failed',
-                  description: error instanceof Error ? error.message : 'Unknown error',
-                  variant: 'destructive',
+                  title: "Test failed",
+                  description:
+                    error instanceof Error ? error.message : "Unknown error",
+                  variant: "destructive",
                 });
               }
             }}
           >
             Test API
           </Button>
-          
+
           <Button
             type="submit"
             disabled={isSubmitting}
             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
           >
             <Save className="h-4 w-4 mr-2" />
-            {isSubmitting ? 'Creating Subscription...' : 'Create Subscription'}
+            {isSubmitting ? "Creating Subscription..." : "Create Subscription"}
           </Button>
         </div>
       </form>

@@ -1,18 +1,24 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { 
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -21,9 +27,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
-import { ReportViewer } from '@/components/reports/report-viewer';
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { ReportViewer } from "@/components/reports/report-viewer";
 import {
   FileText,
   Download,
@@ -51,27 +57,28 @@ import {
   Search,
   RefreshCw,
   Play,
-  Loader2
-} from 'lucide-react';
-import { format, subDays, subMonths, subYears } from 'date-fns';
-import { generateReport } from '@/api/analytics';
+  Loader2,
+} from "lucide-react";
+import { format, subDays, subMonths, subYears } from "date-fns";
+import { generateReport } from "@/api/analytics";
 import {
   fetchReports as fetchReportsApi,
   createReport as createReportApi,
   deleteReport as deleteReportApi,
   fetchReportTemplates as fetchReportTemplatesApi,
-  fetchReportById
-} from '@/api/reports';
-import * as LucideIcons from 'lucide-react';
-import { Tabs, TabList, Tab, TabPanel } from 'react-tabs';
-import 'react-tabs/style/react-tabs.css';
+  fetchReportById,
+} from "@/api/reports";
+import * as LucideIcons from "lucide-react";
+import { Tabs, TabList, Tab, TabPanel } from "react-tabs";
+import "react-tabs/style/react-tabs.css";
+import { useAuthStore } from "@/stores/auth-store";
 
 interface Report {
   id: string;
   name: string;
   description: string;
-  type: 'financial' | 'operational' | 'user' | 'salon' | 'custom';
-  status: 'completed' | 'generating' | 'scheduled' | 'failed';
+  type: "financial" | "operational" | "user" | "salon" | "custom";
+  status: "completed" | "generating" | "scheduled" | "failed";
   createdAt: string;
   generatedAt?: string;
   createdBy: string;
@@ -80,7 +87,7 @@ interface Report {
   parameters: {
     dateRange: string;
     filters: string[];
-    format: 'pdf' | 'excel' | 'csv';
+    format: "pdf" | "excel" | "csv";
   };
 }
 
@@ -88,7 +95,7 @@ interface ReportTemplate {
   id: string;
   name: string;
   description: string;
-  type: 'financial' | 'operational' | 'user' | 'salon' | 'custom';
+  type: "financial" | "operational" | "user" | "salon" | "custom";
   icon: any;
   color: string;
   fields: string[];
@@ -96,10 +103,10 @@ interface ReportTemplate {
 }
 
 const statusColors = {
-  completed: 'bg-green-100 text-green-800',
-  generating: 'bg-blue-100 text-blue-800',
-  scheduled: 'bg-yellow-100 text-yellow-800',
-  failed: 'bg-red-100 text-red-800',
+  completed: "bg-green-100 text-green-800",
+  generating: "bg-blue-100 text-blue-800",
+  scheduled: "bg-yellow-100 text-yellow-800",
+  failed: "bg-red-100 text-red-800",
 };
 
 const statusIcons = {
@@ -110,48 +117,58 @@ const statusIcons = {
 };
 
 const typeColors = {
-  financial: 'bg-green-100 text-green-800',
-  operational: 'bg-blue-100 text-blue-800',
-  user: 'bg-purple-100 text-purple-800',
-  salon: 'bg-orange-100 text-orange-800',
-  custom: 'bg-gray-100 text-gray-800',
+  financial: "bg-green-100 text-green-800",
+  operational: "bg-blue-100 text-blue-800",
+  user: "bg-purple-100 text-purple-800",
+  salon: "bg-orange-100 text-orange-800",
+  custom: "bg-gray-100 text-gray-800",
 };
 
 export default function ReportsPage() {
+  const { user } = useAuthStore();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'financial' | 'operational' | 'user' | 'salon' | 'custom'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'generating' | 'scheduled' | 'failed'>('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState<
+    "all" | "financial" | "operational" | "user" | "salon" | "custom"
+  >("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "completed" | "generating" | "scheduled" | "failed"
+  >("all");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<ReportTemplate | null>(null);
   const [reportForm, setReportForm] = useState({
-    name: '',
-    description: '',
-    dateRange: '30d',
-    startDate: '',
-    endDate: '',
-    format: 'pdf' as 'pdf' | 'excel' | 'csv',
+    name: "",
+    description: "",
+    dateRange: "30d",
+    startDate: "",
+    endDate: "",
+    format: "pdf" as "pdf" | "excel" | "csv",
     filters: [] as string[],
-    schedule: 'once' as 'once' | 'daily' | 'weekly' | 'monthly',
+    schedule: "once" as "once" | "daily" | "weekly" | "monthly",
   });
-  const [generatingReports, setGeneratingReports] = useState<Set<string>>(new Set());
+  const [generatingReports, setGeneratingReports] = useState<Set<string>>(
+    new Set()
+  );
   const [viewingReport, setViewingReport] = useState<any>(null);
   const { toast } = useToast();
   const [reportTemplates, setReportTemplates] = useState<ReportTemplate[]>([]);
-  const [createMode, setCreateMode] = useState<'template' | 'manual'>('template');
+  const [createMode, setCreateMode] = useState<"template" | "manual">(
+    "template"
+  );
   const [manualForm, setManualForm] = useState({
-    name: '',
-    description: '',
-    sectionTitle: '',
-    sectionData: '',
-    note: '',
-    type: 'analytics',
-    period: 'monthly',
+    name: "",
+    description: "",
+    sectionTitle: "",
+    sectionData: "",
+    note: "",
+    type: "analytics",
+    period: "monthly",
   });
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
 
@@ -171,19 +188,35 @@ export default function ReportsPage() {
     try {
       const [templates, reportData] = await Promise.all([
         fetchReportTemplatesApi(),
-        fetchReportsApi({ page, limit, status: statusFilter !== 'all' ? statusFilter : undefined, search: searchTerm || undefined }),
+        fetchReportsApi({
+          page,
+          limit,
+          status: statusFilter !== "all" ? statusFilter : undefined,
+          search: searchTerm || undefined,
+        }),
       ]);
       setReportTemplates(
         templates.map((tpl: any) => ({
           ...tpl,
-          icon: LucideIcons[tpl.icon as keyof typeof LucideIcons] || LucideIcons.FileText,
+          icon:
+            LucideIcons[tpl.icon as keyof typeof LucideIcons] ||
+            LucideIcons.FileText,
         }))
       );
       setReports(reportData.reports || reportData);
       setTotalPages(reportData.totalPages || 1);
-      setTotal(reportData.total || (reportData.reports ? reportData.reports.length : (reportData.length || 0)));
+      setTotal(
+        reportData.total ||
+          (reportData.reports
+            ? reportData.reports.length
+            : reportData.length || 0)
+      );
     } catch (error: any) {
-      toast({ title: 'Error', description: 'Failed to fetch data', variant: 'destructive' });
+      toast({
+        title: "Error",
+        description: "Failed to fetch data",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -205,25 +238,29 @@ export default function ReportsPage() {
           filters: reportForm.filters,
           schedule: reportForm.schedule,
           fields: selectedFields, // <-- send selected fields
-        }
+        },
       };
       await createReportApi(reportData);
-      toast({ title: 'Report created successfully' });
+      toast({ title: "Report created successfully" });
       setCreateDialogOpen(false);
       setSelectedTemplate(null);
       setReportForm({
-        name: '',
-        description: '',
-        dateRange: '30d',
-        startDate: '',
-        endDate: '',
-        format: 'pdf',
+        name: "",
+        description: "",
+        dateRange: "30d",
+        startDate: "",
+        endDate: "",
+        format: "pdf",
         filters: [],
-        schedule: 'once',
+        schedule: "once",
       });
       fetchAll();
     } catch (error: any) {
-      toast({ title: 'Error creating report', description: 'Please try again later.', variant: 'destructive' });
+      toast({
+        title: "Error creating report",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -241,48 +278,52 @@ export default function ReportsPage() {
         ...manualForm,
         sectionData: customSectionData,
       });
-      toast({ title: 'Manual report created successfully' });
+      toast({ title: "Manual report created successfully" });
       setCreateDialogOpen(false);
       setManualForm({
-        name: '',
-        description: '',
-        sectionTitle: '',
-        sectionData: '',
-        note: '',
-        type: 'analytics',
-        period: 'monthly',
+        name: "",
+        description: "",
+        sectionTitle: "",
+        sectionData: "",
+        note: "",
+        type: "analytics",
+        period: "monthly",
       });
       fetchAll();
     } catch (error: any) {
-      toast({ title: 'Error creating manual report', description: error.response?.data?.error || error.message, variant: 'destructive' });
+      toast({
+        title: "Error creating manual report",
+        description: error.response?.data?.error || error.message,
+        variant: "destructive",
+      });
     }
   };
 
   const handleShowReport = async (template: ReportTemplate) => {
     const reportId = `temp_${Date.now()}`;
-    setGeneratingReports(prev => new Set(prev).add(reportId));
+    setGeneratingReports((prev) => new Set(prev).add(reportId));
 
     try {
       const result = await generateReport(template.id, {
-        dateRange: '30d',
-        format: 'interactive',
-        filters: []
+        dateRange: "30d",
+        format: "interactive",
+        filters: [],
       });
 
       setViewingReport(result.data);
 
       toast({
-        title: 'Report generated successfully',
+        title: "Report generated successfully",
         description: `${template.name} is ready for viewing.`,
       });
     } catch (error) {
       toast({
-        title: 'Error generating report',
-        description: 'Please try again later.',
-        variant: 'destructive',
+        title: "Error generating report",
+        description: "Please try again later.",
+        variant: "destructive",
       });
     } finally {
-      setGeneratingReports(prev => {
+      setGeneratingReports((prev) => {
         const newSet = new Set(prev);
         newSet.delete(reportId);
         return newSet;
@@ -291,18 +332,18 @@ export default function ReportsPage() {
   };
 
   const handleDownloadReport = (report: Report) => {
-    if (report.status !== 'completed' || !report.downloadUrl) {
+    if (report.status !== "completed" || !report.downloadUrl) {
       toast({
-        title: 'Report not available',
-        description: 'This report is not ready for download yet.',
-        variant: 'destructive',
+        title: "Report not available",
+        description: "This report is not ready for download yet.",
+        variant: "destructive",
       });
       return;
     }
 
     // In a real app, you would trigger the actual download
     toast({
-      title: 'Download started',
+      title: "Download started",
       description: `Downloading ${report.name}...`,
     });
   };
@@ -310,10 +351,14 @@ export default function ReportsPage() {
   const handleDeleteReport = async (reportId: string) => {
     try {
       await deleteReportApi(reportId);
-      toast({ title: 'Report deleted' });
+      toast({ title: "Report deleted" });
       fetchAll();
     } catch (error) {
-      toast({ title: 'Error deleting report', description: 'Please try again later.', variant: 'destructive' });
+      toast({
+        title: "Error deleting report",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -325,21 +370,35 @@ export default function ReportsPage() {
       } else if (report && report.data) {
         setViewingReport(report.data);
       } else {
-        toast({ title: 'Error', description: 'No report data available', variant: 'destructive' });
+        toast({
+          title: "Error",
+          description: "No report data available",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to load report', variant: 'destructive' });
+      toast({
+        title: "Error",
+        description: "Failed to load report",
+        variant: "destructive",
+      });
     }
   };
 
   const getDateRangeLabel = (range: string) => {
     switch (range) {
-      case '7d': return 'Last 7 days';
-      case '30d': return 'Last 30 days';
-      case '90d': return 'Last 90 days';
-      case '1y': return 'Last year';
-      case 'custom': return 'Custom range';
-      default: return range;
+      case "7d":
+        return "Last 7 days";
+      case "30d":
+        return "Last 30 days";
+      case "90d":
+        return "Last 90 days";
+      case "1y":
+        return "Last year";
+      case "custom":
+        return "Custom range";
+      default:
+        return range;
     }
   };
 
@@ -351,13 +410,32 @@ export default function ReportsPage() {
     );
   }
 
+  if (user?.role === "user") {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Access Denied
+          </h1>
+          <p className="text-gray-600">
+            You do not have access to reports or analytics.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
-          <p className="text-gray-600">Generate, manage, and download comprehensive business reports</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Reports & Analytics
+          </h1>
+          <p className="text-gray-600">
+            Generate, manage, and download comprehensive business reports
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchAll}>
@@ -378,7 +456,11 @@ export default function ReportsPage() {
                   Choose a template or create a custom report manually
                 </DialogDescription>
               </DialogHeader>
-              <Tabs selectedIndex={createMode === 'template' ? 0 : 1} onSelect={i => setCreateMode(i === 0 ? 'template' : 'manual')} className="w-full">
+              <Tabs
+                selectedIndex={createMode === "template" ? 0 : 1}
+                onSelect={(i) => setCreateMode(i === 0 ? "template" : "manual")}
+                className="w-full"
+              >
                 <TabList className="mb-4">
                   <Tab>From Template</Tab>
                   <Tab>Manual</Tab>
@@ -394,29 +476,50 @@ export default function ReportsPage() {
                               key={template.id}
                               onClick={() => setSelectedTemplate(template)}
                               className={`p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-purple-200 hover:bg-purple-50 ${
-                                template.popular ? 'border-blue-200 bg-blue-50' : 'border-gray-200'
+                                template.popular
+                                  ? "border-blue-200 bg-blue-50"
+                                  : "border-gray-200"
                               }`}
                             >
                               {template.popular && (
-                                <Badge className="mb-2 bg-blue-600 text-white">Popular</Badge>
+                                <Badge className="mb-2 bg-blue-600 text-white">
+                                  Popular
+                                </Badge>
                               )}
                               <div className="flex items-center gap-3 mb-3">
-                                <div className={`p-2 rounded-lg bg-gradient-to-r ${template.color}`}>
+                                <div
+                                  className={`p-2 rounded-lg bg-gradient-to-r ${template.color}`}
+                                >
                                   <Icon className="h-5 w-5 text-white" />
                                 </div>
                                 <div>
-                                  <h3 className="font-semibold text-gray-900">{template.name}</h3>
-                                  <Badge className={typeColors[template.type]}>{template.type}</Badge>
+                                  <h3 className="font-semibold text-gray-900">
+                                    {template.name}
+                                  </h3>
+                                  <Badge className={typeColors[template.type]}>
+                                    {template.type}
+                                  </Badge>
                                 </div>
                               </div>
-                              <p className="text-sm text-gray-600 mb-3">{template.description}</p>
+                              <p className="text-sm text-gray-600 mb-3">
+                                {template.description}
+                              </p>
                               <div className="space-y-1">
-                                <p className="text-xs font-medium text-gray-700">Includes:</p>
+                                <p className="text-xs font-medium text-gray-700">
+                                  Includes:
+                                </p>
                                 {template.fields.slice(0, 3).map((field) => (
-                                  <p key={field} className="text-xs text-gray-600">• {field}</p>
+                                  <p
+                                    key={field}
+                                    className="text-xs text-gray-600"
+                                  >
+                                    • {field}
+                                  </p>
                                 ))}
                                 {template.fields.length > 3 && (
-                                  <p className="text-xs text-gray-500">+{template.fields.length - 3} more</p>
+                                  <p className="text-xs text-gray-500">
+                                    +{template.fields.length - 3} more
+                                  </p>
                                 )}
                               </div>
                             </div>
@@ -428,12 +531,18 @@ export default function ReportsPage() {
                     <div className="space-y-6">
                       <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg bg-gradient-to-r ${selectedTemplate.color}`}>
+                          <div
+                            className={`p-2 rounded-lg bg-gradient-to-r ${selectedTemplate.color}`}
+                          >
                             <selectedTemplate.icon className="h-5 w-5 text-white" />
                           </div>
                           <div>
-                            <h3 className="font-semibold text-gray-900">{selectedTemplate.name}</h3>
-                            <p className="text-sm text-gray-600">{selectedTemplate.description}</p>
+                            <h3 className="font-semibold text-gray-900">
+                              {selectedTemplate.name}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              {selectedTemplate.description}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -446,39 +555,65 @@ export default function ReportsPage() {
                               id="reportName"
                               placeholder={selectedTemplate.name}
                               value={reportForm.name}
-                              onChange={(e) => setReportForm(prev => ({ ...prev, name: e.target.value }))}
+                              onChange={(e) =>
+                                setReportForm((prev) => ({
+                                  ...prev,
+                                  name: e.target.value,
+                                }))
+                              }
                             />
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="reportDescription">Description</Label>
+                            <Label htmlFor="reportDescription">
+                              Description
+                            </Label>
                             <textarea
                               id="reportDescription"
                               rows={3}
                               className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                               placeholder={selectedTemplate.description}
                               value={reportForm.description}
-                              onChange={(e) => setReportForm(prev => ({ ...prev, description: e.target.value }))}
+                              onChange={(e) =>
+                                setReportForm((prev) => ({
+                                  ...prev,
+                                  description: e.target.value,
+                                }))
+                              }
                             />
                           </div>
 
                           <div className="space-y-2">
                             <Label htmlFor="dateRange">Date Range</Label>
-                            <Select value={reportForm.dateRange} onValueChange={(value) => setReportForm(prev => ({ ...prev, dateRange: value }))}>
+                            <Select
+                              value={reportForm.dateRange}
+                              onValueChange={(value) =>
+                                setReportForm((prev) => ({
+                                  ...prev,
+                                  dateRange: value,
+                                }))
+                              }
+                            >
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="7d">Last 7 days</SelectItem>
-                                <SelectItem value="30d">Last 30 days</SelectItem>
-                                <SelectItem value="90d">Last 90 days</SelectItem>
+                                <SelectItem value="30d">
+                                  Last 30 days
+                                </SelectItem>
+                                <SelectItem value="90d">
+                                  Last 90 days
+                                </SelectItem>
                                 <SelectItem value="1y">Last year</SelectItem>
-                                <SelectItem value="custom">Custom range</SelectItem>
+                                <SelectItem value="custom">
+                                  Custom range
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
 
-                          {reportForm.dateRange === 'custom' && (
+                          {reportForm.dateRange === "custom" && (
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
                                 <Label htmlFor="startDate">Start Date</Label>
@@ -486,7 +621,12 @@ export default function ReportsPage() {
                                   id="startDate"
                                   type="date"
                                   value={reportForm.startDate}
-                                  onChange={(e) => setReportForm(prev => ({ ...prev, startDate: e.target.value }))}
+                                  onChange={(e) =>
+                                    setReportForm((prev) => ({
+                                      ...prev,
+                                      startDate: e.target.value,
+                                    }))
+                                  }
                                 />
                               </div>
                               <div className="space-y-2">
@@ -495,7 +635,12 @@ export default function ReportsPage() {
                                   id="endDate"
                                   type="date"
                                   value={reportForm.endDate}
-                                  onChange={(e) => setReportForm(prev => ({ ...prev, endDate: e.target.value }))}
+                                  onChange={(e) =>
+                                    setReportForm((prev) => ({
+                                      ...prev,
+                                      endDate: e.target.value,
+                                    }))
+                                  }
                                 />
                               </div>
                             </div>
@@ -505,13 +650,25 @@ export default function ReportsPage() {
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <Label htmlFor="format">Export Format</Label>
-                            <Select value={reportForm.format} onValueChange={(value: 'pdf' | 'excel' | 'csv') => setReportForm(prev => ({ ...prev, format: value }))}>
+                            <Select
+                              value={reportForm.format}
+                              onValueChange={(value: "pdf" | "excel" | "csv") =>
+                                setReportForm((prev) => ({
+                                  ...prev,
+                                  format: value,
+                                }))
+                              }
+                            >
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="pdf">PDF Document</SelectItem>
-                                <SelectItem value="excel">Excel Spreadsheet</SelectItem>
+                                <SelectItem value="pdf">
+                                  PDF Document
+                                </SelectItem>
+                                <SelectItem value="excel">
+                                  Excel Spreadsheet
+                                </SelectItem>
                                 <SelectItem value="csv">CSV File</SelectItem>
                               </SelectContent>
                             </Select>
@@ -519,12 +676,24 @@ export default function ReportsPage() {
 
                           <div className="space-y-2">
                             <Label htmlFor="schedule">Schedule</Label>
-                            <Select value={reportForm.schedule} onValueChange={(value: 'once' | 'daily' | 'weekly' | 'monthly') => setReportForm(prev => ({ ...prev, schedule: value }))}>
+                            <Select
+                              value={reportForm.schedule}
+                              onValueChange={(
+                                value: "once" | "daily" | "weekly" | "monthly"
+                              ) =>
+                                setReportForm((prev) => ({
+                                  ...prev,
+                                  schedule: value,
+                                }))
+                              }
+                            >
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="once">Generate once</SelectItem>
+                                <SelectItem value="once">
+                                  Generate once
+                                </SelectItem>
                                 <SelectItem value="daily">Daily</SelectItem>
                                 <SelectItem value="weekly">Weekly</SelectItem>
                                 <SelectItem value="monthly">Monthly</SelectItem>
@@ -536,19 +705,26 @@ export default function ReportsPage() {
                             <Label>Report Fields</Label>
                             <div className="space-y-2 max-h-32 overflow-y-auto">
                               {selectedTemplate.fields.map((field) => (
-                                <div key={field} className="flex items-center gap-2">
+                                <div
+                                  key={field}
+                                  className="flex items-center gap-2"
+                                >
                                   <input
                                     type="checkbox"
                                     id={field}
                                     checked={selectedFields.includes(field)}
-                                    onChange={e => {
-                                      setSelectedFields(prev =>
-                                        e.target.checked ? [...prev, field] : prev.filter(f => f !== field)
+                                    onChange={(e) => {
+                                      setSelectedFields((prev) =>
+                                        e.target.checked
+                                          ? [...prev, field]
+                                          : prev.filter((f) => f !== field)
                                       );
                                     }}
                                     className="rounded"
                                   />
-                                  <Label htmlFor={field} className="text-sm">{field}</Label>
+                                  <Label htmlFor={field} className="text-sm">
+                                    {field}
+                                  </Label>
                                 </div>
                               ))}
                             </div>
@@ -566,18 +742,30 @@ export default function ReportsPage() {
                         id="manualReportName"
                         placeholder="Enter report title"
                         value={manualForm.name}
-                        onChange={e => setManualForm(prev => ({ ...prev, name: e.target.value }))}
+                        onChange={(e) =>
+                          setManualForm((prev) => ({
+                            ...prev,
+                            name: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="manualReportDescription">Description</Label>
+                      <Label htmlFor="manualReportDescription">
+                        Description
+                      </Label>
                       <textarea
                         id="manualReportDescription"
                         rows={2}
                         className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                         placeholder="Enter description"
                         value={manualForm.description}
-                        onChange={e => setManualForm(prev => ({ ...prev, description: e.target.value }))}
+                        onChange={(e) =>
+                          setManualForm((prev) => ({
+                            ...prev,
+                            description: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -586,18 +774,30 @@ export default function ReportsPage() {
                         id="manualSectionTitle"
                         placeholder="Section title (optional)"
                         value={manualForm.sectionTitle}
-                        onChange={e => setManualForm(prev => ({ ...prev, sectionTitle: e.target.value }))}
+                        onChange={(e) =>
+                          setManualForm((prev) => ({
+                            ...prev,
+                            sectionTitle: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="manualSectionData">Section Data (JSON or text)</Label>
+                      <Label htmlFor="manualSectionData">
+                        Section Data (JSON or text)
+                      </Label>
                       <textarea
                         id="manualSectionData"
                         rows={3}
                         className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                         placeholder='Example: {"customMetric": 42}'
                         value={manualForm.sectionData}
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setManualForm(prev => ({ ...prev, sectionData: e.target.value }))}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                          setManualForm((prev) => ({
+                            ...prev,
+                            sectionData: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -606,26 +806,40 @@ export default function ReportsPage() {
                         id="manualNote"
                         placeholder="Optional note or metadata"
                         value={manualForm.note}
-                        onChange={e => setManualForm(prev => ({ ...prev, note: e.target.value }))}
+                        onChange={(e) =>
+                          setManualForm((prev) => ({
+                            ...prev,
+                            note: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                   </div>
                 </TabPanel>
               </Tabs>
               <DialogFooter>
-                <Button variant="outline" onClick={() => {
-                  setSelectedTemplate(null);
-                  setCreateDialogOpen(false);
-                }}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedTemplate(null);
+                    setCreateDialogOpen(false);
+                  }}
+                >
                   Cancel
                 </Button>
-                {createMode === 'template' && selectedTemplate && (
-                  <Button onClick={handleCreateReport} className="bg-purple-600 hover:bg-purple-700">
+                {createMode === "template" && selectedTemplate && (
+                  <Button
+                    onClick={handleCreateReport}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
                     Create Report
                   </Button>
                 )}
-                {createMode === 'manual' && (
-                  <Button onClick={handleManualCreateReport} className="bg-purple-600 hover:bg-purple-700">
+                {createMode === "manual" && (
+                  <Button
+                    onClick={handleManualCreateReport}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
                     Create Manual Report
                   </Button>
                 )}
@@ -647,23 +861,38 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {reportTemplates.map((template) => {
               const Icon = template.icon;
-              const isGenerating = Array.from(generatingReports).some(id => id.includes(template.id));
-              
+              const isGenerating = Array.from(generatingReports).some((id) =>
+                id.includes(template.id)
+              );
+
               return (
-                <div key={template.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div
+                  key={template.id}
+                  className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
                   {template.popular && (
-                    <Badge className="mb-2 bg-blue-600 text-white">Popular</Badge>
+                    <Badge className="mb-2 bg-blue-600 text-white">
+                      Popular
+                    </Badge>
                   )}
                   <div className="flex items-center gap-3 mb-3">
-                    <div className={`p-2 rounded-lg bg-gradient-to-r ${template.color}`}>
+                    <div
+                      className={`p-2 rounded-lg bg-gradient-to-r ${template.color}`}
+                    >
                       <Icon className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">{template.name}</h3>
-                      <Badge className={typeColors[template.type]}>{template.type}</Badge>
+                      <h3 className="font-semibold text-gray-900">
+                        {template.name}
+                      </h3>
+                      <Badge className={typeColors[template.type]}>
+                        {template.type}
+                      </Badge>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-4">{template.description}</p>
+                  <p className="text-sm text-gray-600 mb-4">
+                    {template.description}
+                  </p>
                   <div className="flex gap-2">
                     <Button
                       onClick={() => handleShowReport(template)}
@@ -713,7 +942,10 @@ export default function ReportsPage() {
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Select value={typeFilter} onValueChange={(value: any) => setTypeFilter(value)}>
+              <Select
+                value={typeFilter}
+                onValueChange={(value: any) => setTypeFilter(value)}
+              >
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
@@ -726,7 +958,10 @@ export default function ReportsPage() {
                   <SelectItem value="custom">Custom</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+              <Select
+                value={statusFilter}
+                onValueChange={(value: any) => setStatusFilter(value)}
+              >
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
@@ -756,25 +991,39 @@ export default function ReportsPage() {
             {reports.map((report) => {
               const StatusIcon = statusIcons[report.status];
               return (
-                <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div
+                  key={report.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg flex items-center justify-center">
                       <FileText className="h-6 w-6 text-purple-600" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-gray-900">{report.name}</h3>
-                        <Badge className={typeColors[report.type]}>{report.type}</Badge>
+                        <h3 className="font-semibold text-gray-900">
+                          {report.name}
+                        </h3>
+                        <Badge className={typeColors[report.type]}>
+                          {report.type}
+                        </Badge>
                         <Badge className={statusColors[report.status]}>
                           <StatusIcon className="h-3 w-3 mr-1" />
                           {report.status}
                         </Badge>
                       </div>
-                      <p className="text-sm text-gray-600 mb-1">{report.description}</p>
+                      <p className="text-sm text-gray-600 mb-1">
+                        {report.description}
+                      </p>
                       <div className="flex items-center gap-4 text-xs text-gray-500">
                         <span>Created by {report.createdBy}</span>
                         <span>•</span>
-                        <span>{format(new Date(report.createdAt), 'MMM dd, yyyy HH:mm')}</span>
+                        <span>
+                          {format(
+                            new Date(report.createdAt),
+                            "MMM dd, yyyy HH:mm"
+                          )}
+                        </span>
                         {report.size && (
                           <>
                             <span>•</span>
@@ -782,14 +1031,20 @@ export default function ReportsPage() {
                           </>
                         )}
                         <span>•</span>
-                        <span>{getDateRangeLabel(report.parameters.dateRange)}</span>
+                        <span>
+                          {getDateRangeLabel(report.parameters.dateRange)}
+                        </span>
                         <span>•</span>
-                        <span>{report.parameters?.format ? report.parameters.format.toUpperCase() : ''}</span>
+                        <span>
+                          {report.parameters?.format
+                            ? report.parameters.format.toUpperCase()
+                            : ""}
+                        </span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {report.status === 'completed' && (
+                    {report.status === "completed" && (
                       <>
                         <Button
                           variant="ghost"
@@ -816,13 +1071,13 @@ export default function ReportsPage() {
                         </Button>
                       </>
                     )}
-                    {report.status === 'generating' && (
+                    {report.status === "generating" && (
                       <div className="flex items-center gap-2 text-blue-600">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span className="text-sm">Generating...</span>
                       </div>
                     )}
-                    {report.status === 'failed' && (
+                    {report.status === "failed" && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -848,13 +1103,18 @@ export default function ReportsPage() {
           {reports.length === 0 && (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No reports found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No reports found
+              </h3>
               <p className="text-gray-600 mb-4">
-                {searchTerm || typeFilter !== 'all' || statusFilter !== 'all'
-                  ? 'Try adjusting your filters to see more reports.'
-                  : 'Create your first report to get started with analytics.'}
+                {searchTerm || typeFilter !== "all" || statusFilter !== "all"
+                  ? "Try adjusting your filters to see more reports."
+                  : "Create your first report to get started with analytics."}
               </p>
-              <Button onClick={() => setCreateDialogOpen(true)} className="bg-purple-600 hover:bg-purple-700">
+              <Button
+                onClick={() => setCreateDialogOpen(true)}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Report
               </Button>
@@ -865,13 +1125,30 @@ export default function ReportsPage() {
 
       {/* Pagination Controls */}
       <div className="flex justify-center items-center gap-4 mt-6">
-        <Button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} variant="outline">Previous</Button>
-        <span>Page {page} of {totalPages} ({total} reports)</span>
-        <Button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} variant="outline">Next</Button>
+        <Button
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page === 1}
+          variant="outline"
+        >
+          Previous
+        </Button>
+        <span>
+          Page {page} of {totalPages} ({total} reports)
+        </span>
+        <Button
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          disabled={page === totalPages}
+          variant="outline"
+        >
+          Next
+        </Button>
         <select
           className="ml-4 border rounded px-2 py-1"
           value={limit}
-          onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
+          onChange={(e) => {
+            setLimit(Number(e.target.value));
+            setPage(1);
+          }}
         >
           <option value={5}>5</option>
           <option value={10}>10</option>
@@ -887,7 +1164,9 @@ export default function ReportsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Reports</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Reports
+                </p>
                 <p className="text-2xl font-bold text-gray-900">{total}</p>
               </div>
               <FileText className="h-8 w-8 text-blue-500" />
@@ -901,7 +1180,7 @@ export default function ReportsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Completed</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {reports.filter(r => r.status === 'completed').length}
+                  {reports.filter((r) => r.status === "completed").length}
                 </p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-500" />
@@ -915,7 +1194,7 @@ export default function ReportsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Generating</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  {reports.filter(r => r.status === 'generating').length}
+                  {reports.filter((r) => r.status === "generating").length}
                 </p>
               </div>
               <Clock className="h-8 w-8 text-blue-500" />
@@ -929,7 +1208,7 @@ export default function ReportsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Scheduled</p>
                 <p className="text-2xl font-bold text-yellow-600">
-                  {reports.filter(r => r.status === 'scheduled').length}
+                  {reports.filter((r) => r.status === "scheduled").length}
                 </p>
               </div>
               <Calendar className="h-8 w-8 text-yellow-500" />

@@ -1,16 +1,22 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 // Optimize Recharts imports - only import what we use
 import {
   LineChart,
@@ -28,8 +34,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  ComposedChart
-} from 'recharts';
+  ComposedChart,
+} from "recharts";
 import {
   TrendingUp,
   TrendingDown,
@@ -50,11 +56,12 @@ import {
   RefreshCw,
   Eye,
   ArrowUpRight,
-  ArrowDownRight
-} from 'lucide-react';
-import { fetchAnalytics } from '@/api/analytics';
+  ArrowDownRight,
+} from "lucide-react";
+import { fetchAnalytics } from "@/api/analytics";
 // Replace xlsx with exceljs for security
-import * as ExcelJS from 'exceljs';
+import * as ExcelJS from "exceljs";
+import { useAuthStore } from "@/stores/auth-store";
 
 interface AnalyticsData {
   overview: {
@@ -120,13 +127,23 @@ interface AnalyticsData {
   };
 }
 
-const COLORS = ['#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
+const COLORS = [
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+];
 
 export default function AnalyticsPage() {
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const { user } = useAuthStore();
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState('30d');
-  const [selectedMetric, setSelectedMetric] = useState('revenue');
+  const [timeRange, setTimeRange] = useState("30d");
+  const [selectedMetric, setSelectedMetric] = useState("revenue");
 
   useEffect(() => {
     fetchAnalyticsData();
@@ -138,23 +155,23 @@ export default function AnalyticsPage() {
       const data = await fetchAnalytics(timeRange);
       setAnalyticsData(data);
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      console.error("Error fetching analytics:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
   };
 
   const formatPercentage = (value: number) => {
-    return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
+    return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
   };
 
   const getGrowthIcon = (growth: number) => {
@@ -166,67 +183,135 @@ export default function AnalyticsPage() {
   };
 
   const getGrowthColor = (growth: number) => {
-    return growth > 0 ? 'text-green-600' : 'text-red-600';
+    return growth > 0 ? "text-green-600" : "text-red-600";
   };
 
   const handleExportExcel = () => {
     if (!analyticsData) return;
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Overview');
+    const worksheet = workbook.addWorksheet("Overview");
 
     worksheet.addRow([
-      'Total Salons', analyticsData.overview.totalSalons,
-      'Active Salons', analyticsData.overview.activeSalons,
-      'Total Users', analyticsData.overview.totalUsers,
-      'Active Users', analyticsData.overview.activeUsers,
-      'Total Bookings', analyticsData.overview.totalBookings,
-      'Completed Bookings', analyticsData.overview.completedBookings,
-      'Total Revenue', analyticsData.overview.totalRevenue,
-      'Monthly Growth (%)', analyticsData.overview.monthlyGrowth,
+      "Total Salons",
+      analyticsData.overview.totalSalons,
+      "Active Salons",
+      analyticsData.overview.activeSalons,
+      "Total Users",
+      analyticsData.overview.totalUsers,
+      "Active Users",
+      analyticsData.overview.activeUsers,
+      "Total Bookings",
+      analyticsData.overview.totalBookings,
+      "Completed Bookings",
+      analyticsData.overview.completedBookings,
+      "Total Revenue",
+      analyticsData.overview.totalRevenue,
+      "Monthly Growth (%)",
+      analyticsData.overview.monthlyGrowth,
     ]);
 
-    const revenueWorksheet = workbook.addWorksheet('Revenue');
-    revenueWorksheet.addRow(['Month', 'Revenue', 'Subscriptions', 'Commissions']);
-    analyticsData.revenue.data?.forEach(row => {
-      revenueWorksheet.addRow([row.month, row.revenue, row.subscriptions, row.commissions]);
+    const revenueWorksheet = workbook.addWorksheet("Revenue");
+    revenueWorksheet.addRow([
+      "Month",
+      "Revenue",
+      "Subscriptions",
+      "Commissions",
+    ]);
+    analyticsData.revenue.data?.forEach((row) => {
+      revenueWorksheet.addRow([
+        row.month,
+        row.revenue,
+        row.subscriptions,
+        row.commissions,
+      ]);
     });
 
-    const bookingsWorksheet = workbook.addWorksheet('Bookings');
-    bookingsWorksheet.addRow(['Date', 'Total Bookings', 'Completed', 'Cancelled']);
-    analyticsData.bookings.data?.forEach(row => {
-      bookingsWorksheet.addRow([row.date, row.bookings, row.completed, row.cancelled]);
+    const bookingsWorksheet = workbook.addWorksheet("Bookings");
+    bookingsWorksheet.addRow([
+      "Date",
+      "Total Bookings",
+      "Completed",
+      "Cancelled",
+    ]);
+    analyticsData.bookings.data?.forEach((row) => {
+      bookingsWorksheet.addRow([
+        row.date,
+        row.bookings,
+        row.completed,
+        row.cancelled,
+      ]);
     });
 
-    const userGrowthWorksheet = workbook.addWorksheet('User Growth');
-    userGrowthWorksheet.addRow(['Month', 'New Users', 'Returning Users', 'Total Users']);
-    analyticsData.userGrowth.data?.forEach(row => {
-      userGrowthWorksheet.addRow([row.month, row.newUsers, row.returningUsers, row.totalUsers]);
+    const userGrowthWorksheet = workbook.addWorksheet("User Growth");
+    userGrowthWorksheet.addRow([
+      "Month",
+      "New Users",
+      "Returning Users",
+      "Total Users",
+    ]);
+    analyticsData.userGrowth.data?.forEach((row) => {
+      userGrowthWorksheet.addRow([
+        row.month,
+        row.newUsers,
+        row.returningUsers,
+        row.totalUsers,
+      ]);
     });
 
-    const topServicesWorksheet = workbook.addWorksheet('Top Services');
-    topServicesWorksheet.addRow(['Service Name', 'Bookings', 'Revenue', 'Growth']);
-    analyticsData.topServices?.forEach(service => {
-      topServicesWorksheet.addRow([service.name, service.bookings, service.revenue, service.growth]);
+    const topServicesWorksheet = workbook.addWorksheet("Top Services");
+    topServicesWorksheet.addRow([
+      "Service Name",
+      "Bookings",
+      "Revenue",
+      "Growth",
+    ]);
+    analyticsData.topServices?.forEach((service) => {
+      topServicesWorksheet.addRow([
+        service.name,
+        service.bookings,
+        service.revenue,
+        service.growth,
+      ]);
     });
 
-    const geoWorksheet = workbook.addWorksheet('Geographic');
-    geoWorksheet.addRow(['Location', 'Salons', 'Users', 'Revenue']);
-    analyticsData.geographicData?.forEach(location => {
-      geoWorksheet.addRow([location.location, location.salons, location.users, location.revenue]);
+    const geoWorksheet = workbook.addWorksheet("Geographic");
+    geoWorksheet.addRow(["Location", "Salons", "Users", "Revenue"]);
+    analyticsData.geographicData?.forEach((location) => {
+      geoWorksheet.addRow([
+        location.location,
+        location.salons,
+        location.users,
+        location.revenue,
+      ]);
     });
 
-    workbook.xlsx.writeBuffer().then(buffer => {
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = 'analytics_export.xlsx';
+      a.download = "analytics_export.xlsx";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     });
   };
+
+  if (user?.role === "user") {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Access Denied
+          </h1>
+          <p className="text-gray-600">You do not have access to analytics.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -240,7 +325,9 @@ export default function AnalyticsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900">No data available</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            No data available
+          </h2>
           <p className="text-gray-600 mt-2">Unable to load analytics data.</p>
         </div>
       </div>
@@ -252,8 +339,12 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
-          <p className="text-gray-600">Comprehensive insights into platform performance and trends</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Analytics Dashboard
+          </h1>
+          <p className="text-gray-600">
+            Comprehensive insights into platform performance and trends
+          </p>
         </div>
         <div className="flex gap-2">
           <Select value={timeRange} onValueChange={setTimeRange}>
@@ -284,13 +375,19 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Revenue
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
                   {formatCurrency(analyticsData.overview.totalRevenue)}
                 </p>
                 <div className="flex items-center gap-1 mt-1">
                   {getGrowthIcon(analyticsData.overview.monthlyGrowth)}
-                  <span className={`text-sm font-medium ${getGrowthColor(analyticsData.overview.monthlyGrowth)}`}>
+                  <span
+                    className={`text-sm font-medium ${getGrowthColor(
+                      analyticsData.overview.monthlyGrowth
+                    )}`}
+                  >
                     {formatPercentage(analyticsData.overview.monthlyGrowth)}
                   </span>
                   <span className="text-xs text-gray-500">vs last month</span>
@@ -307,7 +404,9 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Salons</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Active Salons
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
                   {analyticsData.overview.activeSalons.toLocaleString()}
                 </p>
@@ -328,7 +427,9 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Users</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Active Users
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
                   {analyticsData.overview.activeUsers.toLocaleString()}
                 </p>
@@ -349,7 +450,9 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Bookings</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Bookings
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
                   {analyticsData.overview.totalBookings.toLocaleString()}
                 </p>
@@ -379,29 +482,47 @@ export default function AnalyticsPage() {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={analyticsData.revenue.data}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200" />
-                <XAxis dataKey="month" className="text-gray-600" fontSize={12} />
-                <YAxis className="text-gray-600" fontSize={12} tickFormatter={(value) => `$${value / 1000}k`} />
-                <Tooltip 
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  className="stroke-gray-200"
+                />
+                <XAxis
+                  dataKey="month"
+                  className="text-gray-600"
+                  fontSize={12}
+                />
+                <YAxis
+                  className="text-gray-600"
+                  fontSize={12}
+                  tickFormatter={(value) => `$${value / 1000}k`}
+                />
+                <Tooltip
                   formatter={(value: any, name: string) => [
-                    `$${value.toLocaleString()}`, 
-                    name === 'revenue' ? 'Total Revenue' : 
-                    name === 'subscriptions' ? 'Subscriptions' : 'Commissions'
+                    `$${value.toLocaleString()}`,
+                    name === "revenue"
+                      ? "Total Revenue"
+                      : name === "subscriptions"
+                      ? "Subscriptions"
+                      : "Commissions",
                   ]}
-                  labelStyle={{ color: '#374151' }}
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px'
+                  labelStyle={{ color: "#374151" }}
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
                   }}
                 />
                 <Legend />
-                <Bar dataKey="subscriptions" fill="#8b5cf6" name="Subscriptions" />
+                <Bar
+                  dataKey="subscriptions"
+                  fill="#8b5cf6"
+                  name="Subscriptions"
+                />
                 <Bar dataKey="commissions" fill="#ec4899" name="Commissions" />
-                <Line 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#06b6d4" 
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#06b6d4"
                   strokeWidth={3}
                   name="Total Revenue"
                 />
@@ -413,45 +534,53 @@ export default function AnalyticsPage() {
         <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle>User Growth</CardTitle>
-            <CardDescription>
-              New vs returning users over time
-            </CardDescription>
+            <CardDescription>New vs returning users over time</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={analyticsData.userGrowth.data}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200" />
-                <XAxis dataKey="month" className="text-gray-600" fontSize={12} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  className="stroke-gray-200"
+                />
+                <XAxis
+                  dataKey="month"
+                  className="text-gray-600"
+                  fontSize={12}
+                />
                 <YAxis className="text-gray-600" fontSize={12} />
-                <Tooltip 
+                <Tooltip
                   formatter={(value: any, name: string) => [
-                    value.toLocaleString(), 
-                    name === 'newUsers' ? 'New Users' : 
-                    name === 'returningUsers' ? 'Returning Users' : 'Total Users'
+                    value.toLocaleString(),
+                    name === "newUsers"
+                      ? "New Users"
+                      : name === "returningUsers"
+                      ? "Returning Users"
+                      : "Total Users",
                   ]}
-                  labelStyle={{ color: '#374151' }}
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px'
+                  labelStyle={{ color: "#374151" }}
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
                   }}
                 />
                 <Legend />
-                <Area 
-                  type="monotone" 
-                  dataKey="newUsers" 
-                  stackId="1" 
-                  stroke="#10b981" 
-                  fill="#10b981" 
+                <Area
+                  type="monotone"
+                  dataKey="newUsers"
+                  stackId="1"
+                  stroke="#10b981"
+                  fill="#10b981"
                   fillOpacity={0.6}
                   name="New Users"
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="returningUsers" 
-                  stackId="1" 
-                  stroke="#8b5cf6" 
-                  fill="#8b5cf6" 
+                <Area
+                  type="monotone"
+                  dataKey="returningUsers"
+                  stackId="1"
+                  stroke="#8b5cf6"
+                  fill="#8b5cf6"
                   fillOpacity={0.6}
                   name="Returning Users"
                 />
@@ -472,29 +601,35 @@ export default function AnalyticsPage() {
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
             <ComposedChart data={analyticsData.bookings.data}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200" />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                className="stroke-gray-200"
+              />
               <XAxis dataKey="date" className="text-gray-600" fontSize={12} />
               <YAxis className="text-gray-600" fontSize={12} />
-              <Tooltip 
+              <Tooltip
                 formatter={(value: any, name: string) => [
-                  value.toLocaleString(), 
-                  name === 'bookings' ? 'Total Bookings' : 
-                  name === 'completed' ? 'Completed' : 'Cancelled'
+                  value.toLocaleString(),
+                  name === "bookings"
+                    ? "Total Bookings"
+                    : name === "completed"
+                    ? "Completed"
+                    : "Cancelled",
                 ]}
-                labelStyle={{ color: '#374151' }}
-                contentStyle={{ 
-                  backgroundColor: 'white', 
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px'
+                labelStyle={{ color: "#374151" }}
+                contentStyle={{
+                  backgroundColor: "white",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
                 }}
               />
               <Legend />
               <Bar dataKey="completed" fill="#10b981" name="Completed" />
               <Bar dataKey="cancelled" fill="#ef4444" name="Cancelled" />
-              <Line 
-                type="monotone" 
-                dataKey="bookings" 
-                stroke="#8b5cf6" 
+              <Line
+                type="monotone"
+                dataKey="bookings"
+                stroke="#8b5cf6"
                 strokeWidth={3}
                 name="Total Bookings"
               />
@@ -519,9 +654,13 @@ export default function AnalyticsPage() {
                   <DollarSign className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Avg. Booking Value</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Avg. Booking Value
+                  </p>
                   <p className="text-lg font-bold text-gray-900">
-                    {formatCurrency(analyticsData.performanceMetrics.averageBookingValue)}
+                    {formatCurrency(
+                      analyticsData.performanceMetrics.averageBookingValue
+                    )}
                   </p>
                 </div>
               </div>
@@ -534,7 +673,9 @@ export default function AnalyticsPage() {
                   <Users className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Customer Retention</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Customer Retention
+                  </p>
                   <p className="text-lg font-bold text-gray-900">
                     {analyticsData.performanceMetrics.customerRetentionRate}%
                   </p>
@@ -549,7 +690,9 @@ export default function AnalyticsPage() {
                   <Activity className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Salon Utilization</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Salon Utilization
+                  </p>
                   <p className="text-lg font-bold text-gray-900">
                     {analyticsData.performanceMetrics.salonUtilizationRate}%
                   </p>
@@ -564,7 +707,9 @@ export default function AnalyticsPage() {
                   <Star className="h-5 w-5 text-yellow-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Average Rating</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Average Rating
+                  </p>
                   <p className="text-lg font-bold text-gray-900">
                     {analyticsData.performanceMetrics.averageRating}/5.0
                   </p>
@@ -585,13 +730,18 @@ export default function AnalyticsPage() {
           <CardContent>
             <div className="space-y-4">
               {analyticsData.topServices.map((service, index) => (
-                <div key={service.name} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div
+                  key={service.name}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
                   <div className="flex items-center gap-4">
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-bold">
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900">{service.name}</p>
+                      <p className="font-semibold text-gray-900">
+                        {service.name}
+                      </p>
                       <p className="text-sm text-gray-600">
                         {service.bookings.toLocaleString()} bookings
                       </p>
@@ -603,7 +753,9 @@ export default function AnalyticsPage() {
                     </p>
                     <div className="flex items-center gap-1">
                       {getGrowthIcon(service.growth)}
-                      <span className={`text-sm ${getGrowthColor(service.growth)}`}>
+                      <span
+                        className={`text-sm ${getGrowthColor(service.growth)}`}
+                      >
                         {formatPercentage(service.growth)}
                       </span>
                     </div>
@@ -626,24 +778,35 @@ export default function AnalyticsPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {analyticsData.geographicData.map((location) => (
-              <div key={location.location} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+              <div
+                key={location.location}
+                className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+              >
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-blue-100 rounded-lg">
                     <MapPin className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900">{location.location}</h4>
-                    <p className="text-sm text-gray-600">{location.salons} salons</p>
+                    <h4 className="font-semibold text-gray-900">
+                      {location.location}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {location.salons} salons
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Users:</span>
-                    <span className="text-sm font-medium">{location.users.toLocaleString()}</span>
+                    <span className="text-sm font-medium">
+                      {location.users.toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Revenue:</span>
-                    <span className="text-sm font-medium">{formatCurrency(location.revenue)}</span>
+                    <span className="text-sm font-medium">
+                      {formatCurrency(location.revenue)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -656,26 +819,39 @@ export default function AnalyticsPage() {
       <Card className="border-0 shadow-sm bg-gradient-to-r from-purple-50 to-pink-50">
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>
-            Common analytics tasks and reports
-          </CardDescription>
+          <CardDescription>Common analytics tasks and reports</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+            <Button
+              variant="outline"
+              className="h-auto p-4 flex flex-col items-center gap-2"
+            >
               <BarChart3 className="h-6 w-6 text-purple-600" />
               <span className="font-medium">Custom Report</span>
-              <span className="text-xs text-gray-500">Create detailed reports</span>
+              <span className="text-xs text-gray-500">
+                Create detailed reports
+              </span>
             </Button>
-            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+            <Button
+              variant="outline"
+              className="h-auto p-4 flex flex-col items-center gap-2"
+            >
               <Download className="h-6 w-6 text-blue-600" />
               <span className="font-medium">Export Data</span>
-              <span className="text-xs text-gray-500">Download analytics data</span>
+              <span className="text-xs text-gray-500">
+                Download analytics data
+              </span>
             </Button>
-            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+            <Button
+              variant="outline"
+              className="h-auto p-4 flex flex-col items-center gap-2"
+            >
               <Eye className="h-6 w-6 text-green-600" />
               <span className="font-medium">Live Dashboard</span>
-              <span className="text-xs text-gray-500">Real-time monitoring</span>
+              <span className="text-xs text-gray-500">
+                Real-time monitoring
+              </span>
             </Button>
           </div>
         </CardContent>

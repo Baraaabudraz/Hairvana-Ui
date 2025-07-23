@@ -1,31 +1,49 @@
-import { useEffect, useState } from 'react';
-import { StatsCards } from '@/components/dashboard/stats-cards';
-import { RevenueChart } from '@/components/dashboard/revenue-chart';
-import { RecentActivity } from '@/components/dashboard/recent-activity';
-import { TopSalons } from '@/components/dashboard/top-salons';
-import { useAuthStore } from '@/stores/auth-store';
+import { useEffect, useState } from "react";
+import { StatsCards } from "@/components/dashboard/stats-cards";
+import { RevenueChart } from "@/components/dashboard/revenue-chart";
+import { RecentActivity } from "@/components/dashboard/recent-activity";
+import { TopSalons } from "@/components/dashboard/top-salons";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
-  const [greeting, setGreeting] = useState('');
+  const [greeting, setGreeting] = useState("");
 
   useEffect(() => {
     // Set greeting based on time of day
     const hour = new Date().getHours();
     if (hour < 12) {
-      setGreeting('Good morning');
+      setGreeting("Good morning");
     } else if (hour < 18) {
-      setGreeting('Good afternoon');
+      setGreeting("Good afternoon");
     } else {
-      setGreeting('Good evening');
+      setGreeting("Good evening");
     }
   }, []);
+
+  if (user?.role === "user") {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Access Denied
+          </h1>
+          <p className="text-gray-600">
+            You do not have access to the dashboard.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
-        <p className="text-gray-600">{greeting}, {user?.name || 'Welcome back'}! Here's what's happening with your platform.</p>
+        <p className="text-gray-600">
+          {greeting}, {user?.name || "Welcome back"}! Here's what's happening
+          with your platform.
+        </p>
       </div>
 
       <StatsCards />

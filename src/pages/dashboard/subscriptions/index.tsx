@@ -1,18 +1,24 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +28,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -30,15 +36,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { 
-  Search, 
-  MoreHorizontal, 
-  Eye, 
-  Edit, 
-  XCircle, 
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Search,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  XCircle,
   Plus,
   CreditCard,
   Building2,
@@ -53,21 +59,21 @@ import {
   RefreshCw,
   Zap,
   Star,
-  Crown
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { 
-  fetchSubscriptions, 
-  cancelSubscription, 
-  updateSubscription, 
-  updatePaymentMethod, 
+  Crown,
+} from "lucide-react";
+import { format } from "date-fns";
+import {
+  fetchSubscriptions,
+  cancelSubscription,
+  updateSubscription,
+  updatePaymentMethod,
   syncBilling,
   SubscriptionParams,
-  fetchSubscriptionPlans
-} from '@/api/subscriptions';
+  fetchSubscriptionPlans,
+} from "@/api/subscriptions";
 
-type SubscriptionStatus = 'active' | 'trial' | 'cancelled' | 'past_due';
-type PlanType = 'Basic' | 'Standard' | 'Premium';
+type SubscriptionStatus = "active" | "trial" | "cancelled" | "past_due";
+type PlanType = "Basic" | "Standard" | "Premium";
 
 interface PaymentMethod {
   type: string;
@@ -87,11 +93,11 @@ interface BillingHistory {
 
 interface Usage {
   bookings: number;
-  bookingsLimit: number | 'unlimited';
+  bookingsLimit: number | "unlimited";
   staff: number;
-  staffLimit: number | 'unlimited';
+  staffLimit: number | "unlimited";
   locations: number;
-  locationsLimit: number | 'unlimited';
+  locationsLimit: number | "unlimited";
 }
 
 interface Subscription {
@@ -122,9 +128,9 @@ interface Plan {
   description: string;
   features: string[];
   limits: {
-    bookings: number | 'unlimited';
-    staff: number | 'unlimited';
-    locations: number | 'unlimited';
+    bookings: number | "unlimited";
+    staff: number | "unlimited";
+    locations: number | "unlimited";
   };
   popular: boolean;
 }
@@ -138,16 +144,16 @@ interface SubscriptionStats {
 }
 
 const statusColors: Record<SubscriptionStatus, string> = {
-  active: 'bg-green-100 text-green-800',
-  trial: 'bg-blue-100 text-blue-800',
-  cancelled: 'bg-red-100 text-red-800',
-  past_due: 'bg-yellow-100 text-yellow-800',
+  active: "bg-green-100 text-green-800",
+  trial: "bg-blue-100 text-blue-800",
+  cancelled: "bg-red-100 text-red-800",
+  past_due: "bg-yellow-100 text-yellow-800",
 };
 
 const planColors: Record<PlanType, string> = {
-  Basic: 'bg-gray-100 text-gray-800',
-  Standard: 'bg-blue-100 text-blue-800',
-  Premium: 'bg-purple-100 text-purple-800',
+  Basic: "bg-gray-100 text-gray-800",
+  Standard: "bg-blue-100 text-blue-800",
+  Premium: "bg-purple-100 text-purple-800",
 };
 
 const planIcons = {
@@ -169,9 +175,11 @@ export default function SubscriptionsPage() {
     totalRevenue: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | SubscriptionStatus>('all');
-  const [planFilter, setPlanFilter] = useState<'all' | PlanType>('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | SubscriptionStatus>(
+    "all"
+  );
+  const [planFilter, setPlanFilter] = useState<"all" | PlanType>("all");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
@@ -180,14 +188,15 @@ export default function SubscriptionsPage() {
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
   const [editBillingDialogOpen, setEditBillingDialogOpen] = useState(false);
-  const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
+  const [selectedSubscription, setSelectedSubscription] =
+    useState<Subscription | null>(null);
   const [selectedNewPlan, setSelectedNewPlan] = useState<Plan | null>(null);
   const [newPaymentMethod, setNewPaymentMethod] = useState({
-    cardNumber: '',
-    expiryMonth: '',
-    expiryYear: '',
-    cvv: '',
-    cardholderName: '',
+    cardNumber: "",
+    expiryMonth: "",
+    expiryYear: "",
+    cvv: "",
+    cardholderName: "",
   });
   const { toast } = useToast();
 
@@ -202,11 +211,11 @@ export default function SubscriptionsPage() {
       const data = await fetchSubscriptionPlans();
       setPlans(data);
     } catch (error: any) {
-      setPlansError('Failed to load plans');
+      setPlansError("Failed to load plans");
       toast({
-        title: 'Error',
-        description: 'Failed to load subscription plans. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load subscription plans. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setPlansLoading(false);
@@ -222,10 +231,10 @@ export default function SubscriptionsPage() {
     try {
       setLoading(true);
       const params: SubscriptionParams = { page, limit };
-      if (statusFilter !== 'all') {
+      if (statusFilter !== "all") {
         params.status = statusFilter;
       }
-      if (planFilter !== 'all') {
+      if (planFilter !== "all") {
         (params as any).plan = planFilter;
       }
       if (searchTerm) {
@@ -236,13 +245,16 @@ export default function SubscriptionsPage() {
       setSubscriptions(data.subscriptions);
       setStats(data.stats);
       setTotalPages(data.totalPages || 1);
-      setTotal(data.total || (data.subscriptions ? data.subscriptions.length : (data.length || 0)));
+      setTotal(
+        data.total ||
+          (data.subscriptions ? data.subscriptions.length : data.length || 0)
+      );
     } catch (error) {
-      console.error('Error loading subscriptions:', error);
+      console.error("Error loading subscriptions:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load subscriptions. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load subscriptions. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -252,20 +264,24 @@ export default function SubscriptionsPage() {
   const handleCancelSubscription = async (subscriptionId: string) => {
     try {
       await cancelSubscription(subscriptionId);
-      
-      setSubscriptions(prev => prev.map(sub => 
-        sub.id === subscriptionId ? { ...sub, status: 'cancelled' as SubscriptionStatus } : sub
-      ));
+
+      setSubscriptions((prev) =>
+        prev.map((sub) =>
+          sub.id === subscriptionId
+            ? { ...sub, status: "cancelled" as SubscriptionStatus }
+            : sub
+        )
+      );
 
       toast({
-        title: 'Subscription cancelled',
-        description: 'The subscription has been cancelled successfully.',
+        title: "Subscription cancelled",
+        description: "The subscription has been cancelled successfully.",
       });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to cancel subscription. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to cancel subscription. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -274,19 +290,25 @@ export default function SubscriptionsPage() {
     if (!selectedSubscription || !selectedNewPlan) return;
 
     try {
-      await updateSubscription(selectedSubscription.id, { 
+      await updateSubscription(selectedSubscription.id, {
         plan_id: selectedNewPlan.id,
-        amount: selectedNewPlan.price
+        amount: selectedNewPlan.price,
       });
 
-      setSubscriptions(prev => prev.map(sub => 
-        sub.id === selectedSubscription.id 
-          ? { ...sub, plan: selectedNewPlan.name as PlanType, amount: selectedNewPlan.price }
-          : sub
-      ));
+      setSubscriptions((prev) =>
+        prev.map((sub) =>
+          sub.id === selectedSubscription.id
+            ? {
+                ...sub,
+                plan: selectedNewPlan.name as PlanType,
+                amount: selectedNewPlan.price,
+              }
+            : sub
+        )
+      );
 
       toast({
-        title: 'Plan upgraded successfully',
+        title: "Plan upgraded successfully",
         description: `${selectedSubscription.salonName} has been upgraded to ${selectedNewPlan.name} plan.`,
       });
 
@@ -295,9 +317,9 @@ export default function SubscriptionsPage() {
       setSelectedNewPlan(null);
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to upgrade plan. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to upgrade plan. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -306,19 +328,25 @@ export default function SubscriptionsPage() {
     if (!selectedSubscription || !selectedNewPlan) return;
 
     try {
-      await updateSubscription(selectedSubscription.id, { 
+      await updateSubscription(selectedSubscription.id, {
         plan_id: selectedNewPlan.id,
-        amount: selectedNewPlan.price
+        amount: selectedNewPlan.price,
       });
 
-      setSubscriptions(prev => prev.map(sub => 
-        sub.id === selectedSubscription.id 
-          ? { ...sub, plan: selectedNewPlan.name as PlanType, amount: selectedNewPlan.price }
-          : sub
-      ));
+      setSubscriptions((prev) =>
+        prev.map((sub) =>
+          sub.id === selectedSubscription.id
+            ? {
+                ...sub,
+                plan: selectedNewPlan.name as PlanType,
+                amount: selectedNewPlan.price,
+              }
+            : sub
+        )
+      );
 
       toast({
-        title: 'Plan downgraded successfully',
+        title: "Plan downgraded successfully",
         description: `${selectedSubscription.salonName} has been downgraded to ${selectedNewPlan.name} plan.`,
       });
 
@@ -327,9 +355,9 @@ export default function SubscriptionsPage() {
       setSelectedNewPlan(null);
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to downgrade plan. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to downgrade plan. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -339,43 +367,45 @@ export default function SubscriptionsPage() {
 
     try {
       const paymentData = {
-        type: 'card',
+        type: "card",
         last4: newPaymentMethod.cardNumber.slice(-4),
-        brand: 'Visa', // In real app, detect from card number
+        brand: "Visa", // In real app, detect from card number
         expiryMonth: parseInt(newPaymentMethod.expiryMonth),
-        expiryYear: parseInt(newPaymentMethod.expiryYear)
+        expiryYear: parseInt(newPaymentMethod.expiryYear),
       };
-      
+
       await updatePaymentMethod(selectedSubscription.id, paymentData);
 
-      setSubscriptions(prev => prev.map(sub => 
-        sub.id === selectedSubscription.id 
-          ? { 
-              ...sub, 
-              paymentMethod: paymentData as PaymentMethod
-            }
-          : sub
-      ));
+      setSubscriptions((prev) =>
+        prev.map((sub) =>
+          sub.id === selectedSubscription.id
+            ? {
+                ...sub,
+                paymentMethod: paymentData as PaymentMethod,
+              }
+            : sub
+        )
+      );
 
       toast({
-        title: 'Payment method updated',
-        description: 'The payment method has been updated successfully.',
+        title: "Payment method updated",
+        description: "The payment method has been updated successfully.",
       });
 
       setEditBillingDialogOpen(false);
       setSelectedSubscription(null);
       setNewPaymentMethod({
-        cardNumber: '',
-        expiryMonth: '',
-        expiryYear: '',
-        cvv: '',
-        cardholderName: '',
+        cardNumber: "",
+        expiryMonth: "",
+        expiryYear: "",
+        cvv: "",
+        cardholderName: "",
       });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to update payment method. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update payment method. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -383,22 +413,22 @@ export default function SubscriptionsPage() {
   const handleSyncBilling = async () => {
     try {
       toast({
-        title: 'Syncing billing data',
-        description: 'Please wait while we sync with the payment gateway...',
+        title: "Syncing billing data",
+        description: "Please wait while we sync with the payment gateway...",
       });
-      
+
       // In a real app, you would call the API to sync billing data
       await syncBilling();
-      
+
       toast({
-        title: 'Billing data synced',
-        description: 'Billing data has been synchronized successfully.',
+        title: "Billing data synced",
+        description: "Billing data has been synchronized successfully.",
       });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to sync billing data. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to sync billing data. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -432,26 +462,30 @@ export default function SubscriptionsPage() {
   };
 
   const getAvailableUpgrades = (currentPlan: PlanType) => {
-    const planOrder = ['Basic', 'Standard', 'Premium'];
+    const planOrder = ["Basic", "Standard", "Premium"];
     const currentIndex = planOrder.indexOf(currentPlan);
-    return plans.filter(plan => planOrder.indexOf(plan.name as PlanType) > currentIndex);
+    return plans.filter(
+      (plan) => planOrder.indexOf(plan.name as PlanType) > currentIndex
+    );
   };
 
   const getAvailableDowngrades = (currentPlan: PlanType) => {
-    const planOrder = ['Basic', 'Standard', 'Premium'];
+    const planOrder = ["Basic", "Standard", "Premium"];
     const currentIndex = planOrder.indexOf(currentPlan);
-    return plans.filter(plan => planOrder.indexOf(plan.name as PlanType) < currentIndex);
+    return plans.filter(
+      (plan) => planOrder.indexOf(plan.name as PlanType) < currentIndex
+    );
   };
 
-  const getUsagePercentage = (current: number, limit: number | 'unlimited') => {
-    if (limit === 'unlimited') return 0;
+  const getUsagePercentage = (current: number, limit: number | "unlimited") => {
+    if (limit === "unlimited") return 0;
     return Math.min((current / limit) * 100, 100);
   };
 
   const getUsageColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-red-500';
-    if (percentage >= 75) return 'bg-yellow-500';
-    return 'bg-green-500';
+    if (percentage >= 90) return "bg-red-500";
+    if (percentage >= 75) return "bg-yellow-500";
+    return "bg-green-500";
   };
 
   if (loading) {
@@ -466,8 +500,12 @@ export default function SubscriptionsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Subscription Management</h1>
-          <p className="text-gray-600">Manage salon subscriptions, billing, and plans</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Subscription Management
+          </h1>
+          <p className="text-gray-600">
+            Manage salon subscriptions, billing, and plans
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleSyncBilling}>
@@ -489,8 +527,12 @@ export default function SubscriptionsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Subscriptions</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Subscriptions
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.total}
+                </p>
               </div>
               <CreditCard className="h-8 w-8 text-blue-500" />
             </div>
@@ -501,7 +543,9 @@ export default function SubscriptionsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Active</p>
-                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {stats.active}
+                </p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
@@ -512,7 +556,9 @@ export default function SubscriptionsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Trial</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.trial}</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {stats.trial}
+                </p>
               </div>
               <AlertTriangle className="h-8 w-8 text-blue-500" />
             </div>
@@ -523,7 +569,9 @@ export default function SubscriptionsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Cancelled</p>
-                <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {stats.cancelled}
+                </p>
               </div>
               <XCircle className="h-8 w-8 text-red-500" />
             </div>
@@ -533,8 +581,12 @@ export default function SubscriptionsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
-                <p className="text-2xl font-bold text-green-600">${stats.totalRevenue.toFixed(2)}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Monthly Revenue
+                </p>
+                <p className="text-2xl font-bold text-green-600">
+                  ${stats.totalRevenue.toFixed(2)}
+                </p>
               </div>
               <DollarSign className="h-8 w-8 text-green-500" />
             </div>
@@ -564,39 +616,61 @@ export default function SubscriptionsPage() {
               {plans.map((plan) => {
                 const PlanIcon = planIcons[plan.name as PlanType];
                 return (
-                  <div key={plan.id} className={`relative p-6 rounded-lg border-2 ${
-                    plan.popular ? 'border-purple-200 bg-purple-50' : 'border-gray-200 bg-white'
-                  }`}>
+                  <div
+                    key={plan.id}
+                    className={`relative p-6 rounded-lg border-2 ${
+                      plan.popular
+                        ? "border-purple-200 bg-purple-50"
+                        : "border-gray-200 bg-white"
+                    }`}
+                  >
                     {plan.popular && (
                       <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                        <Badge className="bg-purple-600 text-white">Most Popular</Badge>
+                        <Badge className="bg-purple-600 text-white">
+                          Most Popular
+                        </Badge>
                       </div>
                     )}
                     <div className="text-center">
                       <div className="flex justify-center mb-4">
-                        <div className={`p-3 rounded-lg bg-gradient-to-r ${
-                          plan.name === 'Basic' ? 'from-gray-600 to-gray-700' :
-                          plan.name === 'Standard' ? 'from-blue-600 to-blue-700' :
-                          'from-purple-600 to-purple-700'
-                        }`}>
-                          {PlanIcon ? <PlanIcon className="h-6 w-6 text-white" /> : <span className="h-6 w-6">?</span>}
+                        <div
+                          className={`p-3 rounded-lg bg-gradient-to-r ${
+                            plan.name === "Basic"
+                              ? "from-gray-600 to-gray-700"
+                              : plan.name === "Standard"
+                              ? "from-blue-600 to-blue-700"
+                              : "from-purple-600 to-purple-700"
+                          }`}
+                        >
+                          {PlanIcon ? (
+                            <PlanIcon className="h-6 w-6 text-white" />
+                          ) : (
+                            <span className="h-6 w-6">?</span>
+                          )}
                         </div>
                       </div>
-                      <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {plan.name}
+                      </h3>
                       <p className="text-gray-600 mt-2">{plan.description}</p>
                       <div className="mt-4">
-                        <span className="text-3xl font-bold text-gray-900">${plan.price}</span>
+                        <span className="text-3xl font-bold text-gray-900">
+                          ${plan.price}
+                        </span>
                         <span className="text-gray-600">/month</span>
                       </div>
                       <p className="text-sm text-gray-500 mt-1">
-                        or ${plan.yearlyPrice}/year (save ${((plan.price * 12) - plan.yearlyPrice).toFixed(2)})
+                        or ${plan.yearlyPrice}/year (save $
+                        {(plan.price * 12 - plan.yearlyPrice).toFixed(2)})
                       </p>
                     </div>
                     <ul className="mt-6 space-y-3">
                       {plan.features.map((feature, index) => (
                         <li key={index} className="flex items-center gap-2">
                           <CheckCircle className="h-4 w-4 text-green-500" />
-                          <span className="text-sm text-gray-700">{feature}</span>
+                          <span className="text-sm text-gray-700">
+                            {feature}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -624,63 +698,63 @@ export default function SubscriptionsPage() {
             <div className="flex flex-wrap gap-2">
               {/* Status Filters */}
               <Button
-                variant={statusFilter === 'all' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('all')}
+                variant={statusFilter === "all" ? "default" : "outline"}
+                onClick={() => setStatusFilter("all")}
                 size="sm"
               >
                 All Status
               </Button>
               <Button
-                variant={statusFilter === 'active' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('active')}
+                variant={statusFilter === "active" ? "default" : "outline"}
+                onClick={() => setStatusFilter("active")}
                 size="sm"
               >
                 <CheckCircle className="h-3 w-3 mr-1" />
                 Active
               </Button>
               <Button
-                variant={statusFilter === 'trial' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('trial')}
+                variant={statusFilter === "trial" ? "default" : "outline"}
+                onClick={() => setStatusFilter("trial")}
                 size="sm"
               >
                 <AlertTriangle className="h-3 w-3 mr-1" />
                 Trial
               </Button>
               <Button
-                variant={statusFilter === 'cancelled' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('cancelled')}
+                variant={statusFilter === "cancelled" ? "default" : "outline"}
+                onClick={() => setStatusFilter("cancelled")}
                 size="sm"
               >
                 <XCircle className="h-3 w-3 mr-1" />
                 Cancelled
               </Button>
-              
+
               {/* Plan Filters */}
               <div className="w-px h-6 bg-gray-300 mx-2" />
               <Button
-                variant={planFilter === 'all' ? 'default' : 'outline'}
-                onClick={() => setPlanFilter('all')}
+                variant={planFilter === "all" ? "default" : "outline"}
+                onClick={() => setPlanFilter("all")}
                 size="sm"
               >
                 All Plans
               </Button>
               <Button
-                variant={planFilter === 'Basic' ? 'default' : 'outline'}
-                onClick={() => setPlanFilter('Basic')}
+                variant={planFilter === "Basic" ? "default" : "outline"}
+                onClick={() => setPlanFilter("Basic")}
                 size="sm"
               >
                 Basic
               </Button>
               <Button
-                variant={planFilter === 'Standard' ? 'default' : 'outline'}
-                onClick={() => setPlanFilter('Standard')}
+                variant={planFilter === "Standard" ? "default" : "outline"}
+                onClick={() => setPlanFilter("Standard")}
                 size="sm"
               >
                 Standard
               </Button>
               <Button
-                variant={planFilter === 'Premium' ? 'default' : 'outline'}
-                onClick={() => setPlanFilter('Premium')}
+                variant={planFilter === "Premium" ? "default" : "outline"}
+                onClick={() => setPlanFilter("Premium")}
                 size="sm"
               >
                 Premium
@@ -694,80 +768,117 @@ export default function SubscriptionsPage() {
               const PlanIcon = planIcons[subscription.plan];
               const usage = subscription.usage || {};
               const bookings = usage.bookings ?? 0;
-              const bookingsLimit = usage.bookingsLimit ?? 'unlimited';
+              const bookingsLimit = usage.bookingsLimit ?? "unlimited";
               const staff = usage.staff ?? 0;
-              const staffLimit = usage.staffLimit ?? 'unlimited';
-              const bookingsPercentage = getUsagePercentage(bookings, bookingsLimit);
+              const staffLimit = usage.staffLimit ?? "unlimited";
+              const bookingsPercentage = getUsagePercentage(
+                bookings,
+                bookingsLimit
+              );
               const staffPercentage = getUsagePercentage(staff, staffLimit);
-              
+
               return (
-                <div key={subscription.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div
+                  key={subscription.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
                   <div className="flex items-center space-x-4">
                     <div className="relative">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={subscription.salonImage || '/default-salon.png'} alt={subscription.salonName} />
-                        <AvatarFallback>{(subscription.salonName ? subscription.salonName.split(' ').map(n => n[0]).join('') : '?')}</AvatarFallback>
+                        <AvatarImage
+                          src={subscription.salonImage || "/default-salon.png"}
+                          alt={subscription.salonName}
+                        />
+                        <AvatarFallback>
+                          {subscription.salonName
+                            ? subscription.salonName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                            : "?"}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1">
-                        {PlanIcon ? <PlanIcon className="h-3 w-3 text-gray-600" /> : <span className="h-3 w-3">?</span>}
+                        {PlanIcon ? (
+                          <PlanIcon className="h-3 w-3 text-gray-600" />
+                        ) : (
+                          <span className="h-3 w-3">?</span>
+                        )}
                       </div>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">{subscription.salonName}</h3>
-                      <p className="text-sm text-gray-600">{subscription.ownerName}</p>
-                      <p className="text-xs text-gray-500">{subscription.ownerEmail}</p>
+                      <h3 className="font-semibold text-gray-900">
+                        {subscription.salonName}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {subscription.ownerName}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {subscription.ownerEmail}
+                      </p>
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-3 w-3 text-gray-400" />
                         <span className="text-xs text-gray-500">
-                          Next billing: {(() => {
-                            if (!subscription.nextBillingDate) return 'N/A';
+                          Next billing:{" "}
+                          {(() => {
+                            if (!subscription.nextBillingDate) return "N/A";
                             const date = new Date(subscription.nextBillingDate);
-                            return isNaN(date.getTime()) ? 'N/A' : format(date, 'MMM dd, yyyy');
+                            return isNaN(date.getTime())
+                              ? "N/A"
+                              : format(date, "MMM dd, yyyy");
                           })()}
                         </span>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-6">
                     {/* Usage Indicators */}
                     <div className="text-center">
                       <p className="text-sm font-semibold text-gray-900">
                         {bookings}
-                        {bookingsLimit !== 'unlimited' && `/${bookingsLimit}`}
+                        {bookingsLimit !== "unlimited" && `/${bookingsLimit}`}
                       </p>
                       <p className="text-xs text-gray-500">Bookings</p>
-                      {bookingsLimit !== 'unlimited' && (
+                      {bookingsLimit !== "unlimited" && (
                         <div className="w-16 h-1 bg-gray-200 rounded-full mt-1">
-                          <div 
-                            className={`h-1 rounded-full ${getUsageColor(bookingsPercentage)}`}
+                          <div
+                            className={`h-1 rounded-full ${getUsageColor(
+                              bookingsPercentage
+                            )}`}
                             style={{ width: `${bookingsPercentage}%` }}
                           />
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="text-center">
                       <p className="text-sm font-semibold text-gray-900">
                         {staff}
-                        {staffLimit !== 'unlimited' && `/${staffLimit}`}
+                        {staffLimit !== "unlimited" && `/${staffLimit}`}
                       </p>
                       <p className="text-xs text-gray-500">Staff</p>
-                      {staffLimit !== 'unlimited' && (
+                      {staffLimit !== "unlimited" && (
                         <div className="w-16 h-1 bg-gray-200 rounded-full mt-1">
-                          <div 
-                            className={`h-1 rounded-full ${getUsageColor(staffPercentage)}`}
+                          <div
+                            className={`h-1 rounded-full ${getUsageColor(
+                              staffPercentage
+                            )}`}
                             style={{ width: `${staffPercentage}%` }}
                           />
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="text-center">
-                      <p className="text-sm font-semibold text-gray-900">${subscription.amount}</p>
-                      <p className="text-xs text-gray-500">{subscription.billingCycle}</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        ${subscription.amount}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {subscription.billingCycle}
+                      </p>
                     </div>
-                    
+
                     <div className="flex flex-col gap-1">
                       <Badge className={planColors[subscription.plan]}>
                         {subscription.plan}
@@ -776,7 +887,7 @@ export default function SubscriptionsPage() {
                         {subscription.status}
                       </Badge>
                     </div>
-                    
+
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -785,27 +896,33 @@ export default function SubscriptionsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                          <Link to={`/dashboard/subscriptions/${subscription.id}`} className="flex items-center w-full">
+                          <Link
+                            to={`/dashboard/subscriptions/${subscription.id}`}
+                            className="flex items-center w-full"
+                          >
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link to={`/dashboard/salons/${subscription.salonId}`} className="flex items-center w-full">
+                          <Link
+                            to={`/dashboard/salons/${subscription.salonId}`}
+                            className="flex items-center w-full"
+                          >
                             <Building2 className="mr-2 h-4 w-4" />
                             View Salon
                           </Link>
                         </DropdownMenuItem>
-                        {subscription.status === 'active' && (
+                        {subscription.status === "active" && (
                           <>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="cursor-pointer"
                               onClick={() => openUpgradeDialog(subscription)}
                             >
                               <ArrowUpCircle className="mr-2 h-4 w-4" />
                               Upgrade Plan
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="cursor-pointer"
                               onClick={() => openDowngradeDialog(subscription)}
                             >
@@ -814,15 +931,15 @@ export default function SubscriptionsPage() {
                             </DropdownMenuItem>
                           </>
                         )}
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="cursor-pointer"
                           onClick={() => openEditBillingDialog(subscription)}
                         >
                           <Edit className="mr-2 h-4 w-4" />
                           Edit Billing
                         </DropdownMenuItem>
-                        {subscription.status === 'active' && (
-                          <DropdownMenuItem 
+                        {subscription.status === "active" && (
+                          <DropdownMenuItem
                             className="text-red-600 cursor-pointer"
                             onClick={() => openCancelDialog(subscription)}
                           >
@@ -842,13 +959,30 @@ export default function SubscriptionsPage() {
 
       {/* Pagination Controls */}
       <div className="flex justify-center items-center gap-4 mt-6">
-        <Button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} variant="outline">Previous</Button>
-        <span>Page {page} of {totalPages} ({total} subscriptions)</span>
-        <Button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} variant="outline">Next</Button>
+        <Button
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page === 1}
+          variant="outline"
+        >
+          Previous
+        </Button>
+        <span>
+          Page {page} of {totalPages} ({total} subscriptions)
+        </span>
+        <Button
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          disabled={page === totalPages}
+          variant="outline"
+        >
+          Next
+        </Button>
         <select
           className="ml-4 border rounded px-2 py-1"
           value={limit}
-          onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
+          onChange={(e) => {
+            setLimit(Number(e.target.value));
+            setPage(1);
+          }}
         >
           <option value={5}>5</option>
           <option value={10}>10</option>
@@ -864,12 +998,15 @@ export default function SubscriptionsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Subscription</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel the subscription for "{selectedSubscription?.salonName}"? 
-              This action will immediately revoke access to premium features and cannot be undone.
+              Are you sure you want to cancel the subscription for "
+              {selectedSubscription?.salonName}"? This action will immediately
+              revoke access to premium features and cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="mt-4">
-            <p className="text-sm text-gray-600 mb-2">The salon will lose access to:</p>
+            <p className="text-sm text-gray-600 mb-2">
+              The salon will lose access to:
+            </p>
             <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
               <li>Advanced booking features</li>
               <li>Analytics and reporting</li>
@@ -879,7 +1016,7 @@ export default function SubscriptionsPage() {
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={confirmCancel}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
@@ -901,58 +1038,84 @@ export default function SubscriptionsPage() {
           <div className="space-y-4">
             <div className="p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-800">
-                <strong>Current Plan:</strong> {selectedSubscription?.plan} - ${selectedSubscription?.amount}/month
+                <strong>Current Plan:</strong> {selectedSubscription?.plan} - $
+                {selectedSubscription?.amount}/month
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {selectedSubscription && getAvailableUpgrades(selectedSubscription?.plan).map((plan) => {
-                const PlanIcon = planIcons[plan.name as PlanType];
-                const isSelected = selectedNewPlan?.id === plan.id;
-                return (
-                  <div
-                    key={plan.id}
-                    onClick={() => setSelectedNewPlan(plan)}
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      isSelected ? 'border-purple-200 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`p-2 rounded-lg bg-gradient-to-r ${
-                        plan.name === 'Standard' ? 'from-blue-600 to-blue-700' : 'from-purple-600 to-purple-700'
-                      }`}>
-                        {PlanIcon ? <PlanIcon className="h-5 w-5 text-white" /> : <span className="h-5 w-5">?</span>}
+              {selectedSubscription &&
+                getAvailableUpgrades(selectedSubscription?.plan).map((plan) => {
+                  const PlanIcon = planIcons[plan.name as PlanType];
+                  const isSelected = selectedNewPlan?.id === plan.id;
+                  return (
+                    <div
+                      key={plan.id}
+                      onClick={() => setSelectedNewPlan(plan)}
+                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        isSelected
+                          ? "border-purple-200 bg-purple-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div
+                          className={`p-2 rounded-lg bg-gradient-to-r ${
+                            plan.name === "Standard"
+                              ? "from-blue-600 to-blue-700"
+                              : "from-purple-600 to-purple-700"
+                          }`}
+                        >
+                          {PlanIcon ? (
+                            <PlanIcon className="h-5 w-5 text-white" />
+                          ) : (
+                            <span className="h-5 w-5">?</span>
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-gray-900">
+                            {plan.name}
+                          </h3>
+                          <p className="text-lg font-semibold text-gray-900">
+                            ${plan.price}/month
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900">{plan.name}</h3>
-                        <p className="text-lg font-semibold text-gray-900">${plan.price}/month</p>
-                      </div>
+                      <p className="text-sm text-gray-600 mb-3">
+                        {plan.description}
+                      </p>
+                      <ul className="space-y-1">
+                        {plan.features.slice(0, 4).map((feature, index) => (
+                          <li key={index} className="flex items-center gap-2">
+                            <CheckCircle className="h-3 w-3 text-green-500" />
+                            <span className="text-xs text-gray-700">
+                              {feature}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">{plan.description}</p>
-                    <ul className="space-y-1">
-                      {plan.features.slice(0, 4).map((feature, index) => (
-                        <li key={index} className="flex items-center gap-2">
-                          <CheckCircle className="h-3 w-3 text-green-500" />
-                          <span className="text-xs text-gray-700">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
-            {selectedSubscription && getAvailableUpgrades(selectedSubscription?.plan).length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <Crown className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>Already on the highest plan</p>
-                <p className="text-sm">This subscription is already on the Premium plan.</p>
-              </div>
-            )}
+            {selectedSubscription &&
+              getAvailableUpgrades(selectedSubscription?.plan).length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Crown className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Already on the highest plan</p>
+                  <p className="text-sm">
+                    This subscription is already on the Premium plan.
+                  </p>
+                </div>
+              )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setUpgradeDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleUpgradePlan}
               disabled={!selectedNewPlan}
               className="bg-green-600 hover:bg-green-700 text-white"
@@ -976,61 +1139,90 @@ export default function SubscriptionsPage() {
           <div className="space-y-4">
             <div className="p-4 bg-yellow-50 rounded-lg">
               <p className="text-sm text-yellow-800">
-                <strong>Current Plan:</strong> {selectedSubscription?.plan} - ${selectedSubscription?.amount}/month
+                <strong>Current Plan:</strong> {selectedSubscription?.plan} - $
+                {selectedSubscription?.amount}/month
               </p>
               <p className="text-xs text-yellow-700 mt-1">
                 Downgrading will reduce available features and limits.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {selectedSubscription && getAvailableDowngrades(selectedSubscription?.plan).map((plan) => {
-                const PlanIcon = planIcons[plan.name as PlanType];
-                const isSelected = selectedNewPlan?.id === plan.id;
-                return (
-                  <div
-                    key={plan.id}
-                    onClick={() => setSelectedNewPlan(plan)}
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      isSelected ? 'border-orange-200 bg-orange-50' : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`p-2 rounded-lg bg-gradient-to-r ${
-                        plan.name === 'Basic' ? 'from-gray-600 to-gray-700' : 'from-blue-600 to-blue-700'
-                      }`}>
-                        {PlanIcon ? <PlanIcon className="h-5 w-5 text-white" /> : <span className="h-5 w-5">?</span>}
+              {selectedSubscription &&
+                getAvailableDowngrades(selectedSubscription?.plan).map(
+                  (plan) => {
+                    const PlanIcon = planIcons[plan.name as PlanType];
+                    const isSelected = selectedNewPlan?.id === plan.id;
+                    return (
+                      <div
+                        key={plan.id}
+                        onClick={() => setSelectedNewPlan(plan)}
+                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                          isSelected
+                            ? "border-orange-200 bg-orange-50"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 mb-3">
+                          <div
+                            className={`p-2 rounded-lg bg-gradient-to-r ${
+                              plan.name === "Basic"
+                                ? "from-gray-600 to-gray-700"
+                                : "from-blue-600 to-blue-700"
+                            }`}
+                          >
+                            {PlanIcon ? (
+                              <PlanIcon className="h-5 w-5 text-white" />
+                            ) : (
+                              <span className="h-5 w-5">?</span>
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-gray-900">
+                              {plan.name}
+                            </h3>
+                            <p className="text-lg font-semibold text-gray-900">
+                              ${plan.price}/month
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-3">
+                          {plan.description}
+                        </p>
+                        <ul className="space-y-1">
+                          {plan.features.slice(0, 4).map((feature, index) => (
+                            <li key={index} className="flex items-center gap-2">
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                              <span className="text-xs text-gray-700">
+                                {feature}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900">{plan.name}</h3>
-                        <p className="text-lg font-semibold text-gray-900">${plan.price}/month</p>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">{plan.description}</p>
-                    <ul className="space-y-1">
-                      {plan.features.slice(0, 4).map((feature, index) => (
-                        <li key={index} className="flex items-center gap-2">
-                          <CheckCircle className="h-3 w-3 text-green-500" />
-                          <span className="text-xs text-gray-700">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
+                    );
+                  }
+                )}
             </div>
-            {selectedSubscription && getAvailableDowngrades(selectedSubscription?.plan).length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <Zap className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>Already on the lowest plan</p>
-                <p className="text-sm">This subscription is already on the Basic plan.</p>
-              </div>
-            )}
+            {selectedSubscription &&
+              getAvailableDowngrades(selectedSubscription?.plan).length ===
+                0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Zap className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Already on the lowest plan</p>
+                  <p className="text-sm">
+                    This subscription is already on the Basic plan.
+                  </p>
+                </div>
+              )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDowngradeDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDowngradeDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleDowngradePlan}
               disabled={!selectedNewPlan}
               className="bg-orange-600 hover:bg-orange-700 text-black font-semibold"
@@ -1043,7 +1235,10 @@ export default function SubscriptionsPage() {
       </Dialog>
 
       {/* Edit Billing Dialog */}
-      <Dialog open={editBillingDialogOpen} onOpenChange={setEditBillingDialogOpen}>
+      <Dialog
+        open={editBillingDialogOpen}
+        onOpenChange={setEditBillingDialogOpen}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Payment Method</DialogTitle>
@@ -1055,14 +1250,17 @@ export default function SubscriptionsPage() {
             {selectedSubscription?.paymentMethod && (
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-800">
-                  <strong>Current:</strong> {selectedSubscription.paymentMethod.brand} ending in {selectedSubscription.paymentMethod.last4}
+                  <strong>Current:</strong>{" "}
+                  {selectedSubscription.paymentMethod.brand} ending in{" "}
+                  {selectedSubscription.paymentMethod.last4}
                 </p>
                 <p className="text-xs text-gray-600">
-                  Expires {selectedSubscription.paymentMethod.expiryMonth}/{selectedSubscription.paymentMethod.expiryYear}
+                  Expires {selectedSubscription.paymentMethod.expiryMonth}/
+                  {selectedSubscription.paymentMethod.expiryYear}
                 </p>
               </div>
             )}
-            
+
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="cardholderName">Cardholder Name</Label>
@@ -1070,20 +1268,30 @@ export default function SubscriptionsPage() {
                   id="cardholderName"
                   placeholder="John Doe"
                   value={newPaymentMethod.cardholderName}
-                  onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cardholderName: e.target.value }))}
+                  onChange={(e) =>
+                    setNewPaymentMethod((prev) => ({
+                      ...prev,
+                      cardholderName: e.target.value,
+                    }))
+                  }
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="cardNumber">Card Number</Label>
                 <Input
                   id="cardNumber"
                   placeholder="1234 5678 9012 3456"
                   value={newPaymentMethod.cardNumber}
-                  onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cardNumber: e.target.value }))}
+                  onChange={(e) =>
+                    setNewPaymentMethod((prev) => ({
+                      ...prev,
+                      cardNumber: e.target.value,
+                    }))
+                  }
                 />
               </div>
-              
+
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="expiryMonth">Month</Label>
@@ -1091,7 +1299,12 @@ export default function SubscriptionsPage() {
                     id="expiryMonth"
                     placeholder="MM"
                     value={newPaymentMethod.expiryMonth}
-                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, expiryMonth: e.target.value }))}
+                    onChange={(e) =>
+                      setNewPaymentMethod((prev) => ({
+                        ...prev,
+                        expiryMonth: e.target.value,
+                      }))
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -1100,7 +1313,12 @@ export default function SubscriptionsPage() {
                     id="expiryYear"
                     placeholder="YYYY"
                     value={newPaymentMethod.expiryYear}
-                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, expiryYear: e.target.value }))}
+                    onChange={(e) =>
+                      setNewPaymentMethod((prev) => ({
+                        ...prev,
+                        expiryYear: e.target.value,
+                      }))
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -1109,19 +1327,29 @@ export default function SubscriptionsPage() {
                     id="cvv"
                     placeholder="123"
                     value={newPaymentMethod.cvv}
-                    onChange={(e) => setNewPaymentMethod(prev => ({ ...prev, cvv: e.target.value }))}
+                    onChange={(e) =>
+                      setNewPaymentMethod((prev) => ({
+                        ...prev,
+                        cvv: e.target.value,
+                      }))
+                    }
                   />
                 </div>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditBillingDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setEditBillingDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleUpdatePaymentMethod}
-              disabled={!newPaymentMethod.cardNumber || !newPaymentMethod.cardholderName}
+              disabled={
+                !newPaymentMethod.cardNumber || !newPaymentMethod.cardholderName
+              }
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <CreditCard className="h-4 w-4 mr-2" />

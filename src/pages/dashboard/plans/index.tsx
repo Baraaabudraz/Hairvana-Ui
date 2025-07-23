@@ -1,14 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/stores/auth-store';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Edit, Trash2, Plus, Search } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { fetchSubscriptionPlans, deleteSubscriptionPlan } from '@/api/subscriptions';
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/stores/auth-store";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Edit, Trash2, Plus, Search } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  fetchSubscriptionPlans,
+  deleteSubscriptionPlan,
+} from "@/api/subscriptions";
 
 interface Plan {
   id: string;
@@ -21,37 +35,41 @@ interface Plan {
 }
 
 const statusColors: Record<string, string> = {
-  active: 'bg-green-100 text-green-800',
-  inactive: 'bg-gray-100 text-gray-800',
+  active: "bg-green-100 text-green-800",
+  inactive: "bg-gray-100 text-gray-800",
 };
 
 export default function PlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive"
+  >("all");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const navigate = useNavigate();
-  const token = useAuthStore(state => state.token);
+  const token = useAuthStore((state) => state.token);
   const { toast } = useToast();
 
   const fetchPlans = async () => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const params: any = { page, limit };
-      if (statusFilter !== 'all') params.status = statusFilter;
+      if (statusFilter !== "all") params.status = statusFilter;
       if (searchTerm) params.search = searchTerm;
       const data = await fetchSubscriptionPlans(params);
       setPlans(data.plans || data); // fallback for old API
       setTotalPages(data.totalPages || 1);
-      setTotal(data.total || (data.plans ? data.plans.length : (data.length || 0)));
+      setTotal(
+        data.total || (data.plans ? data.plans.length : data.length || 0)
+      );
     } catch (err: any) {
-      setError(err.message || 'Error fetching plans');
+      setError(err.message || "Error fetching plans");
     } finally {
       setLoading(false);
     }
@@ -63,13 +81,20 @@ export default function PlansPage() {
   }, [statusFilter, searchTerm, page, limit]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this plan?')) return;
+    if (!confirm("Are you sure you want to delete this plan?")) return;
     try {
       await deleteSubscriptionPlan(id);
       setPlans(plans.filter((plan) => plan.id !== id));
-      toast({ title: 'Plan deleted', description: 'The plan has been removed.' });
+      toast({
+        title: "Plan deleted",
+        description: "The plan has been removed.",
+      });
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message || 'Error deleting plan', variant: 'destructive' });
+      toast({
+        title: "Error",
+        description: err.message || "Error deleting plan",
+        variant: "destructive",
+      });
     }
   };
 
@@ -81,7 +106,9 @@ export default function PlansPage() {
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Plan Management</h1>
-          <p className="text-gray-600">Manage all subscription plans for your platform</p>
+          <p className="text-gray-600">
+            Manage all subscription plans for your platform
+          </p>
         </div>
         <Link to="/dashboard/plans/new">
           <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
@@ -104,22 +131,22 @@ export default function PlansPage() {
             </div>
             <div className="flex gap-2">
               <Button
-                variant={statusFilter === 'all' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('all')}
+                variant={statusFilter === "all" ? "default" : "outline"}
+                onClick={() => setStatusFilter("all")}
                 size="sm"
               >
                 All
               </Button>
               <Button
-                variant={statusFilter === 'active' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('active')}
+                variant={statusFilter === "active" ? "default" : "outline"}
+                onClick={() => setStatusFilter("active")}
                 size="sm"
               >
                 Active
               </Button>
               <Button
-                variant={statusFilter === 'inactive' ? 'default' : 'outline'}
-                onClick={() => setStatusFilter('inactive')}
+                variant={statusFilter === "inactive" ? "default" : "outline"}
+                onClick={() => setStatusFilter("inactive")}
                 size="sm"
               >
                 Inactive
@@ -135,45 +162,88 @@ export default function PlansPage() {
           ) : error ? (
             <div className="py-8 text-center text-red-600">{error}</div>
           ) : plans.length === 0 ? (
-            <div className="py-8 text-center text-gray-500">No plans found.</div>
+            <div className="py-8 text-center text-gray-500">
+              No plans found.
+            </div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 bg-white rounded-lg shadow-sm">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Monthly Price</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Yearly Price</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Billing Period</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Description
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Monthly Price
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Yearly Price
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Billing Period
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {plans.map((plan) => (
                       <tr key={plan.id} className="hover:bg-gray-50 transition">
-                        <td className="px-4 py-3 font-medium text-gray-900">{plan.name}</td>
-                        <td className="px-4 py-3 text-gray-700 max-w-xs truncate">{plan.description}</td>
-                        <td className="px-4 py-3 text-gray-700">${plan.price}</td>
-                        <td className="px-4 py-3 text-gray-700">${plan.yearly_price}</td>
-                        <td className="px-4 py-3 text-gray-700 capitalize">{plan.billing_period}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">
+                          {plan.name}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700 max-w-xs truncate">
+                          {plan.description}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">
+                          ${plan.price}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">
+                          ${plan.yearly_price}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700 capitalize">
+                          {plan.billing_period}
+                        </td>
                         <td className="px-4 py-3">
-                          <Badge className={statusColors[plan.status] + ' font-semibold'}>{plan.status}</Badge>
+                          <Badge
+                            className={
+                              statusColors[plan.status] + " font-semibold"
+                            }
+                          >
+                            {plan.status}
+                          </Badge>
                         </td>
                         <td className="px-4 py-3">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                              >
                                 <MoreHorizontal className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => navigate(`/dashboard/plans/${plan.id}/edit`)}>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  navigate(`/dashboard/plans/${plan.id}/edit`)
+                                }
+                              >
                                 <Edit className="w-4 h-4 mr-2" /> Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDelete(plan.id)} className="text-red-600">
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(plan.id)}
+                                className="text-red-600"
+                              >
                                 <Trash2 className="w-4 h-4 mr-2" /> Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -186,13 +256,30 @@ export default function PlansPage() {
               </div>
               {/* Pagination Controls */}
               <div className="flex justify-center items-center gap-4 mt-6">
-                <Button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} variant="outline">Previous</Button>
-                <span>Page {page} of {totalPages} ({total} plans)</span>
-                <Button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} variant="outline">Next</Button>
+                <Button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  variant="outline"
+                >
+                  Previous
+                </Button>
+                <span>
+                  Page {page} of {totalPages} ({total} plans)
+                </span>
+                <Button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  variant="outline"
+                >
+                  Next
+                </Button>
                 <select
                   className="ml-4 border rounded px-2 py-1"
                   value={limit}
-                  onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
+                  onChange={(e) => {
+                    setLimit(Number(e.target.value));
+                    setPage(1);
+                  }}
                 >
                   <option value={5}>5</option>
                   <option value={10}>10</option>
@@ -207,4 +294,4 @@ export default function PlansPage() {
       </Card>
     </div>
   );
-} 
+}

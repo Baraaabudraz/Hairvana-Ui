@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import {
   BarChart3,
   Building2,
@@ -14,32 +14,64 @@ import {
   Scissors,
   X,
   Menu,
-} from 'lucide-react';
+} from "lucide-react";
+import { useAuthStore } from "@/stores/auth-store";
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Salons', href: '/dashboard/salons', icon: Building2 },
-  { name: 'Users', href: '/dashboard/users', icon: Users },
-  { name: 'Plans', href: '/dashboard/plans', icon: CreditCard },
-  { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: CreditCard },
-  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-  { name: 'Reports', href: '/dashboard/reports', icon: MessageSquare },
-  { name: 'Notifications', href: '/dashboard/notifications', icon: Bell },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "Salons", href: "/dashboard/salons", icon: Building2 },
+  { name: "Users", href: "/dashboard/users", icon: Users, adminOnly: true },
+  {
+    name: "Plans",
+    href: "/dashboard/plans",
+    icon: CreditCard,
+    adminOnly: true,
+  },
+  {
+    name: "Subscriptions",
+    href: "/dashboard/subscriptions",
+    icon: CreditCard,
+    adminOnly: true,
+  },
+  {
+    name: "Analytics",
+    href: "/dashboard/analytics",
+    icon: BarChart3,
+    adminOnly: true,
+  },
+  {
+    name: "Reports",
+    href: "/dashboard/reports",
+    icon: MessageSquare,
+    adminOnly: true,
+  },
+  {
+    name: "Notifications",
+    href: "/dashboard/notifications",
+    icon: Bell,
+    hideForSalon: true,
+  },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export function Sidebar() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { user } = useAuthStore();
 
   return (
     <>
       {/* Mobile sidebar */}
-      <div className={cn(
-        'relative z-50 lg:hidden',
-        sidebarOpen ? 'block' : 'hidden'
-      )}>
-        <div className="fixed inset-0 bg-gray-900/80" onClick={() => setSidebarOpen(false)} />
+      <div
+        className={cn(
+          "relative z-50 lg:hidden",
+          sidebarOpen ? "block" : "hidden"
+        )}
+      >
+        <div
+          className="fixed inset-0 bg-gray-900/80"
+          onClick={() => setSidebarOpen(false)}
+        />
         <div className="fixed inset-0 flex">
           <div className="relative mr-16 flex w-full max-w-xs flex-1">
             <div className="absolute left-full top-0 flex w-16 justify-center pt-5">
@@ -75,6 +107,15 @@ export function Sidebar() {
   );
 
   function SidebarContent() {
+    // Only show navigation if not a 'user' role
+    if (user?.role === "user") {
+      return null;
+    }
+    // For salon owners, filter out adminOnly and hideForSalon items
+    const filteredNav =
+      user?.role === "salon"
+        ? navigation.filter((item) => !item.adminOnly && !item.hideForSalon)
+        : navigation;
     return (
       <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-4 shadow-xl">
         <div className="flex h-16 shrink-0 items-center">
@@ -91,24 +132,28 @@ export function Sidebar() {
           <ul role="list" className="flex flex-1 flex-col gap-y-7">
             <li>
               <ul role="list" className="-mx-2 space-y-1">
-                {navigation.map((item) => {
-                  const isActive = location.pathname === item.href || 
-                                  (item.href !== '/dashboard' && location.pathname.startsWith(item.href));
+                {filteredNav.map((item) => {
+                  const isActive =
+                    location.pathname === item.href ||
+                    (item.href !== "/dashboard" &&
+                      location.pathname.startsWith(item.href));
                   return (
                     <li key={item.name}>
                       <Link
                         to={item.href}
                         className={cn(
-                          'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors',
+                          "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors",
                           isActive
-                            ? 'bg-gradient-to-r from-purple-50 to-pink-50 text-purple-600'
-                            : 'text-gray-700 hover:text-purple-600 hover:bg-gray-50'
+                            ? "bg-gradient-to-r from-purple-50 to-pink-50 text-purple-600"
+                            : "text-gray-700 hover:text-purple-600 hover:bg-gray-50"
                         )}
                       >
                         <item.icon
                           className={cn(
-                            'h-6 w-6 shrink-0',
-                            isActive ? 'text-purple-600' : 'text-gray-400 group-hover:text-purple-600'
+                            "h-6 w-6 shrink-0",
+                            isActive
+                              ? "text-purple-600"
+                              : "text-gray-400 group-hover:text-purple-600"
                           )}
                         />
                         {item.name}
@@ -123,8 +168,12 @@ export function Sidebar() {
                 <div className="flex items-center gap-3">
                   <Shield className="h-8 w-8 text-purple-600" />
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">Admin Access</p>
-                    <p className="text-xs text-gray-600">Full platform control</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      Admin Access
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Full platform control
+                    </p>
                   </div>
                 </div>
               </div>

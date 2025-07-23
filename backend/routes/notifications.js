@@ -1,26 +1,56 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const notificationController = require('../controllers/notificationController');
-const { createNotificationValidation } = require('../validation/notificationValidation');
-const validate = require('../middleware/validate');
-const { authenticateToken, authorize } = require('../middleware/authMiddleware');
+const notificationController = require("../controllers/notificationController");
+const {
+  createNotificationValidation,
+} = require("../validation/notificationValidation");
+const validate = require("../middleware/validate");
+const {
+  authenticateToken,
+  authorize,
+  authorizeNoDelete,
+  blockUserDashboard,
+} = require("../middleware/authMiddleware");
 
 // Protect all routes
 router.use(authenticateToken);
+router.use(blockUserDashboard());
 
 // GET all notifications - admin only
-router.get('/', authorize('admin', 'super_admin'), notificationController.getAllNotifications);
+router.get(
+  "/",
+  authorize("admin", "super_admin"),
+  notificationController.getAllNotifications
+);
 
 // POST a new notification with validation - admin only
-router.post('/', authorize('admin', 'super_admin'), createNotificationValidation, validate, notificationController.createNotification);
+router.post(
+  "/",
+  authorize("admin", "super_admin"),
+  createNotificationValidation,
+  validate,
+  notificationController.createNotification
+);
 
 // GET notification templates - admin only
-router.get('/templates', authorize('admin', 'super_admin'), notificationController.getNotificationTemplates);
+router.get(
+  "/templates",
+  authorize("admin", "super_admin"),
+  notificationController.getNotificationTemplates
+);
 
-// DELETE a notification - admin only
-router.delete('/:id', authorize('admin', 'super_admin'), notificationController.deleteNotification);
+// DELETE a notification - super_admin only
+router.delete(
+  "/:id",
+  authorizeNoDelete(),
+  notificationController.deleteNotification
+);
 
 // POST send a notification - admin only
-router.post('/:id/send', authorize('admin', 'super_admin'), notificationController.sendNotification);
+router.post(
+  "/:id/send",
+  authorize("admin", "super_admin"),
+  notificationController.sendNotification
+);
 
 module.exports = router;

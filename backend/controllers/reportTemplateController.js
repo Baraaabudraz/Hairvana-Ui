@@ -22,7 +22,6 @@ exports.getReportTemplateById = async (req, res, next) => {
 
 exports.createReportTemplate = async (req, res, next) => {
   try {
-    validateReportTemplate(req.body);
     const template = await reportTemplateService.createReportTemplate(req.body);
     res.status(201).json(template);
   } catch (error) {
@@ -32,7 +31,6 @@ exports.createReportTemplate = async (req, res, next) => {
 
 exports.updateReportTemplate = async (req, res, next) => {
   try {
-    validateReportTemplate(req.body, true);
     const updated = await reportTemplateService.updateReportTemplate(req.params.id, req.body);
     if (!updated) return res.status(404).json({ error: 'Not found' });
     res.json(updated);
@@ -49,4 +47,6 @@ exports.deleteReportTemplate = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-}; 
+};
+
+ 

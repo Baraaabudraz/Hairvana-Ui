@@ -24,19 +24,21 @@ A modern admin dashboard for managing the Hairvana platform, built with React, T
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - PostgreSQL
 - npm, yarn, or pnpm
 
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd Hairvana-Ui
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    # or
@@ -46,12 +48,14 @@ A modern admin dashboard for managing the Hairvana platform, built with React, T
    ```
 
 3. **Set up environment variables**
+
    ```bash
    cp .env.example .env
-   # Edit .env with your configuration
+   # Edit ..env with your configuration
    ```
 
 4. **Set up the database**
+
    ```bash
    cd backend
    npm run migrate
@@ -59,11 +63,12 @@ A modern admin dashboard for managing the Hairvana platform, built with React, T
    ```
 
 5. **Start the development server**
+
    ```bash
    # Terminal 1 - Backend
    cd backend
    npm run dev
-   
+
    # Terminal 2 - Frontend
    npm run dev
    ```

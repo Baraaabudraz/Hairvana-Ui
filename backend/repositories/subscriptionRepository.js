@@ -1,27 +1,37 @@
-const { Subscription, Salon, SubscriptionPlan, BillingHistory } = require('../models');
-const { Op } = require('sequelize');
+const {
+  Subscription,
+  Salon,
+  SubscriptionPlan,
+  BillingHistory,
+} = require("../models");
+const { Op } = require("sequelize");
 
 exports.getAllSubscriptions = async (query) => {
   const { status, salonId, ownerId, search, includePlans } = query;
   const where = {};
-  if (status && status !== 'all') where.status = status;
+  if (status && status !== "all") where.status = status;
   if (salonId) where.salon_id = salonId;
   const salonWhere = {};
   if (ownerId) salonWhere.owner_id = ownerId;
   if (search) {
     salonWhere[Op.or] = [
       { name: { [Op.iLike]: `%${search}%` } },
-      { owner_name: { [Op.iLike]: `%${search}%` } }
+      { owner_name: { [Op.iLike]: `%${search}%` } },
     ];
   }
   const subscriptions = await Subscription.findAll({
     where,
     include: [
-      { model: Salon, as: 'salon', where: Object.keys(salonWhere).length ? salonWhere : undefined, required: !!(ownerId || search) },
-      { model: SubscriptionPlan, as: 'plan' }
-    ]
+      {
+        model: Salon,
+        as: "salon",
+        where: Object.keys(salonWhere).length ? salonWhere : undefined,
+        required: !!(ownerId || search),
+      },
+      { model: SubscriptionPlan, as: "plan" },
+    ],
   });
-  const formattedSubscriptions = subscriptions.map(sub => {
+  const formattedSubscriptions = subscriptions.map((sub) => {
     const s = sub.toJSON();
     return {
       id: s.id,
@@ -41,22 +51,25 @@ exports.getAllSubscriptions = async (query) => {
       features: s.plan?.features,
       usage: s.usage,
       paymentMethod: s.payment_method,
-      billingHistory: []
+      billingHistory: [],
     };
   });
   const stats = {
     total: formattedSubscriptions.length,
-    active: formattedSubscriptions.filter(s => s.status === 'active').length,
-    trial: formattedSubscriptions.filter(s => s.status === 'trial').length,
-    cancelled: formattedSubscriptions.filter(s => s.status === 'cancelled').length,
-    totalRevenue: formattedSubscriptions.filter(s => s.status === 'active').reduce((sum, s) => sum + Number(s.amount || 0), 0),
+    active: formattedSubscriptions.filter((s) => s.status === "active").length,
+    trial: formattedSubscriptions.filter((s) => s.status === "trial").length,
+    cancelled: formattedSubscriptions.filter((s) => s.status === "cancelled")
+      .length,
+    totalRevenue: formattedSubscriptions
+      .filter((s) => s.status === "active")
+      .reduce((sum, s) => sum + Number(s.amount || 0), 0),
   };
   const response = {
     subscriptions: formattedSubscriptions,
     total: formattedSubscriptions.length,
-    stats
+    stats,
   };
-  if (includePlans === 'true') {
+  if (includePlans === "true") {
     const plans = await SubscriptionPlan.findAll();
     response.plans = plans;
   }
@@ -67,9 +80,9 @@ exports.getSubscriptionById = async (id) => {
   const sub = await Subscription.findOne({
     where: { id },
     include: [
-      { model: Salon, as: 'salon' },
-      { model: SubscriptionPlan, as: 'plan' }
-    ]
+      { model: Salon, as: "salon" },
+      { model: SubscriptionPlan, as: "plan" },
+    ],
   });
   if (!sub) return null;
   const s = sub.toJSON();
@@ -77,22 +90,34 @@ exports.getSubscriptionById = async (id) => {
   if (!usage) {
     usage = {
       bookings: 0,
-      bookingsLimit: (s.plan && s.plan.limits && s.plan.limits.bookings != null) ? s.plan.limits.bookings : 0,
+      bookingsLimit:
+        s.plan && s.plan.limits && s.plan.limits.bookings != null
+          ? s.plan.limits.bookings
+          : 0,
       staff: 0,
-      staffLimit: (s.plan && s.plan.limits && s.plan.limits.staff != null) ? s.plan.limits.staff : 0,
+      staffLimit:
+        s.plan && s.plan.limits && s.plan.limits.staff != null
+          ? s.plan.limits.staff
+          : 0,
       locations: 1,
-      locationsLimit: (s.plan && s.plan.limits && s.plan.limits.locations != null) ? s.plan.limits.locations : 1
+      locationsLimit:
+        s.plan && s.plan.limits && s.plan.limits.locations != null
+          ? s.plan.limits.locations
+          : 1,
     };
   }
   let billingHistory = await BillingHistory.findAll({
     where: { subscription_id: s.id },
-    order: [['date', 'DESC']]
+    order: [["date", "DESC"]],
   });
-  billingHistory = billingHistory.map(bh => {
+  billingHistory = billingHistory.map((bh) => {
     const obj = bh.toJSON();
     return {
       ...obj,
-      total: obj.total !== undefined ? obj.total : (Number(obj.amount) + Number(obj.tax_amount || 0)),
+      total:
+        obj.total !== undefined
+          ? obj.total
+          : Number(obj.amount) + Number(obj.tax_amount || 0),
     };
   });
   return {
@@ -102,54 +127,59 @@ exports.getSubscriptionById = async (id) => {
     salonPhone: s.salon?.phone,
     salonEmail: s.salon?.email,
     ownerId: s.salon?.owner_id,
-    ownerName: s.salon?.owner_name,
-    ownerEmail: s.salon?.owner_email,
+    ownerName: s.salon?.ownerName,
+    ownerEmail: s.salon?.ownerEmail,
     plan: s.plan?.name,
     status: s.status,
     startDate: s.start_date,
-    nextBillingDate: s.next_billing_date,
+    nextBillingDate: s.nextBillingDate,
     amount: s.amount,
-    billingCycle: s.billing_cycle,
+    billingCycle: s.billingCycle,
     features: s.plan?.features,
     usage,
-    paymentMethod: s.payment_method,
-    billingHistory
+    paymentMethod: s.paymentMethod,
+    billingHistory,
+    startDate: s.startDate,
   };
 };
 
 exports.createSubscription = async (data) => {
-  if (!data.salon_id || !data.plan_id) throw new Error('salon_id and plan_id are required');
-  const plan = await SubscriptionPlan.findOne({ where: { id: data.plan_id } });
-  if (!plan) throw new Error('Invalid plan ID');
-  const salon = await Salon.findOne({ where: { id: data.salon_id } });
-  if (!salon) throw new Error('Invalid salon ID');
+  console.log("data", data);
+  if (!data.salonId || !data.planId)
+    throw new Error("salon_id and plan_id are required");
+  const plan = await SubscriptionPlan.findOne({ where: { id: data.planId } });
+  if (!plan) throw new Error("Invalid plan ID");
+  const salon = await Salon.findOne({ where: { id: data.salonId } });
+  if (!salon) throw new Error("Invalid salon ID");
   const newSub = await Subscription.create({
     ...data,
     amount: plan.price,
-    start_date: data.start_date || new Date(),
-    status: data.status || 'active',
-    billing_cycle: data.billing_cycle || plan.billing_period
+    startDate: data.startDate || new Date(),
+    status: data.status || "active",
+    billingCycle: data.billingCycle || plan.billingPeriod,
   });
   return newSub.toJSON();
 };
 
 exports.updateSubscription = async (id, data) => {
-  if (data.plan_id) {
-    const plan = await SubscriptionPlan.findOne({ where: { id: data.plan_id } });
-    if (!plan) throw new Error('Invalid plan ID');
+  if (data.planId) {
+    const plan = await SubscriptionPlan.findOne({
+      where: { id: data.planId },
+    });
+    if (!plan) throw new Error("Invalid plan ID");
     if (data.usage) {
       data.usage = {
         ...data.usage,
         bookingsLimit: plan.limits.bookings,
         staffLimit: plan.limits.staff,
-        locationsLimit: plan.limits.locations
+        locationsLimit: plan.limits.locations,
       };
     }
     data.amount = plan.price;
   }
   const [updatedCount, updatedRows] = await Subscription.update(data, {
     where: { id },
-    returning: true
+    returning: true,
   });
   if (updatedCount === 0) return null;
   return updatedRows[0];
@@ -157,7 +187,7 @@ exports.updateSubscription = async (id, data) => {
 
 exports.cancelSubscription = async (id) => {
   const [updatedCount, updatedRows] = await Subscription.update(
-    { status: 'cancelled' },
+    { status: "cancelled" },
     { where: { id }, returning: true }
   );
   if (updatedCount === 0) return null;
@@ -170,7 +200,7 @@ exports.getSubscriptionPlans = async (query) => {
 
 exports.createBillingRecord = async (data, supabase) => {
   const { data: result, error } = await supabase
-    .from('billing_history')
+    .from("billing_history")
     .insert(data)
     .select()
     .single();
@@ -180,102 +210,104 @@ exports.createBillingRecord = async (data, supabase) => {
 
 exports.syncBilling = async (id, supabase) => {
   const { data: subscription, error: subError } = await supabase
-    .from('subscriptions')
+    .from("subscriptions")
     .select(`*,salon:salons(id, name),plan:subscription_plans(*)`)
-    .eq('id', id)
+    .eq("id", id)
     .single();
-  if (subError) throw new Error('Subscription not found');
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  if (subError) throw new Error("Subscription not found");
+  await new Promise((resolve) => setTimeout(resolve, 1500));
   return {
-    message: 'Billing data synchronized successfully',
+    message: "Billing data synchronized successfully",
     subscription: {
       ...subscription,
-      lastSynced: new Date().toISOString()
-    }
+      lastSynced: new Date().toISOString(),
+    },
   };
 };
 
 exports.generateReport = async (id, body, supabase) => {
   const { reportType, dateRange, format } = body;
   const { data: subscription, error: subError } = await supabase
-    .from('subscriptions')
+    .from("subscriptions")
     .select(`*,salon:salons(id, name),plan:subscription_plans(*)`)
-    .eq('id', id)
+    .eq("id", id)
     .single();
-  if (subError) throw new Error('Subscription not found');
+  if (subError) throw new Error("Subscription not found");
   const { data: billingHistory, error: billingError } = await supabase
-    .from('billing_history')
-    .select('*')
-    .eq('subscription_id', id)
-    .order('date', { ascending: false });
-  if (billingError) throw new Error('Failed to fetch billing history');
+    .from("billing_history")
+    .select("*")
+    .eq("subscription_id", id)
+    .order("date", { ascending: false });
+  if (billingError) throw new Error("Failed to fetch billing history");
   let reportData;
   switch (reportType) {
-    case 'billing':
+    case "billing":
       reportData = {
-        title: 'Subscription Billing Report',
+        title: "Subscription Billing Report",
         subscription: subscription,
         billingHistory: billingHistory || [],
         summary: {
-          totalBilled: billingHistory?.reduce((sum, record) => sum + record.amount, 0) || 0,
+          totalBilled:
+            billingHistory?.reduce((sum, record) => sum + record.amount, 0) ||
+            0,
           invoiceCount: billingHistory?.length || 0,
-          dateRange: dateRange
-        }
+          dateRange: dateRange,
+        },
       };
       break;
-    case 'usage':
+    case "usage":
       reportData = {
-        title: 'Subscription Usage Report',
+        title: "Subscription Usage Report",
         subscription: subscription,
         usage: subscription.usage,
         limits: subscription.plan.limits,
-        dateRange: dateRange
+        dateRange: dateRange,
       };
       break;
     default:
       reportData = {
-        title: 'Subscription Summary Report',
+        title: "Subscription Summary Report",
         subscription: subscription,
         billingHistory: billingHistory || [],
-        dateRange: dateRange
+        dateRange: dateRange,
       };
   }
   return {
-    message: 'Report generated successfully',
+    message: "Report generated successfully",
     reportId: `report-${Date.now()}`,
     reportData,
-    format
+    format,
   };
 };
 
 exports.exportInvoices = async (id, query, supabase) => {
   const { format } = query;
   const { data: billingHistory, error: billingError } = await supabase
-    .from('billing_history')
-    .select('*')
-    .eq('subscription_id', id)
-    .order('date', { ascending: false });
-  if (billingError) throw new Error('Failed to fetch billing history');
+    .from("billing_history")
+    .select("*")
+    .eq("subscription_id", id)
+    .order("date", { ascending: false });
+  if (billingError) throw new Error("Failed to fetch billing history");
   return {
-    message: 'Invoices exported successfully',
+    message: "Invoices exported successfully",
     exportId: `export-${Date.now()}`,
     invoices: billingHistory || [],
-    format: format || 'csv'
+    format: format || "csv",
   };
 };
 
 exports.updatePaymentMethod = async (id, data, supabase) => {
-  if (!data || !data.type) throw new Error('Invalid payment method data');
+  if (!data || !data.type) throw new Error("Invalid payment method data");
   const { data: result, error } = await supabase
-    .from('subscriptions')
+    .from("subscriptions")
     .update({ payment_method: data })
-    .eq('id', id)
+    .eq("id", id)
     .select()
     .single();
   if (error) throw new Error(error.message);
   return {
-    message: 'Payment method updated successfully',
-    subscription: result
+    message: "Payment method updated successfully",
+    subscription: result,
   };
 };
 
@@ -303,4 +335,4 @@ exports.deletePlan = async (id) => {
   if (!plan) return null;
   await plan.destroy();
   return true;
-}; 
+};

@@ -114,6 +114,11 @@ app.use(
   "/uploads/avatars",
   express.static(path.join(__dirname, "../public/uploads/avatars"))
 );
+// Serve salon images from /images/salon/ path for frontend compatibility
+app.use(
+  "/images/salon",
+  express.static(path.join(__dirname, "../public/uploads/salons"))
+);
 // Salon image upload route
 app.use("/backend/api/salons", require("./routes/salonImages"));
 

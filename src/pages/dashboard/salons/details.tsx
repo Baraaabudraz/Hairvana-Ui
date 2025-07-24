@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { fetchSalonById, updateSalonStatus, deleteSalon } from '@/api/salons';
 import { useToast } from '@/hooks/use-toast';
+import { getSalonImageUrl, getSalonGalleryUrls } from '@/lib/api';
 
 interface Salon {
   id: string;
@@ -395,7 +396,7 @@ export default function SalonDetailsPage() {
             <div className="flex items-center gap-6">
               <Avatar className="h-16 w-16">
                 <AvatarImage
-                  src={salon.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${salon.avatar}` : '/default-salon.png'}
+                  src={salon.avatar ? getSalonImageUrl(salon.avatar) : '/default-salon.png'}
                   alt={salon.name}
                 />
                 <AvatarFallback className="text-lg">
@@ -691,7 +692,7 @@ export default function SalonDetailsPage() {
             {salon.gallery.map((img, idx) => (
               <img
                 key={idx}
-                src={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${img}`}
+                src={getSalonImageUrl(img)}
                 alt={`Gallery image ${idx + 1}`}
                 className="w-full h-24 object-cover rounded-lg"
               />

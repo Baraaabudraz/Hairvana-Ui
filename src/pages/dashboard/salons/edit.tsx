@@ -1,19 +1,33 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Upload, X, Plus, Save } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { 
+  ArrowLeft, 
+  Upload, 
+  X, 
+  Plus, 
+  Clock,
+  FileText,
+  CreditCard,
+  Globe,
+  MapPin,
+  Phone,
+  Mail,
+  User
+} from 'lucide-react';
 import { fetchSalonById, updateSalon } from '@/api/salons';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useRef } from 'react';
+import { getSalonImageUrl } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 const salonSchema = z.object({
   name: z.string().min(2, 'Salon name must be at least 2 characters'),
@@ -678,7 +692,7 @@ export default function EditSalonPage() {
                     : avatarFile
                       ? URL.createObjectURL(avatarFile)
                       : salonData?.avatar
-                        ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${salonData.avatar}`
+                        ? getSalonImageUrl(salonData.avatar)
                         : '/default-salon.png'}
                   alt="Salon Avatar"
                 />
@@ -744,7 +758,7 @@ export default function EditSalonPage() {
                       src={
                         file instanceof File
                           ? URL.createObjectURL(file)
-                          : `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${file}`
+                          : getSalonImageUrl(file)
                       }
                       alt="Preview"
                       style={{ width: 100, height: 100, objectFit: 'cover' }}

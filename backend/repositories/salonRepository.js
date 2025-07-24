@@ -32,6 +32,16 @@ exports.findById = async (id) => {
   });
 };
 
+exports.findByOwnerId = async (ownerId) => {
+  return Salon.findOne({
+    where: { owner_id: ownerId },
+    include: [
+      { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] },
+      { model: Service, as: 'services' }
+    ]
+  });
+};
+
 exports.create = async (data) => Salon.create(data);
 
 exports.update = async (id, data) => {

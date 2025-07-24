@@ -1,44 +1,132 @@
-const { Salon } = require('../../../models');
-const { getFileInfo } = require('../../../helpers/uploadHelper');
+const salonService = require('../../../services/salonService');
 
-exports.getSalonProfile = async (req, res) => {
+/**
+ * Get salon profile for the authenticated owner
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+exports.getSalonProfile = async (req, res, next) => {
   try {
-    const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
-    if (!salon) return res.status(404).json({ error: 'Salon not found' });
-    return res.json({ success: true, salon });
-  } catch (err) {
-    return res.status(500).json({ error: 'Failed to fetch salon profile' });
+    const salon = await salonService.getSalonByOwnerId(req.user.id, req);
+    
+    if (!salon) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Salon not found for this owner' 
+      });
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      data: salon 
+    });
+  } catch (error) {
+    next(error);
   }
 };
 
-exports.updateSalonProfile = async (req, res) => {
+/**
+ * Update salon profile for the authenticated owner
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+exports.updateSalonProfile = async (req, res, next) => {
   try {
-    const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
-    if (!salon) return res.status(404).json({ error: 'Salon not found' });
-    const { name, phone, address, location, website, description, business_license, tax_id, hours } = req.body;
-    if (name) salon.name = name;
-    if (phone) salon.phone = phone;
-    if (address) salon.address = address;
-    if (location) salon.location = location;
-    if (website) salon.website = website;
-    if (description) salon.description = description;
-    if (business_license) salon.business_license = business_license;
-    if (tax_id) salon.tax_id = tax_id;
-    if (hours) salon.hours = hours;
-    // Handle uploaded images
-    if (req.files && req.files.length > 0) {
-      // Store only filenames in DB
-      salon.images = req.files.map(file => getFileInfo(file, '/uploads/salons').storedName);
-    } else if (req.body.images) {
-      // If images are sent as a JSON array in the body (for non-upload updates)
-      salon.images = req.body.images;
+    // Get existing salon to verify ownership
+    const existingSalon = await salonService.getSalonByOwnerId(req.user.id, req);
+    if (!existingSalon) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Salon not found for this owner' 
+      });
     }
-    await salon.save();
-    // Return full URLs in the response
-    const baseUrl = req.protocol + '://' + req.get('host');
-    const images = (salon.images || []).map(filename => baseUrl + '/uploads/salons/' + filename);
-    return res.json({ success: true, salon: { ...salon.toJSON(), images } });
-  } catch (err) {
-    return res.status(500).json({ error: 'Failed to update salon profile' });
+
+    // Prepare update data
+    const updateData = {
+      name: req.body.name,
+      phone: req.body.phone,
+      address: req.body.address,
+      location: req.body.location,
+      website: req.body.website,
+      description: req.body.description,
+      business_license: req.body.business_license,
+      tax_id: req.body.tax_id,
+      hours: req.body.hours
+    };
+
+    // Remove undefined values
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
+    // Handle hours field - ensure it's properly formatted
+    if (updateData.hours) {
+      // If hours is an array, convert it to a more structured format
+      if (Array.isArray(updateData.hours)) {
+        const hoursObject = {};
+        updateData.hours.forEach((hour, index) => {
+          if (typeof hour === 'string') {
+            // Try to parse "day: time" format (e.g., "friday: 9:00 AM - 9:00 PM")
+            const colonIndex = hour.indexOf(':');
+            if (colonIndex !== -1) {
+              const day = hour.substring(0, colonIndex).trim().toLowerCase();
+              const time = hour.substring(colonIndex + 1).trim();
+              hoursObject[day] = time;
+            } else {
+              // If no colon found, use index as key
+              hoursObject[`day_${index}`] = hour;
+            }
+          } else if (typeof hour === 'object' && hour !== null) {
+            // If it's already an object, merge it
+            Object.assign(hoursObject, hour);
+          }
+        });
+        updateData.hours = hoursObject;
+      }
+      // If hours is already an object, keep it as is
+      // If hours is a string, keep it as is
+    }
+
+    // Handle image uploads
+    if (req.files) {
+      // Handle avatar upload
+      if (req.files['avatar'] && req.files['avatar'][0]) {
+        updateData.avatar = req.files['avatar'][0].filename;
+      }
+      
+      // Handle gallery images upload
+      if (req.files['gallery'] && req.files['gallery'].length > 0) {
+        updateData.gallery = req.files['gallery'].map(file => file.filename);
+      }
+    }
+    
+    // Handle gallery from request body (for non-upload updates)
+    if (req.body.gallery && !req.files) {
+      updateData.gallery = Array.isArray(req.body.gallery) 
+        ? req.body.gallery 
+        : [req.body.gallery];
+    }
+
+    // Update salon
+    const updatedSalon = await salonService.updateSalonProfile(existingSalon.id, updateData, req);
+    
+    if (!updatedSalon) {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to update salon profile' 
+      });
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Salon profile updated successfully',
+      data: updatedSalon 
+    });
+  } catch (error) {
+    next(error);
   }
 }; 

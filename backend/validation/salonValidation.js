@@ -207,6 +207,83 @@ const updateSalonValidation = [
 ];
 
 /**
+ * Validation schema for updating salon profile (owner-specific)
+ */
+const updateSalonProfileValidation = [
+  body('name')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Salon name must be between 2 and 100 characters'),
+  
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Description must not exceed 500 characters'),
+  
+  body('address')
+    .optional()
+    .trim()
+    .isLength({ min: 10, max: 200 })
+    .withMessage('Address must be between 10 and 200 characters'),
+  
+  body('location')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 200 })
+    .withMessage('Location must be between 2 and 200 characters'),
+  
+  body('phone')
+    .optional()
+    .trim()
+    .matches(/^\+?[\d\s\-\(\)]+$/)
+    .withMessage('Invalid phone number format'),
+  
+  body('website')
+    .optional()
+    .trim()
+    .isURL()
+    .withMessage('Invalid website URL'),
+  
+  body('business_license')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Business license must be between 1 and 100 characters'),
+  
+  body('tax_id')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Tax ID must be between 1 and 50 characters'),
+  
+  body('hours')
+    .optional()
+    .custom((value) => {
+      // Allow object, array, or string format
+      if (typeof value === 'object' && value !== null) {
+        return true; // Object or array is valid
+      }
+      if (typeof value === 'string') {
+        return true; // String is valid
+      }
+      throw new Error('Hours must be an object, array, or string');
+    })
+    .withMessage('Hours must be an object, array, or string'),
+  
+  body('avatar')
+    .optional()
+    .isString()
+    .withMessage('Avatar must be a string'),
+  
+  body('gallery')
+    .optional()
+    .isArray()
+    .withMessage('Gallery must be an array'),
+];
+
+/**
  * Validation schema for getting salons with filters
  */
 const getSalonsValidation = [
@@ -324,6 +401,7 @@ const searchSalonsValidation = [
 module.exports = {
   createSalonValidation,
   updateSalonValidation,
+  updateSalonProfileValidation,
   getSalonsValidation,
   getSalonByIdValidation,
   searchSalonsValidation,

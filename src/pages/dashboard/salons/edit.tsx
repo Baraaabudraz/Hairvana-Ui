@@ -23,7 +23,8 @@ import {
   MapPin,
   Phone,
   Mail,
-  User
+  User,
+  Save
 } from 'lucide-react';
 import { fetchSalonById, updateSalon } from '@/api/salons';
 import { getSalonImageUrl } from '@/lib/api';
@@ -91,6 +92,7 @@ interface Salon {
   images?: string[];
   status: 'active' | 'pending' | 'suspended';
   subscription: 'Basic' | 'Standard' | 'Premium';
+  avatar?: string; // Added avatar to interface
 }
 
 export default function EditSalonPage() {
@@ -99,17 +101,18 @@ export default function EditSalonPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [customService, setCustomService] = useState('');
   const [hours, setHours] = useState<Record<string, { open: string; close: string; closed: boolean }>>({});
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [uploadedImages, setUploadedImages] = useState<(string | File)[]>([]);
+  const [uploadedImages, setUploadedImages] = useState<(File | string)[]>([]);
   // Add state for avatar
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Add state for full salon data
-  const [salonData, setSalonData] = useState<any>(null);
+  const [salonData, setSalonData] = useState<Salon | null>(null);
 
   const {
     register,
@@ -124,11 +127,16 @@ export default function EditSalonPage() {
     const fetchSalon = async () => {
       try {
         setLoading(true);
+        console.log('Fetching salon with ID:', params.id);
         const data = await fetchSalonById(params.id as string);
+        console.log('Salon data received:', data);
         setSalonData(data);
         
         // Parse address into components
-        if (!data || !data.address) return;
+        if (!data || !data.address) {
+          console.log('No data or address found');
+          return;
+        }
         const addressParts = data.address.split(', ');
         const streetAddress = addressParts[0];
         const city = addressParts[1];
@@ -137,11 +145,11 @@ export default function EditSalonPage() {
         const zipCode = stateZip[1] || '';
         
         // Populate form with existing data
-        reset({
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          address: streetAddress,
+        const formData = {
+          name: data.name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          address: streetAddress || '',
           city: city || '',
           state: state || '',
           zipCode: zipCode || '',
@@ -152,7 +160,10 @@ export default function EditSalonPage() {
           ownerPhone: data.owner_phone || '',
           businessLicense: data.business_license || '',
           taxId: data.tax_id || '',
-        });
+        };
+        
+        console.log('Setting form data:', formData);
+        reset(formData);
 
         // Convert hours format
         const formattedHours: Record<string, { open: string; close: string; closed: boolean }> = {};
@@ -183,6 +194,7 @@ export default function EditSalonPage() {
         setUploadedImages(data.gallery || []); // Only set once on load
       } catch (error) {
         console.error('Error fetching salon:', error);
+        setError('Could not load salon data. Please try again.');
         toast({
           title: 'Error loading salon',
           description: 'Could not load salon data. Please try again.',
@@ -342,6 +354,34 @@ export default function EditSalonPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Salon</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!salonData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Salon Not Found</h2>
+          <p className="text-gray-600 mb-4">The salon you're looking for doesn't exist.</p>
+          <Link to="/dashboard/salons">
+            <Button>Back to Salons</Button>
+          </Link>
+        </div>
       </div>
     );
   }

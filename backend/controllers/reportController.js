@@ -25,7 +25,6 @@ exports.getReportById = async (req, res, next) => {
 // Create a new report
 exports.createReport = async (req, res, next) => {
   try {
-    validateReport(req.body);
     const report = await reportService.createReport(req.body);
     res.status(201).json(report);
   } catch (error) {
@@ -36,7 +35,6 @@ exports.createReport = async (req, res, next) => {
 // Update a report
 exports.updateReport = async (req, res, next) => {
   try {
-    validateReport(req.body, true);
     const updated = await reportService.updateReport(req.params.id, req.body);
     if (!updated) return res.status(404).json({ error: 'Report not found' });
     res.json(updated);
@@ -59,7 +57,6 @@ exports.deleteReport = async (req, res, next) => {
 // Generate a report from template
 exports.generateReport = async (req, res, next) => {
   try {
-    validateGenerateReport(req.body);
     const result = await reportService.generateReport(req.body, req.user);
     res.json(result);
   } catch (error) {
@@ -101,4 +98,6 @@ function getDateRangeLabel(range) {
     case 'custom': return 'Custom range';
     default: return range;
   }
-} 
+}
+
+ 

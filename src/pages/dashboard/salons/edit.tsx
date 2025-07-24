@@ -270,8 +270,9 @@ export default function EditSalonPage() {
       
       // Add form fields
       Object.keys(data).forEach(key => {
-        if (data[key as keyof SalonForm] !== undefined && data[key as keyof SalonForm] !== null) {
-          formData.append(key, data[key as keyof SalonForm].toString());
+        const value = data[key as keyof SalonForm];
+        if (value !== undefined && value !== null) {
+          formData.append(key, value.toString());
         }
       });
 

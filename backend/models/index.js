@@ -38,6 +38,9 @@ const ReportTemplate = require('./report_template');
 const Report = require('./report');
 const Hairstyle = require('./hairstyle');
 const SecuritySettings = require('./security_settings');
+const PlatformSettings = require('./platform_settings');
+const BackupSettings = require('./backup_settings');
+const NotificationPreferences = require('./notification_preferences');
 const IntegrationSettings = require('./integration_settings')(sequelize);
 const Review = require('./review');
 const MobileDevice = require('./mobile_device');
@@ -66,6 +69,9 @@ const models = {
   Report: Report(sequelize, Sequelize.DataTypes),
   Hairstyle: Hairstyle(sequelize, Sequelize.DataTypes),
   SecuritySettings: SecuritySettings(sequelize, Sequelize.DataTypes),
+  PlatformSettings: PlatformSettings(sequelize, Sequelize.DataTypes),
+  BackupSettings: BackupSettings(sequelize, Sequelize.DataTypes),
+  NotificationPreferences: NotificationPreferences(sequelize, Sequelize.DataTypes),
   IntegrationSettings: IntegrationSettings,
   Review: Review(sequelize, Sequelize.DataTypes),
   MobileDevice: MobileDevice(sequelize, Sequelize.DataTypes),
@@ -111,6 +117,9 @@ async function syncOrdered(options = {}) {
       'billing_settings',
       'reports',
       'security_settings',
+      'platform_settings',
+      'backup_settings',
+      'notification_preferences',
       'reviews',
       'owner_documents'
     ];

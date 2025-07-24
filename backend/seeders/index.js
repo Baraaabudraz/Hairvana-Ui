@@ -15,15 +15,24 @@ async function seed() {
     await seedSubscriptionPlans();
     await seedSubscriptions();
     await seedNotificationTemplates();
-    // await seedNotifications();
     await seedServices();
     await seedHairstyles();
     await seedSalonServices();
     await seedStaff();
     await seedIntegrationSettings();
     await seedReportTemplates();
+    await seedOwnerDocuments();
+    await seedReviews();
+    await seedBillingSettings();
+    await seedSecuritySettings();
+    await seedPlatformSettings();
+    await seedBackupSettings();
+    await seedNotificationPreferences();
+    await seedMobileDevices();
+    await seedBillingHistories();
+    await seedNotificationUsers();
+    // await seedNotifications(); // Uncomment if needed
   
-    
     console.log('✅ Database seeding completed successfully!');
     process.exit(0);
   } catch (error) {
@@ -200,107 +209,8 @@ async function seedUsers() {
 // Seed salons
 async function seedSalons() {
   console.log('Seeding salons...');
-  
-  try {
-  // Clean slate - delete existing salons
-    await db.Salon.destroy({ where: {} });
-    // Clean up salon_services join table
-    if (db.sequelize.getQueryInterface().bulkDelete) {
-      await db.sequelize.getQueryInterface().bulkDelete('salon_services', null, {});
-    }
-    // Get salon owners
-    const salonOwners = await db.User.findAll({
-      where: { role: 'salon' },
-      attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role']
-    });
-    // Get all services
-    const allServices = await db.Service.findAll();
-  // Define salons to seed
-  const salons = [
-    {
-      id: '00000000-0000-0000-0000-000000000001',
-        owner_id: salonOwners[0].id,
-      name: 'Luxe Hair Studio',
-      email: 'contact@luxehair.com',
-      phone: '+1 (555) 123-4567',
-      address: '123 Rodeo Drive, Beverly Hills, CA 90210',
-      location: 'Beverly Hills, CA',
-      status: 'active',
-        join_date: new Date('2024-01-15'),
-      revenue: 12450,
-      bookings: 156,
-      rating: 4.9,
-      hours: {
-        monday: '9:00 AM - 8:00 PM',
-        tuesday: '9:00 AM - 8:00 PM',
-        wednesday: '9:00 AM - 8:00 PM',
-        thursday: '9:00 AM - 8:00 PM',
-        friday: '9:00 AM - 9:00 PM',
-        saturday: '8:00 AM - 9:00 PM',
-        sunday: '10:00 AM - 6:00 PM'
-      },
-        website: 'https://luxehair.com',
-        description: 'Premium hair salon offering luxury hair services in Beverly Hills.',
-        business_license: 'CA123456789',
-      tax_id: '12-3456789',
-      images: [
-          'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=800',
-          'https://images.pexels.com/photos/3993450/pexels-photo-3993450.jpeg?auto=compress&cs=tinysrgb&w=800'
-        ]
-    },
-    {
-      id: '00000000-0000-0000-0000-000000000002',
-        owner_id: salonOwners[1].id,
-      name: 'Urban Cuts',
-      email: 'info@urbancuts.com',
-      phone: '+1 (555) 234-5678',
-        address: '456 Main Street, Los Angeles, CA 90012',
-        location: 'Los Angeles, CA',
-      status: 'active',
-        join_date: new Date('2024-02-20'),
-        revenue: 8750,
-        bookings: 98,
-        rating: 4.7,
-      hours: {
-        monday: '10:00 AM - 7:00 PM',
-        tuesday: '10:00 AM - 7:00 PM',
-        wednesday: '10:00 AM - 7:00 PM',
-        thursday: '10:00 AM - 7:00 PM',
-        friday: '10:00 AM - 8:00 PM',
-        saturday: '9:00 AM - 8:00 PM',
-        sunday: 'Closed'
-      },
-        website: 'https://urbancuts.com',
-        description: 'Modern hair salon in downtown Los Angeles.',
-        business_license: 'CA987654321',
-      tax_id: '98-7654321',
-      images: [
-          'https://images.pexels.com/photos/3993451/pexels-photo-3993451.jpeg?auto=compress&cs=tinysrgb&w=800'
-        ]
-      }
-    ];
-    await db.Salon.bulkCreate(salons, {
-      fields: [
-        'id', 'name', 'email', 'phone', 'address', 'location', 'website', 
-        'description', 'business_license', 'tax_id', 'owner_id', 'status', 
-        'join_date', 'revenue', 'bookings', 'rating', 'hours', 'images'
-      ]
-    });
-    // Associate each salon with 2 random services
-  for (const salon of salons) {
-      const salonInstance = await db.Salon.findByPk(salon.id);
-      if (salonInstance && allServices.length > 0) {
-        // Pick 2 random services for each salon
-        const shuffled = allServices.sort(() => 0.5 - Math.random());
-        const selected = shuffled.slice(0, 2);
-        await salonInstance.setServices(selected.map(s => s.id));
-      }
-    }
-    console.log(`Seeded ${salons.length} salons successfully.`);
-  } catch (error) {
-    console.error('Error seeding salons:', error);
-    throw error;
-  }
+  const seeder = require('./20250724000000-demo-salons.js');
+  await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
 }
 
 // Seed subscription plans
@@ -417,14 +327,14 @@ async function seedSubscriptions() {
 
     const subscriptions = salons.map((salon, index) => ({
       id: `00000000-0000-0000-0000-00000000000${index + 1}`,
-      salon_id: salon.id,
-      plan_id: plans[index % plans.length].id,
+      salonId: salon.id,
+      planId: plans[index % plans.length].id,
       status: 'active',
-      start_date: new Date('2024-01-01'),
-      end_date: new Date('2024-12-31'),
-      billing_period: 'monthly',
-      billing_cycle: 'monthly',
-      next_billing_date: new Date('2024-04-01'),
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2024-12-31'),
+      billingPeriod: 'monthly',
+      billingCycle: 'monthly',
+      nextBillingDate: new Date('2024-04-01'),
       amount: index % plans.length === 0 ? 29.99 : index % plans.length === 1 ? 59.99 : 99.99
     }));
     
@@ -520,6 +430,328 @@ async function seedIntegrationSettings() {
 async function seedReportTemplates() {
   console.log('Seeding report templates...');
   const seeder = require('./20250703150000-demo-report-templates.js');
+  await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
+}
+
+// New seeder functions for latest models
+async function seedOwnerDocuments() {
+  console.log('Seeding owner documents...');
+  try {
+    await db.OwnerDocument.destroy({ where: {} });
+    
+    const salonOwners = await db.User.findAll({
+      where: { role: 'salon' },
+      attributes: ['id']
+    });
+
+    const ownerDocuments = salonOwners.map(owner => ({
+      id: uuidv4(),
+      owner_id: owner.id,
+      commercial_registration_url: 'https://example.com/commercial-registration.pdf',
+      certificate_url: 'https://example.com/certificate.pdf',
+      additional_info: 'Additional business information and documentation.',
+      created_at: new Date(),
+      updated_at: new Date()
+    }));
+
+    await db.OwnerDocument.bulkCreate(ownerDocuments);
+    console.log(`Seeded ${ownerDocuments.length} owner documents successfully.`);
+  } catch (error) {
+    console.error('Error seeding owner documents:', error);
+    throw error;
+  }
+}
+
+async function seedReviews() {
+  console.log('Seeding reviews...');
+  try {
+    await db.Review.destroy({ where: {} });
+    
+    const users = await db.User.findAll({
+      where: { role: 'user' },
+      attributes: ['id']
+    });
+    
+    const salons = await db.Salon.findAll({
+      attributes: ['id']
+    });
+
+    const reviews = [
+      {
+        id: uuidv4(),
+        user_id: users[0].id,
+        salon_id: salons[0].id,
+        appointment_id: null,
+        rating: 5,
+        title: 'Excellent Service!',
+        comment: 'Amazing haircut and great customer service. Highly recommend!',
+        service_quality: 5,
+        created_at: new Date('2024-03-15'),
+        updated_at: new Date('2024-03-15')
+      },
+      {
+        id: uuidv4(),
+        user_id: users[1].id,
+        salon_id: salons[1].id,
+        appointment_id: null,
+        rating: 4,
+        title: 'Good Experience',
+        comment: 'Nice salon with professional staff. Will visit again.',
+        service_quality: 4,
+        created_at: new Date('2024-03-10'),
+        updated_at: new Date('2024-03-10')
+      },
+      {
+        id: uuidv4(),
+        user_id: users[0].id,
+        salon_id: salons[1].id,
+        appointment_id: null,
+        rating: 5,
+        title: 'Outstanding!',
+        comment: 'Best haircut I\'ve ever had. The stylist was very skilled.',
+        service_quality: 5,
+        created_at: new Date('2024-03-05'),
+        updated_at: new Date('2024-03-05')
+      }
+    ];
+
+    await db.Review.bulkCreate(reviews);
+    console.log(`Seeded ${reviews.length} reviews successfully.`);
+  } catch (error) {
+    console.error('Error seeding reviews:', error);
+    throw error;
+  }
+}
+
+async function seedBillingSettings() {
+  console.log('Seeding billing settings...');
+  try {
+    await db.BillingSettings.destroy({ where: {} });
+    
+    const users = await db.User.findAll({
+      where: { role: 'salon' },
+      attributes: ['id']
+    });
+
+    const billingSettings = users.map(user => ({
+      id: uuidv4(),
+      user_id: user.id,
+      default_payment_method: 'credit_card',
+      billing_address: '123 Business St, City, State 12345',
+      tax_id: '12-3456789',
+      invoice_email: `billing@${user.id}.com`,
+      auto_pay: true,
+      payment_methods: {
+        credit_card: {
+          last4: '1234',
+          brand: 'visa',
+          exp_month: 12,
+          exp_year: 2025
+        }
+      },
+      created_at: new Date(),
+      updated_at: new Date()
+    }));
+
+    await db.BillingSettings.bulkCreate(billingSettings);
+    console.log(`Seeded ${billingSettings.length} billing settings successfully.`);
+  } catch (error) {
+    console.error('Error seeding billing settings:', error);
+    throw error;
+  }
+}
+
+async function seedSecuritySettings() {
+  console.log('Seeding security settings...');
+  try {
+    await db.SecuritySettings.destroy({ where: {} });
+    
+    const users = await db.User.findAll({
+      attributes: ['id']
+    });
+
+    const securitySettings = users.map(user => ({
+      id: uuidv4(),
+      user_id: user.id,
+      two_factor_enabled: false,
+      password_last_changed: new Date('2024-01-01'),
+      login_attempts: 0,
+      last_login_ip: '192.168.1.1',
+      allowed_ips: ['192.168.1.1', '10.0.0.1'],
+      session_timeout: 30,
+      created_at: new Date(),
+      updated_at: new Date()
+    }));
+
+    await db.SecuritySettings.bulkCreate(securitySettings);
+    console.log(`Seeded ${securitySettings.length} security settings successfully.`);
+  } catch (error) {
+    console.error('Error seeding security settings:', error);
+    throw error;
+  }
+}
+
+async function seedPlatformSettings() {
+  console.log('Seeding platform settings...');
+  try {
+    await db.PlatformSettings.destroy({ where: {} });
+    
+    const platformSettings = [
+      {
+        id: uuidv4(),
+        setting_key: 'maintenance_mode',
+        setting_value: 'false',
+        setting_type: 'boolean',
+        description: 'Enable maintenance mode for the platform',
+        category: 'system',
+        created_at: new Date(),
+        updated_at: new Date()
+      },
+      {
+        id: uuidv4(),
+        setting_key: 'max_file_size',
+        setting_value: '10485760',
+        setting_type: 'number',
+        description: 'Maximum file upload size in bytes',
+        category: 'uploads',
+        created_at: new Date(),
+        updated_at: new Date()
+      },
+      {
+        id: uuidv4(),
+        setting_key: 'allowed_file_types',
+        setting_value: 'jpg,jpeg,png,pdf,doc,docx',
+        setting_type: 'array',
+        description: 'Allowed file types for uploads',
+        category: 'uploads',
+        created_at: new Date(),
+        updated_at: new Date()
+      },
+      {
+        id: uuidv4(),
+        setting_key: 'default_timezone',
+        setting_value: 'America/New_York',
+        setting_type: 'string',
+        description: 'Default timezone for the platform',
+        category: 'localization',
+        created_at: new Date(),
+        updated_at: new Date()
+      }
+    ];
+
+    await db.PlatformSettings.bulkCreate(platformSettings);
+    console.log(`Seeded ${platformSettings.length} platform settings successfully.`);
+  } catch (error) {
+    console.error('Error seeding platform settings:', error);
+    throw error;
+  }
+}
+
+async function seedBackupSettings() {
+  console.log('Seeding backup settings...');
+  try {
+    await db.BackupSettings.destroy({ where: {} });
+    
+    const users = await db.User.findAll({
+      attributes: ['id']
+    });
+
+    const backupSettings = users.map(user => ({
+      id: uuidv4(),
+      user_id: user.id,
+      auto_backup: true,
+      backup_frequency: 'daily',
+      backup_time: '02:00:00',
+      retention_days: 30,
+      storage_provider: 'local',
+      storage_path: '/backups',
+      cloud_credentials: null,
+      last_backup: null,
+      backup_history: [],
+      created_at: new Date(),
+      updated_at: new Date()
+    }));
+
+    await db.BackupSettings.bulkCreate(backupSettings);
+    console.log(`Seeded ${backupSettings.length} backup settings successfully.`);
+  } catch (error) {
+    console.error('Error seeding backup settings:', error);
+    throw error;
+  }
+}
+
+async function seedNotificationPreferences() {
+  console.log('Seeding notification preferences...');
+  try {
+    await db.NotificationPreferences.destroy({ where: {} });
+    
+    const users = await db.User.findAll({
+      attributes: ['id']
+    });
+
+    const notificationPreferences = users.map(user => ({
+      id: uuidv4(),
+      user_id: user.id,
+      email_notifications: true,
+      push_notifications: true,
+      sms_notifications: false,
+      in_app_notifications: true,
+      marketing_emails: true,
+      booking_reminders: true,
+      promotional_offers: false,
+      system_updates: true,
+      created_at: new Date(),
+      updated_at: new Date()
+    }));
+
+    await db.NotificationPreferences.bulkCreate(notificationPreferences);
+    console.log(`Seeded ${notificationPreferences.length} notification preferences successfully.`);
+  } catch (error) {
+    console.error('Error seeding notification preferences:', error);
+    throw error;
+  }
+}
+
+async function seedMobileDevices() {
+  console.log('Seeding mobile devices...');
+  try {
+    await db.MobileDevice.destroy({ where: {} });
+    
+    const users = await db.User.findAll({
+      where: { role: 'user' },
+      attributes: ['id']
+    });
+
+    const mobileDevices = users.map(user => ({
+      id: uuidv4(),
+      user_id: user.id,
+      device_token: `device_token_${user.id}`,
+      device_type: 'ios',
+      app_version: '1.0.0',
+      os_version: '15.0',
+      is_active: true,
+      last_used: new Date(),
+      created_at: new Date(),
+      updated_at: new Date()
+    }));
+
+    await db.MobileDevice.bulkCreate(mobileDevices);
+    console.log(`Seeded ${mobileDevices.length} mobile devices successfully.`);
+  } catch (error) {
+    console.error('Error seeding mobile devices:', error);
+    throw error;
+  }
+}
+
+async function seedBillingHistories() {
+  console.log('Seeding billing histories...');
+  const seeder = require('./20250701141000-demo-billing-histories.js');
+  await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
+}
+
+async function seedNotificationUsers() {
+  console.log('Seeding notification users...');
+  const seeder = require('./20250709130000-demo-notification-users.js');
   await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
 }
 

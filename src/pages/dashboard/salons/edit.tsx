@@ -34,10 +34,11 @@ const salonSchema = z.object({
   name: z.string().min(2, 'Salon name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(10, 'Phone number must be at least 10 characters'),
-  address: z.string().min(10, 'Address must be at least 10 characters'),
+  street_address: z.string().min(5, 'Street address must be at least 5 characters'),
   city: z.string().min(2, 'City is required'),
   state: z.string().min(2, 'State is required'),
-  zipCode: z.string().min(5, 'ZIP code must be at least 5 characters'),
+  zip_code: z.string().min(5, 'ZIP code must be at least 5 characters'),
+  country: z.string().min(2, 'Country is required').default('US'),
   website: z.string().url('Invalid website URL').optional().or(z.literal('')),
   description: z.string().min(20, 'Description must be at least 20 characters'),
   ownerName: z.string().min(2, 'Owner name is required'),
@@ -63,10 +64,15 @@ interface Salon {
   name: string;
   email: string;
   phone: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
+  address?: {
+    id: string;
+    street_address: string;
+    city: string;
+    state: string;
+    zip_code: string;
+    country: string;
+  };
+  address_id?: string;
   website?: string;
   description?: string;
   ownerName?: string;
@@ -132,27 +138,37 @@ export default function EditSalonPage() {
         console.log('Salon data received:', data);
         setSalonData(data);
         
-        // Parse address into components
-        if (!data || !data.address) {
-          console.log('No data or address found');
+        // Handle address data from the new address object structure
+        if (!data) {
+          console.log('No data found');
           return;
         }
-        const addressParts = data.address.split(', ');
-        const streetAddress = addressParts[0];
-        const city = addressParts[1];
-        const stateZip = addressParts[2] ? addressParts[2].split(' ') : [];
-        const state = stateZip[0] || '';
-        const zipCode = stateZip[1] || '';
+
+        let streetAddress = '';
+        let city = '';
+        let state = '';
+        let zipCode = '';
+        let country = 'US';
+
+        if (data.address && typeof data.address === 'object') {
+          // New address structure - address is an object
+          streetAddress = data.address.street_address || '';
+          city = data.address.city || '';
+          state = data.address.state || '';
+          zipCode = data.address.zip_code || '';
+          country = data.address.country || 'US';
+        }
         
         // Populate form with existing data
         const formData = {
           name: data.name || '',
           email: data.email || '',
           phone: data.phone || '',
-          address: streetAddress || '',
+          street_address: streetAddress || '',
           city: city || '',
           state: state || '',
-          zipCode: zipCode || '',
+          zip_code: zipCode || '',
+          country: country || 'US',
           website: data.website || '',
           description: data.description || '',
           ownerName: data.owner_name || '',
@@ -491,10 +507,10 @@ export default function EditSalonPage() {
               <Input
                 id="address"
                 placeholder="123 Main Street"
-                {...register('address')}
+                {...register('street_address')}
               />
-              {errors.address && (
-                <p className="text-sm text-red-500">{errors.address.message}</p>
+              {errors.street_address && (
+                <p className="text-sm text-red-500">{errors.street_address.message}</p>
               )}
             </div>
 
@@ -526,10 +542,21 @@ export default function EditSalonPage() {
                 <Input
                   id="zipCode"
                   placeholder="10001"
-                  {...register('zipCode')}
+                  {...register('zip_code')}
                 />
-                {errors.zipCode && (
-                  <p className="text-sm text-red-500">{errors.zipCode.message}</p>
+                {errors.zip_code && (
+                  <p className="text-sm text-red-500">{errors.zip_code.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country *</Label>
+                <Input
+                  id="country"
+                  placeholder="US"
+                  {...register('country')}
+                />
+                {errors.country && (
+                  <p className="text-sm text-red-500">{errors.country.message}</p>
                 )}
               </div>
             </div>

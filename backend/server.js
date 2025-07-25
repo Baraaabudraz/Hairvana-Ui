@@ -103,6 +103,10 @@ app.use(
   require("./routes/Api/v0/salon/salonProfile")
 );
 app.use(
+  "/backend/api/v0/salon",
+  require("./routes/Api/v0/salon/salon")
+);
+app.use(
   "/backend/api/v0/salon/hairstyle",
   require("./routes/Api/v0/salon/hairstyle")
 );

@@ -12,7 +12,10 @@ const uploadSalonFiles = createUploadMiddleware({
   maxSize: 5 * 1024 * 1024 // 5MB per image
 });
 
+// Get salon profile for the authenticated owner
 router.get('/salon-profile', authenticateOwner, salonProfileController.getSalonProfile);
+
+// Update salon profile for the authenticated owner
 router.put('/salon-profile', 
   authenticateOwner, 
   uploadSalonFiles.fields([

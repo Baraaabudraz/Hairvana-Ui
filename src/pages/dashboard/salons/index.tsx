@@ -36,7 +36,15 @@ interface Salon {
   name: string;
   email: string;
   phone: string;
-  location: string;
+  address?: {
+    id: string;
+    street_address: string;
+    city: string;
+    state: string;
+    zip_code: string;
+    country: string;
+  };
+  location?: string; // Keep for backward compatibility
   status: SalonStatus;
   subscription: SubscriptionType;
   joinDate: string;
@@ -321,7 +329,9 @@ export default function SalonsPage() {
                     </Avatar>
                     <div>
                       <h3 className="font-semibold text-gray-900">{salon.name}</h3>
-                      <p className="text-sm text-gray-600">{salon.location}</p>
+                      <p className="text-sm text-gray-600">
+                        {salon.address ? `${salon.address.city}, ${salon.address.state}` : salon.location}
+                      </p>
                       <p className="text-xs text-gray-500">{salon.email}</p>
                     </div>
                   </div>

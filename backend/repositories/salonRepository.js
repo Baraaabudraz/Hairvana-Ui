@@ -1,21 +1,29 @@
-const { Salon, User, Appointment, Review, Service, Staff } = require('../models');
+const { Salon, User, Appointment, Review, Service, Staff, Address } = require('../models');
 const { Op, Sequelize } = require('sequelize');
 
 exports.findAll = async (query) => {
   const where = {};
   if (query.status && query.status !== 'all') where.status = query.status;
   if (query.ownerId) where.owner_id = query.ownerId;
+  
+  const includeModels = [
+    { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] },
+    { model: Address, as: 'address' }
+  ];
+  
   if (query.search) {
     where[Op.or] = [
       { name: { [Op.iLike]: `%${query.search}%` } },
-      { location: { [Op.iLike]: `%${query.search}%` } }
+      { '$address.city$': { [Op.iLike]: `%${query.search}%` } },
+      { '$address.state$': { [Op.iLike]: `%${query.search}%` } }
     ];
   }
+  
   const limit = query.limit ? parseInt(query.limit, 10) : 10;
   const offset = query.page ? (parseInt(query.page, 10) - 1) * limit : 0;
   const { rows, count } = await Salon.findAndCountAll({
     where,
-    include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] }],
+    include: includeModels,
     limit,
     offset
   });
@@ -27,6 +35,7 @@ exports.findById = async (id) => {
     where: { id },
     include: [
       { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] },
+      { model: Address, as: 'address' },
       { model: Service, as: 'services' }
     ]
   });
@@ -37,8 +46,21 @@ exports.findByOwnerId = async (ownerId) => {
     where: { owner_id: ownerId },
     include: [
       { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] },
+      { model: Address, as: 'address' },
       { model: Service, as: 'services' }
     ]
+  });
+};
+
+exports.findAllByOwnerId = async (ownerId) => {
+  return Salon.findAll({
+    where: { owner_id: ownerId },
+    include: [
+      { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] },
+      { model: Address, as: 'address' },
+      { model: Service, as: 'services' }
+    ],
+    order: [['created_at', 'DESC']]
   });
 };
 

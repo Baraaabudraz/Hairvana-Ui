@@ -1,5 +1,5 @@
 const salonRepository = require('../repositories/salonRepository');
-const { formatAddress, formatLocation } = require('../helpers/formatHelper');
+const addressService = require('./addressService');
 const { serializeSalon } = require('../serializers/salonSerializer');
 const fs = require('fs');
 const path = require('path');
@@ -33,8 +33,40 @@ exports.getSalonByOwnerId = async (ownerId, req) => {
   return serializeSalon({ ...salon.toJSON(), revenue, bookings, rating }, { req });
 };
 
+exports.getAllSalonsByOwnerId = async (ownerId, req) => {
+  const salons = await salonRepository.findAllByOwnerId(ownerId);
+  const salonsWithStats = await Promise.all(salons.map(async salon => {
+    const revenue = await salonRepository.getRevenue(salon.id);
+    const bookings = await salonRepository.getBookings(salon.id);
+    const rating = await salonRepository.getRating(salon.id);
+    return serializeSalon({ ...salon.toJSON(), revenue, bookings, rating }, { req });
+  }));
+  return salonsWithStats;
+};
+
 exports.createSalon = async (req) => {
   const salonData = req.body;
+  
+  // Ensure owner_id is set
+  if (!salonData.owner_id) {
+    throw new Error('Owner ID is required for salon creation');
+  }
+  
+  // Create address first if address data is provided
+  let addressId = null;
+  if (salonData.street_address && salonData.city && salonData.state) {
+    const addressData = {
+      street_address: salonData.street_address,
+      city: salonData.city,
+      state: salonData.state,
+      zip_code: salonData.zip_code || '',
+      country: salonData.country || 'US'
+    };
+    
+    const newAddress = await addressService.createAddress(addressData);
+    addressId = newAddress.id;
+  }
+  
   // Handle image uploads
   let avatar = null;
   let gallery = [];
@@ -44,12 +76,23 @@ exports.createSalon = async (req) => {
   if (req.files && req.files['gallery']) {
     gallery = req.files['gallery'].map(f => f.filename);
   }
-  // Do NOT merge with req.body.gallery for creation
-  salonData.avatar = avatar;
-  salonData.gallery = gallery;
-  const address = formatAddress(salonData);
-  const location = formatLocation(salonData);
-  const newSalon = await salonRepository.create(salonData);
+  
+  // Prepare salon data (remove address fields from salon data)
+  const {
+    street_address,
+    city,
+    state,
+    zip_code,
+    country,
+    ...cleanSalonData
+  } = salonData;
+  
+  // Set image data and address_id
+  cleanSalonData.avatar = avatar;
+  cleanSalonData.gallery = gallery;
+  cleanSalonData.address_id = addressId;
+  
+  const newSalon = await salonRepository.create(cleanSalonData);
   return serializeSalon(newSalon, { req });
 };
 

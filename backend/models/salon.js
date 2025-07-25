@@ -16,6 +16,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'owner_id',
         as: 'owner'
       });
+      Salon.belongsTo(models.Address, {
+        foreignKey: 'address_id',
+        as: 'address'
+      });
       Salon.hasMany(models.Report, {
         foreignKey: 'salon_id',
         as: 'reports'
@@ -28,7 +32,9 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'salon_id',
         as: 'appointments'
       });
+
       Salon.hasMany(models.Hairstyle, { foreignKey: 'salon_id', as: 'hairstyles' });
+    
       Salon.belongsToMany(models.Service, {
         through: 'salon_services',
         foreignKey: 'salon_id',
@@ -46,15 +52,23 @@ module.exports = (sequelize, DataTypes) => {
     },
     name: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      unique: true
     },
     email: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
+      unique: true
     },
     phone: DataTypes.STRING,
-    address: DataTypes.STRING,
-    location: DataTypes.STRING,
+    address_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'addresses',
+        key: 'id'
+      }
+    },
     website: DataTypes.STRING,
     description: DataTypes.TEXT,
     business_license: DataTypes.STRING,

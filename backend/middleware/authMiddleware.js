@@ -25,6 +25,15 @@ const authorize = (...roles) => {
   };
 };
 
+const authenticateCustomer = (req, res, next) => {
+  protect(req, res, function() {
+    if(req.user && req.user.role === 'customer') {
+      return next();
+    }
+    return res.status(403).json({ error: 'Only customers can access this endpoint.' });
+  });
+};
+
 // Add authenticateOwner middleware
 const authenticateOwner = (req, res, next) => {
   protect(req, res, function() {
@@ -35,4 +44,4 @@ const authenticateOwner = (req, res, next) => {
   });
 };
 
-module.exports = { authenticateToken: protect, authorize, authenticateOwner };
+module.exports = { authenticateToken: protect, authorize, authenticateOwner, authenticateCustomer };

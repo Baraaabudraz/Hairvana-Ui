@@ -21,6 +21,7 @@ const User = require('./user');
 const Customer = require('./customer');
 const SalonOwner = require('./salon_owner');
 const Salon = require('./salon');
+const Address = require('./address');
 const SubscriptionPlan = require('./subscription_plan');
 const Subscription = require('./subscription');
 const Service = require('./service');
@@ -51,6 +52,7 @@ const models = {
   User: User(sequelize, Sequelize.DataTypes),
   Customer: Customer(sequelize, Sequelize.DataTypes),
   SalonOwner: SalonOwner(sequelize, Sequelize.DataTypes),
+  Address: Address(sequelize, Sequelize.DataTypes),
   Salon: Salon(sequelize, Sequelize.DataTypes),
   SubscriptionPlan: SubscriptionPlan(sequelize, Sequelize.DataTypes),
   Subscription: Subscription(sequelize, Sequelize.DataTypes),

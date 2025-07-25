@@ -110,6 +110,10 @@ app.use(
   "/backend/api/v0/salon/hairstyle",
   require("./routes/Api/v0/salon/hairstyle")
 );
+app.use(
+  "/backend/api/v0/salon/services",
+  require("./routes/Api/v0/salon/services")
+);
 
 // Serve uploaded images statically
 app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));

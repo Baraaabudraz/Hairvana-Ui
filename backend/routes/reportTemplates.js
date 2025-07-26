@@ -3,7 +3,6 @@ const router = express.Router();
 const reportTemplateController = require("../controllers/reportTemplateController");
 const checkPermission = require("../middleware/permissionMiddleware");
 const { blockUserDashboard } = require("../middleware/authMiddleware");
-const reportTemplateController = require('../controllers/reportTemplateController');
 const { validate } = require('../middleware/validationMiddleware');
 const { validateReportTemplate } = require('../validation/reportValidation');
 

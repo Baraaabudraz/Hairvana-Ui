@@ -249,7 +249,18 @@ export default function CreateSubscriptionPage() {
         ""
       );
       const last4 = cardNumberSanitized.slice(-4);
-      const brand = data.payment_method.brand || "Visa"; // Replace with actual brand detection if available
+      // Simple card brand detection based on first digit
+      const firstDigit = cardNumberSanitized.charAt(0);
+      let brand = "Visa";
+      if (firstDigit === "4") {
+        brand = "Visa";
+      } else if (firstDigit === "5") {
+        brand = "Mastercard";
+      } else if (firstDigit === "3") {
+        brand = "American Express";
+      } else if (firstDigit === "6") {
+        brand = "Discover";
+      }
 
       const subscriptionData = {
         salonId: salonToUse.id,

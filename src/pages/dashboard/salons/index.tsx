@@ -26,6 +26,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Search, MoreHorizontal, Eye, Edit, Trash2, CheckCircle, XCircle, Plus } from 'lucide-react';
 import { fetchSalons, deleteSalon, updateSalonStatus } from '@/api/salons';
+import { getSalonImageUrl } from '@/lib/api';
 
 type SalonStatus = 'active' | 'pending' | 'suspended';
 type SubscriptionType = 'Basic' | 'Standard' | 'Premium';
@@ -35,7 +36,15 @@ interface Salon {
   name: string;
   email: string;
   phone: string;
-  location: string;
+  address?: {
+    id: string;
+    street_address: string;
+    city: string;
+    state: string;
+    zip_code: string;
+    country: string;
+  };
+  location?: string; // Keep for backward compatibility
   status: SalonStatus;
   subscription: SubscriptionType;
   joinDate: string;
@@ -313,18 +322,16 @@ export default function SalonsPage() {
                     {/* Salon Image */}
                     <Avatar className="h-12 w-12 mr-4">
                       <AvatarImage
-                        src={
-                          salon.avatar
-                            ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${salon.avatar}`
-                            : '/default-salon.png'
-                        }
+                        src={getSalonImageUrl(salon.avatar)}
                         alt={salon.name}
                       />
                       <AvatarFallback>{salon.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                     </Avatar>
                     <div>
                       <h3 className="font-semibold text-gray-900">{salon.name}</h3>
-                      <p className="text-sm text-gray-600">{salon.location}</p>
+                      <p className="text-sm text-gray-600">
+                        {salon.address ? `${salon.address.city}, ${salon.address.state}` : salon.location}
+                      </p>
                       <p className="text-xs text-gray-500">{salon.email}</p>
                     </div>
                   </div>

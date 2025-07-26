@@ -7,6 +7,8 @@ const {
   blockUserDashboard,
 } = require("../middleware/authMiddleware");
 const checkPermission = require("../middleware/permissionMiddleware");
+const { validate } = require('../middleware/validationMiddleware');
+const { validateReport, validateGenerateReport } = require('../validation/reportValidation');
 
 // Protect all routes
 router.use(authenticateToken);
@@ -18,13 +20,13 @@ router.get(
   reportController.getAllReports
 );
 router.get("/:id", reportController.getReportById);
-router.post("/", reportController.createReport);
+router.post("/", validateReport, validate, reportController.createReport);
 router.post(
   "/generate",
   authorize("admin", "super_admin"),
-  reportController.generateReport
+  validateGenerateReport, validate, reportController.generateReport
 );
-router.put("/:id", reportController.updateReport);
+router.put("/:id", validateReport, validate, reportController.updateReport);
 router.delete(
   "/:id",
   checkPermission("reports", "delete"),

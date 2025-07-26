@@ -1,111 +1,217 @@
-const { body } = require('express-validator');
-const { commonRules } = require('./index');
+const { body, param } = require('express-validator');
+const { Service, Salon } = require('../models');
 
 /**
- * Validation schema for creating a new service
+ * Validation schema for creating a service
  */
 const createServiceValidation = [
-  body('salonId')
+  body('name')
     .notEmpty()
-    .withMessage('Salon ID is required')
-    .isUUID()
-    .withMessage('Salon ID must be a valid UUID'),
-  
-  commonRules.requiredString('name').isLength({ min: 2 }).withMessage('Service name must be at least 2 characters long'),
-  
-  commonRules.requiredNumber('price'),
-  
+    .withMessage('Service name is required')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Service name must be between 2 and 100 characters')
+    .custom(async (value, { req }) => {
+      if (!req.user || !req.user.id) {
+        throw new Error('Authentication required');
+      }
+      
+      // Find the salon for the authenticated owner
+      const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
+      if (!salon) {
+        throw new Error('Salon not found for this owner');
+      }
+      
+      // Check if service name already exists for this salon
+      const existingService = await Service.findOne({
+        include: [{
+          model: Salon,
+          as: 'salons',
+          where: { id: salon.id },
+          required: true
+        }],
+        where: { name: value }
+      });
+      
+      if (existingService) {
+        throw new Error('A service with this name already exists in your salon');
+      }
+      
+      return true;
+    }),
+
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Description must not exceed 500 characters'),
+
+  body('price')
+    .notEmpty()
+    .withMessage('Price is required')
+    .isFloat({ min: 0 })
+    .withMessage('Price must be a positive number'),
+
   body('duration')
     .notEmpty()
     .withMessage('Duration is required')
-    .isInt({ min: 5 })
-    .withMessage('Duration must be at least 5 minutes'),
-  
-  body('description')
+    .isInt({ min: 1 })
+    .withMessage('Duration must be a positive integer (minutes)'),
+
+  body('status')
     .optional()
-    .trim(),
-  
-  body('category')
+    .isIn(['active', 'inactive', 'discontinued'])
+    .withMessage('Status must be active, inactive, or discontinued'),
+
+  body('is_popular')
     .optional()
-    .trim(),
-  
-  body('image')
+    .isBoolean()
+    .withMessage('is_popular must be a boolean'),
+
+  body('image_url')
     .optional()
-    .trim()
     .isURL()
-    .withMessage('Image must be a valid URL'),
+    .withMessage('Image URL must be a valid URL'),
+
+  body('special_offers')
+    .optional()
+    .custom((value) => {
+      if (value === null || value === undefined) return true;
+      
+      // Allow objects
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        return true;
+      }
+      
+      // Allow arrays and transform them
+      if (Array.isArray(value)) {
+        return true;
+      }
+      
+      throw new Error('Special offers must be an object or array');
+    }),
 ];
 
 /**
- * Validation schema for updating an existing service
+ * Validation schema for updating a service
  */
 const updateServiceValidation = [
   body('name')
     .optional()
     .trim()
-    .isLength({ min: 2 })
-    .withMessage('Service name must be at least 2 characters long'),
-  
-  body('price')
-    .optional()
-    .isNumeric()
-    .withMessage('Price must be a number'),
-  
-  body('duration')
-    .optional()
-    .isInt({ min: 5 })
-    .withMessage('Duration must be at least 5 minutes'),
-  
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Service name must be between 2 and 100 characters')
+    .custom(async (value, { req }) => {
+      if (!value) return true; // Skip validation if name is not provided
+      
+      if (!req.user || !req.user.id) {
+        throw new Error('Authentication required');
+      }
+      
+      if (!req.params.serviceId) {
+        throw new Error('Service ID is required for update');
+      }
+      
+      // Find the salon for the authenticated owner
+      const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
+      if (!salon) {
+        throw new Error('Salon not found for this owner');
+      }
+      
+      // Check if service name already exists for this salon (excluding current service)
+      const existingService = await Service.findOne({
+        include: [{
+          model: Salon,
+          as: 'salons',
+          where: { id: salon.id },
+          required: true
+        }],
+        where: { 
+          name: value,
+          id: { [require('sequelize').Op.ne]: req.params.serviceId }
+        }
+      });
+      
+      if (existingService) {
+        throw new Error('A service with this name already exists in your salon');
+      }
+      
+      return true;
+    }),
+
   body('description')
     .optional()
-    .trim(),
-  
-  body('category')
-    .optional()
-    .trim(),
-  
-  body('image')
-    .optional()
     .trim()
+    .isLength({ max: 500 })
+    .withMessage('Description must not exceed 500 characters'),
+
+  body('price')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Price must be a positive number'),
+
+  body('duration')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Duration must be a positive integer (minutes)'),
+
+  body('status')
+    .optional()
+    .isIn(['active', 'inactive', 'discontinued'])
+    .withMessage('Status must be active, inactive, or discontinued'),
+
+  body('is_popular')
+    .optional()
+    .isBoolean()
+    .withMessage('is_popular must be a boolean'),
+
+  body('image_url')
+    .optional()
     .isURL()
-    .withMessage('Image must be a valid URL'),
+    .withMessage('Image URL must be a valid URL'),
+
+  body('special_offers')
+    .optional()
+    .custom((value) => {
+      if (value === null || value === undefined) return true;
+      
+      // Allow objects
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        return true;
+      }
+      
+      // Allow arrays and transform them
+      if (Array.isArray(value)) {
+        return true;
+      }
+      
+      throw new Error('Special offers must be an object or array');
+    }),
 ];
 
 /**
- * Validation schema for bulk creating services
+ * Validation schema for adding service to salon
  */
-const bulkCreateServicesValidation = [
-  body()
-    .isArray()
-    .withMessage('Request body must be an array of services'),
-  
-  body('*.salonId')
+const addServiceToSalonValidation = [
+  body('serviceId')
     .notEmpty()
-    .withMessage('Salon ID is required for each service')
+    .withMessage('Service ID is required')
     .isUUID()
-    .withMessage('Salon ID must be a valid UUID'),
-  
-  body('*.name')
-    .notEmpty()
-    .withMessage('Name is required for each service')
-    .isLength({ min: 2 })
-    .withMessage('Service name must be at least 2 characters long'),
-  
-  body('*.price')
-    .notEmpty()
-    .withMessage('Price is required for each service')
-    .isNumeric()
-    .withMessage('Price must be a number'),
-  
-  body('*.duration')
-    .notEmpty()
-    .withMessage('Duration is required for each service')
-    .isInt({ min: 5 })
-    .withMessage('Duration must be at least 5 minutes'),
+    .withMessage('Service ID must be a valid UUID'),
+];
+
+/**
+ * Validation schema for service ID parameter
+ */
+const serviceIdValidation = [
+  param('serviceId')
+    .isUUID()
+    .withMessage('Service ID must be a valid UUID'),
 ];
 
 module.exports = {
   createServiceValidation,
   updateServiceValidation,
-  bulkCreateServicesValidation
+  addServiceToSalonValidation,
+  serviceIdValidation,
 };

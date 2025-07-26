@@ -27,14 +27,23 @@ import {
 } from 'lucide-react';
 import { fetchSalonById, updateSalonStatus, deleteSalon } from '@/api/salons';
 import { useToast } from '@/hooks/use-toast';
+import { getSalonImageUrl, getSalonGalleryUrls } from '@/lib/api';
 
 interface Salon {
   id: string;
   name: string;
   email: string;
   phone: string;
-  address: string;
-  location: string;
+  address?: {
+    id: string;
+    street_address: string;
+    city: string;
+    state: string;
+    zip_code: string;
+    country: string;
+  };
+  address_id?: string;
+  location?: string; // Keep for backward compatibility
   status: 'active' | 'pending' | 'suspended';
   subscription: 'Basic' | 'Standard' | 'Premium';
   join_date: string;
@@ -140,7 +149,13 @@ export default function SalonDetailsPage() {
               name: 'Luxe Hair Studio',
               email: 'info@luxehair.com',
               phone: '+1 (555) 123-4567',
-              address: '123 Beverly Hills Blvd, Beverly Hills, CA 90210',
+              address: {
+                street_address: '123 Beverly Hills Blvd',
+                city: 'Beverly Hills',
+                state: 'CA',
+                zip_code: '90210',
+                country: 'USA'
+              },
               location: 'Beverly Hills, CA',
               status: 'active',
               subscription: 'Premium',
@@ -187,7 +202,13 @@ export default function SalonDetailsPage() {
               name: 'Style Cuts',
               email: 'info@stylecuts.com',
               phone: '+1 (555) 234-5678',
-              address: '456 Market St, San Francisco, CA 94105',
+              address: {
+                street_address: '456 Market St',
+                city: 'San Francisco',
+                state: 'CA',
+                zip_code: '94105',
+                country: 'USA'
+              },
               location: 'San Francisco, CA',
               status: 'active',
               subscription: 'Standard',
@@ -230,7 +251,13 @@ export default function SalonDetailsPage() {
               name: 'Beauty Haven',
               email: 'info@beautyhaven.com',
               phone: '+1 (555) 345-6789',
-              address: '789 Oak Ave, Los Angeles, CA 90001',
+              address: {
+                street_address: '789 Oak Ave',
+                city: 'Los Angeles',
+                state: 'CA',
+                zip_code: '90001',
+                country: 'USA'
+              },
               location: 'Los Angeles, CA',
               status: 'pending',
               subscription: 'Basic',
@@ -395,7 +422,7 @@ export default function SalonDetailsPage() {
             <div className="flex items-center gap-6">
               <Avatar className="h-16 w-16">
                 <AvatarImage
-                  src={salon.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${salon.avatar}` : '/default-salon.png'}
+                  src={salon.avatar ? getSalonImageUrl(salon.avatar) : '/default-salon.png'}
                   alt={salon.name}
                 />
                 <AvatarFallback className="text-lg">
@@ -539,7 +566,7 @@ export default function SalonDetailsPage() {
               <MapPin className="h-4 w-4 text-gray-400 mt-1" />
               <div>
                 <p className="text-sm font-medium">Address</p>
-                <p className="text-sm text-gray-600">{salon.address}</p>
+                <p className="text-sm text-gray-600">{salon.address?.street_address}, {salon.address?.city}, {salon.address?.state} {salon.address?.zip_code}</p>
               </div>
             </div>
           </CardContent>
@@ -691,7 +718,7 @@ export default function SalonDetailsPage() {
             {salon.gallery.map((img, idx) => (
               <img
                 key={idx}
-                src={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${img}`}
+                src={getSalonImageUrl(img)}
                 alt={`Gallery image ${idx + 1}`}
                 className="w-full h-24 object-cover rounded-lg"
               />

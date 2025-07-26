@@ -24,7 +24,7 @@ function parseTags(tags) {
 function getPublicUrl(req, folder, filename) {
   if (!filename) return null;
   const baseUrl = req.protocol + '://' + req.get('host');
-  return `${baseUrl}/uploads/${folder}/${filename}`;
+  return `${baseUrl}/images/${folder}/${filename}`;
 }
 
 function mapHairstyleResponse(req, h) {

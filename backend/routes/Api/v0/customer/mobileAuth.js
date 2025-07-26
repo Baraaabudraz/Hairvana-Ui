@@ -4,6 +4,7 @@ const mobileAuthController = require('../../../../controllers/Api/customer/auth/
 const { registerValidation, loginValidation } = require('../../../../validation/mobileAuthValidation');
 const validate = require('../../../../middleware/validate');
 const { authenticateToken } = require('../../../../middleware/authMiddleware');
+const { authenticateCustomer } = require('../../../../middleware/authMiddleware');
 
 router.post('/register', registerValidation, validate, mobileAuthController.register);
 router.post('/login', loginValidation, validate, mobileAuthController.login);

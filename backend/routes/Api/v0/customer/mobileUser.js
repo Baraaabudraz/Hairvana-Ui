@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mobileUserController = require('../../../../controllers/Api/customer/mobileUserController');
-const { authenticateToken } = require('../../../../middleware/authMiddleware');
+const { authenticateCustomer } = require('../../../../middleware/authMiddleware');
 const { updateProfileValidation } = require('../../../../validation/mobileUserValidation');
 const validate = require('../../../../middleware/validate');
 const multer = require('multer');
@@ -32,7 +32,7 @@ const fileFilter = (req, file, cb) => {
 };
 const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
 
-router.get('/profile', authenticateToken, mobileUserController.getProfile);
-router.put('/profile', authenticateToken, upload.single('avatar'), updateProfileValidation, validate, mobileUserController.updateProfile);
+router.get('/profile', authenticateCustomer, mobileUserController.getProfile);
+router.put('/profile', authenticateCustomer, upload.single('avatar'), updateProfileValidation, validate, mobileUserController.updateProfile);
 
 module.exports = router; 

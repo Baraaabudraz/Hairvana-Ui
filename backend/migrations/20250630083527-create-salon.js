@@ -19,11 +19,15 @@ module.exports = {
       phone: {
         type: Sequelize.TEXT
       },
-      address: {
-        type: Sequelize.TEXT
-      },
-      location: {
-        type: Sequelize.TEXT
+      address_id: {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: 'addresses',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL'
       },
       status: {
         type: Sequelize.ENUM('active', 'pending', 'suspended'),
@@ -34,18 +38,6 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
-      },
-      revenue: {
-        type: Sequelize.DECIMAL(10, 2),
-        defaultValue: 0
-      },
-      bookings: {
-        type: Sequelize.INTEGER,
-        defaultValue: 0
-      },
-      rating: {
-        type: Sequelize.DECIMAL(3, 1),
-        defaultValue: 0
       },
       hours: {
         type: Sequelize.JSONB

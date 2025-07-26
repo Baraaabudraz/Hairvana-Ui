@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const MobileReviewController = require('../../../../controllers/Api/customer/mobileReviewController');
-const authMiddleware = require('../../../../middleware/authMiddleware');
+const { authenticateCustomer } = require('../../../../middleware/authMiddleware');
 const { body, param, query } = require('express-validator');
 const { validate } = require('../../../../middleware/validationMiddleware');
 
@@ -38,7 +38,7 @@ const queryValidation = [
 
 // POST /backend/api/mobile/reviews - Create a new review
 router.post('/', 
-  authMiddleware.authenticateToken, 
+  authenticateCustomer, 
   createReviewValidation, 
   validate, 
   reviewController.createReview.bind(reviewController)
@@ -58,7 +58,7 @@ router.get('/salon/:salon_id/stats',
 
 // GET /backend/api/mobile/reviews/my - Get current user's reviews
 router.get('/my', 
-  authMiddleware.authenticateToken, 
+  authenticateCustomer, 
   queryValidation, 
   validate, 
   reviewController.getUserReviews.bind(reviewController)
@@ -66,7 +66,7 @@ router.get('/my',
 
 // PUT /backend/api/mobile/reviews/:review_id - Update user's own review
 router.put('/:review_id', 
-  authMiddleware.authenticateToken, 
+  authenticateCustomer, 
   updateReviewValidation, 
   validate, 
   reviewController.updateReview.bind(reviewController)
@@ -74,7 +74,7 @@ router.put('/:review_id',
 
 // DELETE /backend/api/mobile/reviews/:review_id - Delete user's own review
 router.delete('/:review_id', 
-  authMiddleware.authenticateToken, 
+  authenticateCustomer, 
   param('review_id').isUUID().withMessage('Valid review ID is required'),
   validate,
   reviewController.deleteReview.bind(reviewController)
@@ -82,7 +82,7 @@ router.delete('/:review_id',
 
 // POST /backend/api/mobile/reviews/:review_id/helpful - Mark a review as helpful
 router.post('/:review_id/helpful', 
-  authMiddleware.authenticateToken,
+  authenticateCustomer,
   param('review_id').isUUID().withMessage('Valid review ID is required'),
   validate,
   reviewController.markReviewHelpful.bind(reviewController)
@@ -90,7 +90,7 @@ router.post('/:review_id/helpful',
 
 // GET /backend/api/mobile/reviews/check-eligibility/:salon_id - Check if user can review a salon
 router.get('/check-eligibility/:salon_id', 
-  authMiddleware.authenticateToken,
+  authenticateCustomer,
   param('salon_id').isUUID().withMessage('Valid salon ID is required'),
   validate,
   async (req, res) => {
@@ -145,7 +145,7 @@ router.get('/check-eligibility/:salon_id',
 
 // GET /backend/api/mobile/reviews/check-appointment/:appointment_id - Check if user can review specific appointment
 router.get('/check-appointment/:appointment_id', 
-  authMiddleware.authenticateToken,
+  authenticateCustomer,
   param('appointment_id').isUUID().withMessage('Valid appointment ID is required'),
   validate,
   async (req, res) => {

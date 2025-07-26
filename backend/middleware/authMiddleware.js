@@ -32,6 +32,17 @@ const authorize = (...roleNames) => {
   };
 };
 
+const authenticateCustomer = (req, res, next) => {
+  protect(req, res, function() {
+    if(req.user && req.user.role === 'customer') {
+      return next();
+    }
+    return res.status(403).json({ error: 'Only customers can access this endpoint.' });
+  });
+};
+
+
+
 // Role helpers using role name from JWT
 const isSuperAdmin = (user) => user && user.role === "super_admin";
 const isAdmin = (user) => user && user.role === "admin";
@@ -57,3 +68,5 @@ module.exports = {
   isUser,
   blockUserDashboard,
 };
+
+module.exports = { authenticateToken: protect, authorize, authenticateOwner, authenticateCustomer };

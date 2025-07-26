@@ -19,10 +19,11 @@ const salonSchema = z.object({
   name: z.string().min(2, 'Salon name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(10, 'Phone number must be at least 10 characters'),
-  address: z.string().min(10, 'Address must be at least 10 characters'),
+  street_address: z.string().min(5, 'Street address must be at least 5 characters'),
   city: z.string().min(2, 'City is required'),
   state: z.string().min(2, 'State is required'),
-  zipCode: z.string().min(5, 'ZIP code must be at least 5 characters'),
+  zip_code: z.string().min(5, 'ZIP code must be at least 5 characters'),
+  country: z.string().min(2, 'Country is required').default('US'),
   website: z.string().url('Invalid website URL').optional().or(z.literal('')),
   description: z.string().min(20, 'Description must be at least 20 characters'),
   owner_id: z.string().min(1, 'Please select an owner'),
@@ -72,6 +73,9 @@ export default function NewSalonPage() {
     formState: { errors },
   } = useForm<SalonForm>({
     resolver: zodResolver(salonSchema),
+    defaultValues: {
+      country: 'US',
+    },
   });
 
   // Fetch potential salon owners
@@ -175,17 +179,18 @@ export default function NewSalonPage() {
       });
 
       // Format address
-      const fullAddress = `${data.address}, ${data.city}, ${data.state} ${data.zipCode}`;
+      const fullAddress = `${data.street_address}, ${data.city}, ${data.state} ${data.zip_code}`;
 
       // Build FormData for all fields and images
       const formData = new FormData();
       formData.append('name', data.name);
       formData.append('email', data.email);
       formData.append('phone', data.phone);
-      formData.append('address', data.address);
+      formData.append('street_address', data.street_address);
       formData.append('city', data.city);
       formData.append('state', data.state);
-      formData.append('zipCode', data.zipCode);
+      formData.append('zip_code', data.zip_code);
+      formData.append('country', data.country);
       formData.append('website', data.website || '');
       formData.append('description', data.description);
       formData.append('owner_id', data.owner_id);
@@ -369,14 +374,14 @@ export default function NewSalonPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="address">Street Address *</Label>
+              <Label htmlFor="street_address">Street Address *</Label>
               <Input
-                id="address"
+                id="street_address"
                 placeholder="123 Main Street"
-                {...register('address')}
+                {...register('street_address')}
               />
-              {errors.address && (
-                <p className="text-sm text-red-500">{errors.address.message}</p>
+              {errors.street_address && (
+                <p className="text-sm text-red-500">{errors.street_address.message}</p>
               )}
             </div>
 
@@ -404,16 +409,27 @@ export default function NewSalonPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="zipCode">ZIP Code *</Label>
+                <Label htmlFor="zip_code">ZIP Code *</Label>
                 <Input
-                  id="zipCode"
+                  id="zip_code"
                   placeholder="10001"
-                  {...register('zipCode')}
+                  {...register('zip_code')}
                 />
-                {errors.zipCode && (
-                  <p className="text-sm text-red-500">{errors.zipCode.message}</p>
+                {errors.zip_code && (
+                  <p className="text-sm text-red-500">{errors.zip_code.message}</p>
                 )}
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="country">Country *</Label>
+              <Input
+                id="country"
+                placeholder="US"
+                {...register('country')}
+              />
+              {errors.country && (
+                <p className="text-sm text-red-500">{errors.country.message}</p>
+              )}
             </div>
           </CardContent>
         </Card>

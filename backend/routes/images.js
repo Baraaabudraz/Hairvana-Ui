@@ -23,4 +23,14 @@ router.get('/salon/:uuid', (req, res) => {
   }
 });
 
+// Serve hairstyle images
+router.get('/hairstyles/original/:filename', (req, res) => {
+  const filePath = path.join(__dirname, '../public/uploads/hairstyles/original', req.params.filename);
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send('Not found');
+  }
+});
+
 module.exports = router; 

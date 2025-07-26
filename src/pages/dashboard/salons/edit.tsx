@@ -1,28 +1,44 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Upload, X, Plus, Save } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { 
+  ArrowLeft, 
+  Upload, 
+  X, 
+  Plus, 
+  Clock,
+  FileText,
+  CreditCard,
+  Globe,
+  MapPin,
+  Phone,
+  Mail,
+  User,
+  Save
+} from 'lucide-react';
 import { fetchSalonById, updateSalon } from '@/api/salons';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useRef } from 'react';
+import { getSalonImageUrl } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 const salonSchema = z.object({
   name: z.string().min(2, 'Salon name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(10, 'Phone number must be at least 10 characters'),
-  address: z.string().min(10, 'Address must be at least 10 characters'),
+  street_address: z.string().min(5, 'Street address must be at least 5 characters'),
   city: z.string().min(2, 'City is required'),
   state: z.string().min(2, 'State is required'),
-  zipCode: z.string().min(5, 'ZIP code must be at least 5 characters'),
+  zip_code: z.string().min(5, 'ZIP code must be at least 5 characters'),
+  country: z.string().min(2, 'Country is required').default('US'),
   website: z.string().url('Invalid website URL').optional().or(z.literal('')),
   description: z.string().min(20, 'Description must be at least 20 characters'),
   ownerName: z.string().min(2, 'Owner name is required'),
@@ -48,10 +64,15 @@ interface Salon {
   name: string;
   email: string;
   phone: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
+  address?: {
+    id: string;
+    street_address: string;
+    city: string;
+    state: string;
+    zip_code: string;
+    country: string;
+  };
+  address_id?: string;
   website?: string;
   description?: string;
   ownerName?: string;
@@ -77,6 +98,7 @@ interface Salon {
   images?: string[];
   status: 'active' | 'pending' | 'suspended';
   subscription: 'Basic' | 'Standard' | 'Premium';
+  avatar?: string; // Added avatar to interface
 }
 
 export default function EditSalonPage() {
@@ -85,17 +107,18 @@ export default function EditSalonPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [customService, setCustomService] = useState('');
   const [hours, setHours] = useState<Record<string, { open: string; close: string; closed: boolean }>>({});
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [uploadedImages, setUploadedImages] = useState<(string | File)[]>([]);
+  const [uploadedImages, setUploadedImages] = useState<(File | string)[]>([]);
   // Add state for avatar
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Add state for full salon data
-  const [salonData, setSalonData] = useState<any>(null);
+  const [salonData, setSalonData] = useState<Salon | null>(null);
 
   const {
     register,
@@ -110,27 +133,42 @@ export default function EditSalonPage() {
     const fetchSalon = async () => {
       try {
         setLoading(true);
+        console.log('Fetching salon with ID:', params.id);
         const data = await fetchSalonById(params.id as string);
+        console.log('Salon data received:', data);
         setSalonData(data);
         
-        // Parse address into components
-        if (!data || !data.address) return;
-        const addressParts = data.address.split(', ');
-        const streetAddress = addressParts[0];
-        const city = addressParts[1];
-        const stateZip = addressParts[2] ? addressParts[2].split(' ') : [];
-        const state = stateZip[0] || '';
-        const zipCode = stateZip[1] || '';
+        // Handle address data from the new address object structure
+        if (!data) {
+          console.log('No data found');
+          return;
+        }
+
+        let streetAddress = '';
+        let city = '';
+        let state = '';
+        let zipCode = '';
+        let country = 'US';
+
+        if (data.address && typeof data.address === 'object') {
+          // New address structure - address is an object
+          streetAddress = data.address.street_address || '';
+          city = data.address.city || '';
+          state = data.address.state || '';
+          zipCode = data.address.zip_code || '';
+          country = data.address.country || 'US';
+        }
         
         // Populate form with existing data
-        reset({
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          address: streetAddress,
+        const formData = {
+          name: data.name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          street_address: streetAddress || '',
           city: city || '',
           state: state || '',
-          zipCode: zipCode || '',
+          zip_code: zipCode || '',
+          country: country || 'US',
           website: data.website || '',
           description: data.description || '',
           ownerName: data.owner_name || '',
@@ -138,7 +176,10 @@ export default function EditSalonPage() {
           ownerPhone: data.owner_phone || '',
           businessLicense: data.business_license || '',
           taxId: data.tax_id || '',
-        });
+        };
+        
+        console.log('Setting form data:', formData);
+        reset(formData);
 
         // Convert hours format
         const formattedHours: Record<string, { open: string; close: string; closed: boolean }> = {};
@@ -169,6 +210,7 @@ export default function EditSalonPage() {
         setUploadedImages(data.gallery || []); // Only set once on load
       } catch (error) {
         console.error('Error fetching salon:', error);
+        setError('Could not load salon data. Please try again.');
         toast({
           title: 'Error loading salon',
           description: 'Could not load salon data. Please try again.',
@@ -270,8 +312,9 @@ export default function EditSalonPage() {
       
       // Add form fields
       Object.keys(data).forEach(key => {
-        if (data[key as keyof SalonForm] !== undefined && data[key as keyof SalonForm] !== null) {
-          formData.append(key, data[key as keyof SalonForm].toString());
+        const value = data[key as keyof SalonForm];
+        if (value !== undefined && value !== null) {
+          formData.append(key, value.toString());
         }
       });
 
@@ -327,6 +370,34 @@ export default function EditSalonPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Salon</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!salonData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Salon Not Found</h2>
+          <p className="text-gray-600 mb-4">The salon you're looking for doesn't exist.</p>
+          <Link to="/dashboard/salons">
+            <Button>Back to Salons</Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -436,10 +507,10 @@ export default function EditSalonPage() {
               <Input
                 id="address"
                 placeholder="123 Main Street"
-                {...register('address')}
+                {...register('street_address')}
               />
-              {errors.address && (
-                <p className="text-sm text-red-500">{errors.address.message}</p>
+              {errors.street_address && (
+                <p className="text-sm text-red-500">{errors.street_address.message}</p>
               )}
             </div>
 
@@ -471,10 +542,21 @@ export default function EditSalonPage() {
                 <Input
                   id="zipCode"
                   placeholder="10001"
-                  {...register('zipCode')}
+                  {...register('zip_code')}
                 />
-                {errors.zipCode && (
-                  <p className="text-sm text-red-500">{errors.zipCode.message}</p>
+                {errors.zip_code && (
+                  <p className="text-sm text-red-500">{errors.zip_code.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country *</Label>
+                <Input
+                  id="country"
+                  placeholder="US"
+                  {...register('country')}
+                />
+                {errors.country && (
+                  <p className="text-sm text-red-500">{errors.country.message}</p>
                 )}
               </div>
             </div>
@@ -677,7 +759,7 @@ export default function EditSalonPage() {
                     : avatarFile
                       ? URL.createObjectURL(avatarFile)
                       : salonData?.avatar
-                        ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${salonData.avatar}`
+                        ? getSalonImageUrl(salonData.avatar)
                         : '/default-salon.png'}
                   alt="Salon Avatar"
                 />
@@ -743,7 +825,7 @@ export default function EditSalonPage() {
                       src={
                         file instanceof File
                           ? URL.createObjectURL(file)
-                          : `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/salon/${file}`
+                          : getSalonImageUrl(file)
                       }
                       alt="Preview"
                       style={{ width: 100, height: 100, objectFit: 'cover' }}

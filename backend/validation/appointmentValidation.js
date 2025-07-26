@@ -1,4 +1,4 @@
-const { body, query } = require('express-validator');
+const { body, query, param } = require('express-validator');
 const { commonRules } = require('./index');
 
 /**
@@ -139,10 +139,84 @@ const bookAppointmentValidation = [
     .withMessage('Price must be a positive number'),
 ];
 
+/**
+ * Validation schema for salon owner appointment queries
+ */
+const salonAppointmentQueryValidation = [
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer'),
+  
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Limit must be between 1 and 100'),
+  
+  query('from')
+    .optional()
+    .isISO8601()
+    .withMessage('From date must be a valid ISO8601 date'),
+  
+  query('to')
+    .optional()
+    .isISO8601()
+    .withMessage('To date must be a valid ISO8601 date'),
+];
+
+/**
+ * Validation schema for appointment ID parameter
+ */
+const appointmentIdValidation = [
+  param('appointmentId')
+    .notEmpty()
+    .withMessage('Appointment ID is required')
+    .isUUID()
+    .withMessage('Appointment ID must be a valid UUID'),
+];
+
+/**
+ * Validation schema for updating appointment status
+ */
+const updateAppointmentStatusValidation = [
+  ...appointmentIdValidation,
+  
+  body('status')
+    .notEmpty()
+    .withMessage('Status is required')
+    .isIn(['pending', 'booked', 'cancelled', 'completed'])
+    .withMessage('Status must be one of: pending, booked, cancelled, completed'),
+  
+  body('notes')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Notes must not exceed 500 characters'),
+];
+
+/**
+ * Validation schema for appointment statistics query
+ */
+const appointmentStatsValidation = [
+  query('from')
+    .optional()
+    .isISO8601()
+    .withMessage('From date must be a valid ISO8601 date'),
+  
+  query('to')
+    .optional()
+    .isISO8601()
+    .withMessage('To date must be a valid ISO8601 date'),
+];
+
 module.exports = {
   createAppointmentValidation,
   updateAppointmentValidation,
   checkAvailabilityValidation,
   cancelAppointmentValidation,
   bookAppointmentValidation,
+  salonAppointmentQueryValidation,
+  appointmentIdValidation,
+  updateAppointmentStatusValidation,
+  appointmentStatsValidation,
 };

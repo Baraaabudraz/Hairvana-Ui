@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const mobilePaymentController = require('../../../../controllers/Api/customer/mobilePaymentController');
-const { authenticateToken } = require('../../../../middleware/authMiddleware');
+const { authenticateCustomer } = require('../../../../middleware/authMiddleware');
 
 // Protect all other routes
-router.use(authenticateToken);
+router.use(authenticateCustomer);
 
 // GET all payments for the authenticated user
 router.get('/', mobilePaymentController.getUserPayments);

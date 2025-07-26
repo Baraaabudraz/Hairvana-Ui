@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { registerDevice } = require('../../../../controllers/Api/customer/mobileDeviceController');
-const { authenticateToken } = require('../../../../middleware/authMiddleware');
+const { authenticateCustomer } = require('../../../../middleware/authMiddleware');
 
-router.post('/', authenticateToken, registerDevice);
+router.post('/', authenticateCustomer, registerDevice);
 
 module.exports = router; 

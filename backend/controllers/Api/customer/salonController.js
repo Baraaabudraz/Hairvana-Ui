@@ -1,5 +1,5 @@
 'use strict';
-const { Salon, Service, Review } = require('../../../models');
+const { Salon, Service, Review, Address } = require('../../../models');
 const { Sequelize } = require('sequelize');
 
 exports.getSalons = async (req, res) => {
@@ -11,7 +11,10 @@ exports.getSalons = async (req, res) => {
     if (rating) where.rating = rating;
     const salons = await Salon.findAll({
       where,
-      include: [{ model: Service, as: 'services' }]
+      include: [
+        { model: Service, as: 'services' },
+        { model: Address, as: 'address' }
+      ]
     });
     // For each salon, calculate avg rating
     const salonsWithRating = await Promise.all(salons.map(async salon => {
@@ -31,7 +34,10 @@ exports.getSalons = async (req, res) => {
 exports.getSalonById = async (req, res) => {
   try {
     const salon = await Salon.findByPk(req.params.id, {
-      include: [{ model: Service, as: 'services' }]
+      include: [
+        { model: Service, as: 'services' },
+        { model: Address, as: 'address' }
+      ]
     });
     if (!salon) return res.status(404).json({ error: 'Salon not found' });
     const ratingResult = await Review.findOne({

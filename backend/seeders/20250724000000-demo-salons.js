@@ -17,6 +17,44 @@ module.exports = {
       return;
     }
 
+    // First, create addresses for the salons
+    const addresses = [
+      {
+        id: '00000000-0000-0000-0000-000000000011',
+        street_address: '123 Rodeo Drive',
+        city: 'Beverly Hills',
+        state: 'CA',
+        zip_code: '90210',
+        country: 'US',
+        created_at: new Date(),
+        updated_at: new Date()
+      },
+      {
+        id: '00000000-0000-0000-0000-000000000012',
+        street_address: '456 Main Street',
+        city: 'Los Angeles',
+        state: 'CA',
+        zip_code: '90012',
+        country: 'US',
+        created_at: new Date(),
+        updated_at: new Date()
+      },
+      {
+        id: '00000000-0000-0000-0000-000000000013',
+        street_address: '789 Fashion Avenue',
+        city: 'New York',
+        state: 'NY',
+        zip_code: '10001',
+        country: 'US',
+        created_at: new Date(),
+        updated_at: new Date()
+      }
+    ];
+
+    // Insert addresses first
+    await queryInterface.bulkInsert('addresses', addresses, {});
+    console.log('Created salon addresses successfully.');
+
     const salons = [
       {
         id: '00000000-0000-0000-0000-000000000001',
@@ -24,8 +62,7 @@ module.exports = {
         name: 'Luxe Hair Studio',
         email: 'contact@luxehair.com',
         phone: '+1 (555) 123-4567',
-        address: '123 Rodeo Drive, Beverly Hills, CA 90210',
-        location: 'Beverly Hills, CA',
+        address_id: '00000000-0000-0000-0000-000000000011',
         status: 'active',
         join_date: new Date('2024-01-15'),
         website: 'https://luxehair.com',
@@ -57,8 +94,7 @@ module.exports = {
         name: 'Urban Cuts',
         email: 'info@urbancuts.com',
         phone: '+1 (555) 234-5678',
-        address: '456 Main Street, Los Angeles, CA 90012',
-        location: 'Los Angeles, CA',
+        address_id: '00000000-0000-0000-0000-000000000012',
         status: 'active',
         join_date: new Date('2024-02-20'),
         website: 'https://urbancuts.com',
@@ -89,8 +125,7 @@ module.exports = {
         name: 'Style & Grace Salon',
         email: 'hello@styleandgrace.com',
         phone: '+1 (555) 345-6789',
-        address: '789 Fashion Avenue, New York, NY 10001',
-        location: 'New York, NY',
+        address_id: '00000000-0000-0000-0000-000000000013',
         status: 'pending',
         join_date: new Date('2024-03-10'),
         website: 'https://styleandgrace.com',
@@ -166,5 +201,6 @@ module.exports = {
 
   down: async (queryInterface, Sequelize) => {
     await queryInterface.bulkDelete('salons', null, {});
+    await queryInterface.bulkDelete('addresses', null, {});
   }
 }; 

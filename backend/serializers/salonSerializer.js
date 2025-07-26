@@ -17,8 +17,22 @@ function serializeSalon(salon, options = {}) {
     name: salon.name,
     email: salon.email,
     phone: salon.phone,
-    address: salon.address,
-    location: salon.location,
+    // Format address data from Address model
+    address: salon.address ? {
+      id: salon.address.id,
+      street_address: salon.address.street_address,
+      city: salon.address.city,
+      state: salon.address.state,
+      zip_code: salon.address.zip_code,
+      country: salon.address.country,
+      full_address: salon.address.getFullAddress ? salon.address.getFullAddress() : 
+        `${salon.address.street_address}, ${salon.address.city}, ${salon.address.state} ${salon.address.zip_code}`,
+      short_address: salon.address.getShortAddress ? salon.address.getShortAddress() : 
+        `${salon.address.city}, ${salon.address.state}`
+    } : null,
+    address_id: salon.address_id,
+    // Legacy location field for backward compatibility
+    location: salon.address ? `${salon.address.city}, ${salon.address.state}` : salon.location,
     status: salon.status,
     join_date: salon.join_date,
     revenue: typeof salon.revenue !== 'undefined' ? salon.revenue : undefined,

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mobilePaymentController = require('../../../../controllers/Api/customer/mobilePaymentController');
-const { authenticateCustomer } = require('../../../../middleware/authMiddleware');
+const { authenticateCustomer } = require('../../../../middleware/passportMiddleware');
 
 // Protect all other routes
 router.use(authenticateCustomer);

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateOwner } = require('../../../../middleware/authMiddleware');
+const { authenticateOwner } = require('../../../../middleware/passportMiddleware');
 const salonProfileController = require('../../../../controllers/Api/salon/salonProfileController');
 const { createUploadMiddleware } = require('../../../../helpers/uploadHelper');
 const { updateSalonProfileValidation } = require('../../../../validation/salonValidation');

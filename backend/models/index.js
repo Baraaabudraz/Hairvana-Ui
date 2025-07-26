@@ -46,6 +46,7 @@ const IntegrationSettings = require('./integration_settings')(sequelize);
 const Review = require('./review');
 const MobileDevice = require('./mobile_device');
 const OwnerDocument = require('./owner_document');
+const TokenBlacklist = require('./token_blacklist');
 
 // Initialize models in dependency order
 const models = {
@@ -77,7 +78,8 @@ const models = {
   IntegrationSettings: IntegrationSettings,
   Review: Review(sequelize, Sequelize.DataTypes),
   MobileDevice: MobileDevice(sequelize, Sequelize.DataTypes),
-  OwnerDocument: OwnerDocument(sequelize, Sequelize.DataTypes)
+  OwnerDocument: OwnerDocument(sequelize, Sequelize.DataTypes),
+  TokenBlacklist: TokenBlacklist(sequelize, Sequelize.DataTypes)
 };
 
 // Initialize associations

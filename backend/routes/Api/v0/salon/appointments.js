@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const appointmentController = require('../../../../controllers/Api/salon/appointmentController');
-const { authenticateOwner } = require('../../../../middleware/authMiddleware');
+const { authenticateOwner } = require('../../../../middleware/passportMiddleware');
 const { 
   salonAppointmentQueryValidation,
   appointmentIdValidation,

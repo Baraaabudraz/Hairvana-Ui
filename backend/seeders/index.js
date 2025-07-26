@@ -22,7 +22,7 @@ async function seed() {
     await seedIntegrationSettings();
     await seedReportTemplates();
     await seedOwnerDocuments();
-    await seedReviews();
+    // await seedReviews(); // Temporarily disabled
     await seedBillingSettings();
     await seedSecuritySettings();
     await seedPlatformSettings();
@@ -128,7 +128,7 @@ async function seedUsers() {
       email: 'emily.davis@email.com',
       name: 'Emily Davis',
       phone: '+1 (555) 678-9012',
-      role: 'user',
+      role: 'customer',
       status: 'active',
         join_date: new Date('2024-02-01'),
         last_login: new Date(),
@@ -140,9 +140,21 @@ async function seedUsers() {
       email: 'michael.brown@email.com',
       name: 'Michael Brown',
       phone: '+1 (555) 789-0123',
-      role: 'user',
+      role: 'customer',
       status: 'active',
         join_date: new Date('2024-03-15'),
+        last_login: new Date(),
+      avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
+      password_hash: passwordHash
+    },
+    {
+      id: '00000000-0000-0000-0000-000000000008',
+      email: 'salon@hairvana.com',
+      name: 'Alex Rodriguez',
+      phone: '+1 (555) 890-1234',
+      role: 'salon',
+      status: 'active',
+        join_date: new Date('2024-01-15'),
         last_login: new Date(),
       avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2',
       password_hash: passwordHash
@@ -168,7 +180,7 @@ async function seedUsers() {
   
   // Create customer records
   const customers = users
-    .filter(user => user.role === 'user')
+    .filter(user => user.role === 'customer')
     .map(user => ({
       user_id: user.id,
       total_spent: 0,
@@ -468,7 +480,7 @@ async function seedReviews() {
     await db.Review.destroy({ where: {} });
     
     const users = await db.User.findAll({
-      where: { role: 'user' },
+      where: { role: 'customer' },
       attributes: ['id']
     });
     
@@ -718,7 +730,7 @@ async function seedMobileDevices() {
     await db.MobileDevice.destroy({ where: {} });
     
     const users = await db.User.findAll({
-      where: { role: 'user' },
+      where: { role: 'customer' },
       attributes: ['id']
     });
 

@@ -3,7 +3,7 @@ const router = express.Router();
 
 // Import controller and middleware
 const salonServicesController = require('../../../../controllers/Api/salon/salonServicesController');
-const { authenticateOwner } = require('../../../../middleware/authMiddleware');
+const { authenticateOwner } = require('../../../../middleware/passportMiddleware');
 const validate = require('../../../../middleware/validate');
 
 // Import validation schemas

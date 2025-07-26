@@ -3,7 +3,7 @@ const router = express.Router();
 const { createUploadMiddleware } = require('../../../../helpers/uploadHelper');
 const ownerAuthController = require('../../../../controllers/Api/salon/auth/ownerAuthController');
 const ownerProfileController = require('../../../../controllers/Api/salon/ownerProfileController');
-const { authenticateOwner } = require('../../../../middleware/authMiddleware');
+const { authenticateOwner, authenticateForLogout } = require('../../../../middleware/passportMiddleware');
 
 // Multer setup for file uploads using uploadHelper
 const upload = createUploadMiddleware({
@@ -25,7 +25,7 @@ router.post('/register', upload.none(), ownerAuthController.register);
 router.post('/login', ownerAuthController.login);
 
 // Logout
-router.post('/logout', authenticateOwner, ownerAuthController.logout);
+router.post('/logout', authenticateForLogout, ownerAuthController.logout);
 
 // Upload documents
 router.post(

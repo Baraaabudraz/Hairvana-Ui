@@ -44,7 +44,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { fetchUsers, updateUserStatus, deleteUser } from '@/api/users';
 
-type UserRole = 'admin' | 'super_admin' | 'salon' | 'user';
+type UserRole = 'admin' | 'super_admin' | 'salon' | 'user' | 'customer';
 type UserStatus = 'active' | 'pending' | 'suspended';
 
 interface Salon {
@@ -95,6 +95,7 @@ const roleColors: Record<UserRole, string> = {
   admin: 'bg-blue-100 text-blue-800',
   salon: 'bg-green-100 text-green-800',
   user: 'bg-gray-100 text-gray-800',
+  customer: 'bg-gray-100 text-gray-800', // Add customer role color
 };
 
 const statusColors: Record<UserStatus, string> = {
@@ -108,6 +109,7 @@ const roleIcons = {
   admin: Shield,
   salon: Building2,
   user: Users,
+  customer: Users, // Add customer role mapping
 };
 
 // Helper function to safely format dates
@@ -274,6 +276,7 @@ export default function UsersPage() {
       case 'admin': return 'Admin';
       case 'salon': return 'Salon Owner';
       case 'user': return 'Customer';
+      case 'customer': return 'Customer'; // Add customer role display name
       default: return role;
     }
   };
@@ -308,6 +311,7 @@ export default function UsersPage() {
           </>
         );
       case 'user':
+      case 'customer': // Handle customer role same as user
         return (
           <>
             <div className="text-center">
@@ -517,14 +521,14 @@ export default function UsersPage() {
         <CardContent>
           <div className="space-y-4">
             {users.map((user) => {
-              const RoleIcon = roleIcons[user.role];
+              const RoleIcon = roleIcons[user.role] || Users; // Fallback to Users icon if role not found
               return (
                 <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center space-x-4">
                     <div className="relative">
                       <Avatar className="h-12 w-12">
                         <AvatarImage
-                          src={user.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/avatar/${user.avatar}` : undefined}
+                          src={user.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${user.avatar}` : undefined}
                           alt={user.name}
                         />
                         <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>

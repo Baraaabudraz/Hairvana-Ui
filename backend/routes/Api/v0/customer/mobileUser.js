@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mobileUserController = require('../../../../controllers/Api/customer/mobileUserController');
-const { authenticateCustomer } = require('../../../../middleware/authMiddleware');
+const { authenticateCustomer } = require('../../../../middleware/passportMiddleware');
 const { updateProfileValidation } = require('../../../../validation/mobileUserValidation');
 const validate = require('../../../../middleware/validate');
 const multer = require('multer');

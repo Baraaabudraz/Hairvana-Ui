@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateOwner } = require('../../../../middleware/authMiddleware');
+const { authenticateOwner } = require('../../../../middleware/passportMiddleware');
 const ownerProfileController = require('../../../../controllers/Api/salon/ownerProfileController');
 const { createUploadMiddleware } = require('../../../../helpers/uploadHelper');
 

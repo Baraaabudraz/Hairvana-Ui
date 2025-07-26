@@ -3,10 +3,9 @@ const router = express.Router();
 const subscriptionController = require("../controllers/subscriptionController");
 const {
   authenticateToken,
-  authorize,
-  authorizeNoDelete,
   blockUserDashboard,
 } = require("../middleware/authMiddleware");
+const checkPermission = require("../middleware/permissionMiddleware");
 const {
   createSubscriptionValidation,
   updateSubscriptionValidation,
@@ -26,11 +25,9 @@ function handleValidationErrors(req, res, next) {
 // Block salon owners from all plan/subscription routes
 function blockSalonOwner(req, res, next) {
   if (req.user && req.user.role === "salon") {
-    return res
-      .status(403)
-      .json({
-        message: "Salon owners are not allowed to access this resource.",
-      });
+    return res.status(403).json({
+      message: "Salon owners are not allowed to access this resource.",
+    });
   }
   next();
 }
@@ -38,21 +35,25 @@ function blockSalonOwner(req, res, next) {
 // Protect all routes
 router.use(authenticateToken);
 router.use(blockUserDashboard());
-router.use(blockSalonOwner);
 
 // --- PLAN ROUTES ---
 router.get("/plans", subscriptionController.getPlans);
 router.get("/plans/:id", subscriptionController.getPlanById);
 router.post("/plans", subscriptionController.createPlan);
 router.put("/plans/:id", subscriptionController.updatePlan);
+// DELETE a plan
 router.delete(
   "/plans/:id",
-  authorizeNoDelete(),
+  checkPermission("subscriptions", "delete"),
   subscriptionController.deletePlan
 );
 
 // GET all subscriptions
-router.get("/", subscriptionController.getAllSubscriptions);
+router.get(
+  "/",
+  checkPermission("subscriptions", "view"),
+  subscriptionController.getAllSubscriptions
+);
 
 // GET subscription by ID
 router.get("/:id", subscriptionController.getSubscriptionById);
@@ -62,6 +63,7 @@ router.post(
   "/",
   createSubscriptionValidation,
   handleValidationErrors,
+  checkPermission("subscriptions", "add"),
   subscriptionController.createSubscription
 );
 
@@ -70,30 +72,52 @@ router.put(
   "/:id",
   updateSubscriptionValidation,
   handleValidationErrors,
+  checkPermission("subscriptions", "edit"),
   subscriptionController.updateSubscription
 );
 
 // PATCH cancel a subscription
-router.patch("/:id/cancel", subscriptionController.cancelSubscription);
+router.patch(
+  "/:id/cancel",
+  checkPermission("subscriptions", "edit"),
+  subscriptionController.cancelSubscription
+);
 
 // POST create a billing record
 router.post(
   "/billing",
+  checkPermission("subscriptions", "edit"),
   createBillingRecordValidation,
   handleValidationErrors,
   subscriptionController.createBillingRecord
 );
 
 // POST sync billing data
-router.post("/:id/sync", subscriptionController.syncBilling);
+router.post(
+  "/:id/sync",
+  checkPermission("subscriptions", "edit"),
+  subscriptionController.syncBilling
+);
 
 // POST generate report
-router.post("/:id/report", subscriptionController.generateReport);
+router.post(
+  "/:id/report",
+  checkPermission("subscriptions", "view"),
+  subscriptionController.generateReport
+);
 
 // GET export invoices
-router.get("/:id/export", subscriptionController.exportInvoices);
+router.get(
+  "/:id/export",
+  checkPermission("subscriptions", "view"),
+  subscriptionController.exportInvoices
+);
 
 // PUT update payment method
-router.put("/:id/payment", subscriptionController.updatePaymentMethod);
+router.put(
+  "/:id/payment",
+  checkPermission("subscriptions", "edit"),
+  subscriptionController.updatePaymentMethod
+);
 
 module.exports = router;

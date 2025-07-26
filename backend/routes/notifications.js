@@ -11,6 +11,7 @@ const {
   authorizeNoDelete,
   blockUserDashboard,
 } = require("../middleware/authMiddleware");
+const checkPermission = require("../middleware/permissionMiddleware");
 
 // Protect all routes
 router.use(authenticateToken);
@@ -19,14 +20,14 @@ router.use(blockUserDashboard());
 // GET all notifications - admin only
 router.get(
   "/",
-  authorize("admin", "super_admin"),
+  checkPermission("notifications", "view"),
   notificationController.getAllNotifications
 );
 
 // POST a new notification with validation - admin only
 router.post(
   "/",
-  authorize("admin", "super_admin"),
+  checkPermission("notifications", "edit"),
   createNotificationValidation,
   validate,
   notificationController.createNotification
@@ -35,14 +36,14 @@ router.post(
 // GET notification templates - admin only
 router.get(
   "/templates",
-  authorize("admin", "super_admin"),
+  checkPermission("notifications", "view"),
   notificationController.getNotificationTemplates
 );
 
 // DELETE a notification - super_admin only
 router.delete(
   "/:id",
-  authorizeNoDelete(),
+  checkPermission("notifications", "delete"),
   notificationController.deleteNotification
 );
 

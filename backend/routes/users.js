@@ -9,9 +9,9 @@ const validate = require("../middleware/validate");
 const {
   authenticateToken,
   authorize,
-  authorizeNoDelete,
   blockUserDashboard,
 } = require("../middleware/authMiddleware");
+const checkPermission = require("../middleware/permissionMiddleware");
 const path = require("path");
 const {
   createUploadMiddleware,
@@ -35,7 +35,7 @@ router.use(authenticateToken);
 router.use(blockUserDashboard());
 
 // GET all users - admin only
-router.get("/", authorize("admin", "super_admin"), userController.getAllUsers);
+router.get("/", checkPermission("users", "view"), userController.getAllUsers);
 
 // GET user by ID
 router.get("/:id", userController.getUserById);
@@ -60,12 +60,16 @@ router.put(
 );
 
 // DELETE a user by ID - super_admin only
-router.delete("/:id", authorizeNoDelete(), userController.deleteUser);
+router.delete(
+  "/:id",
+  checkPermission("users", "delete"),
+  userController.deleteUser
+);
 
 // PATCH update user status - super_admin only
 router.patch(
   "/:id/status",
-  authorizeNoDelete(),
+  checkPermission("users", "edit"),
   userController.updateUserStatus
 );
 

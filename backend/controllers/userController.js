@@ -1,4 +1,4 @@
-const userService = require('../services/userService');
+const userService = require("../services/userService");
 
 // Get all users
 exports.getAllUsers = async (req, res, next) => {
@@ -14,7 +14,7 @@ exports.getAllUsers = async (req, res, next) => {
 exports.getUserById = async (req, res, next) => {
   try {
     const result = await userService.getUserById(req.params.id, req);
-    if (!result) return res.status(404).json({ message: 'User not found' });
+    if (!result) return res.status(404).json({ message: "User not found" });
     res.json(result);
   } catch (error) {
     next(error);
@@ -28,7 +28,9 @@ exports.createUser = async (req, res, next) => {
     res.status(201).json(result);
   } catch (error) {
     if (error.errors) {
-      return res.status(422).json({ message: error.message, errors: error.errors });
+      return res
+        .status(422)
+        .json({ message: error.message, errors: error.errors });
     }
     next(error);
   }
@@ -42,13 +44,15 @@ exports.updateUser = async (req, res, next) => {
     if (req.file) {
       userData.avatar = req.file.filename;
     }
-    
+
     const result = await userService.updateUser(req.params.id, userData, req);
-    if (!result) return res.status(404).json({ message: 'User not found' });
+    if (!result) return res.status(404).json({ message: "User not found" });
     res.json(result);
   } catch (error) {
     if (error.errors) {
-      return res.status(422).json({ message: error.message, errors: error.errors });
+      return res
+        .status(422)
+        .json({ message: error.message, errors: error.errors });
     }
     next(error);
   }
@@ -58,7 +62,7 @@ exports.updateUser = async (req, res, next) => {
 exports.deleteUser = async (req, res, next) => {
   try {
     const result = await userService.deleteUser(req.params.id);
-    if (!result) return res.status(404).json({ message: 'User not found' });
+    if (!result) return res.status(404).json({ message: "User not found" });
     res.json(result);
   } catch (error) {
     next(error);
@@ -68,8 +72,12 @@ exports.deleteUser = async (req, res, next) => {
 // Update user status
 exports.updateUserStatus = async (req, res, next) => {
   try {
-    const result = await userService.updateUserStatus(req.params.id, req.body.status, req);
-    if (!result) return res.status(404).json({ message: 'User not found' });
+    const result = await userService.updateUserStatus(
+      req.params.id,
+      req.body.status,
+      req
+    );
+    if (!result) return res.status(404).json({ message: "User not found" });
     res.json(result);
   } catch (error) {
     next(error);

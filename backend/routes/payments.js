@@ -1,24 +1,45 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const paymentController = require('../controllers/paymentController');
-const { authenticateToken } = require('../middleware/authMiddleware');
+const paymentController = require("../controllers/paymentController");
+const { authenticateToken } = require("../middleware/authMiddleware");
+const checkPermission = require("../middleware/permissionMiddleware");
 
 // Protect all routes
 router.use(authenticateToken);
 
 // GET all payments
-router.get('/', paymentController.getAllPayments);
+router.get(
+  "/",
+  checkPermission("billing", "view"),
+  paymentController.getAllPayments
+);
 
 // GET payment by ID
-router.get('/:id', paymentController.getPaymentById);
+router.get(
+  "/:id",
+  checkPermission("billing", "view"),
+  paymentController.getPaymentById
+);
 
 // POST a new payment
-router.post('/', paymentController.createPayment);
+router.post(
+  "/",
+  checkPermission("billing", "add"),
+  paymentController.createPayment
+);
 
 // PUT (update) a payment by ID
-router.put('/:id', paymentController.updatePayment);
+router.put(
+  "/:id",
+  checkPermission("billing", "edit"),
+  paymentController.updatePayment
+);
 
 // DELETE a payment by ID
-router.delete('/:id', paymentController.deletePayment);
+router.delete(
+  "/:id",
+  checkPermission("billing", "delete"),
+  paymentController.deletePayment
+);
 
-module.exports = router; 
+module.exports = router;

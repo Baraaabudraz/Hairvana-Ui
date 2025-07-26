@@ -51,6 +51,7 @@ app.use("/backend/api/billing-histories", require("./routes/billingHistories"));
 app.use("/backend/api/report-templates", require("./routes/reportTemplates"));
 app.use("/backend/api/reports", require("./routes/reports"));
 app.use("/backend/api/payments", require("./routes/payments"));
+app.use("/backend/api/roles", require("./routes/roles"));
 
 // Mobile API Routes for Customer
 app.use(

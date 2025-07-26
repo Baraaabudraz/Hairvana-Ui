@@ -9,6 +9,9 @@ async function seed() {
   try {
     console.log("🌱 Starting database seeding...");
 
+    // Seed roles and permissions first
+    await seedRoles();
+    await seedPermissions();
     // Seed in sequence to avoid race conditions
     await seedUsers();
     await seedSalons();
@@ -45,6 +48,9 @@ async function seedUsers() {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash("admin123", salt);
 
+    // Fetch role IDs
+    const roles = await db.Role.findAll();
+    const roleMap = Object.fromEntries(roles.map((r) => [r.name, r.id]));
     // Define users to seed
     const users = [
       {
@@ -53,11 +59,10 @@ async function seedUsers() {
         email: "superadmin@hairvana.com",
         password_hash: passwordHash,
         phone: "+1 (555) 234-5678",
-        role: "super_admin",
+        role_id: roleMap["super_admin"],
         status: "active",
         avatar:
           "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2",
-        permissions: ["full_access"],
         join_date: new Date("2024-01-01"),
         last_login: new Date(),
         created_at: new Date(),
@@ -69,16 +74,10 @@ async function seedUsers() {
         email: "admin@hairvana.com",
         password_hash: passwordHash,
         phone: "+1 (555) 123-4567",
-        role: "admin",
+        role_id: roleMap["admin"],
         status: "active",
         avatar:
           "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2",
-        permissions: [
-          "manage_salons",
-          "manage_users",
-          "view_analytics",
-          "manage_subscriptions",
-        ],
         join_date: new Date("2024-01-01"),
         last_login: new Date(),
         created_at: new Date(),
@@ -89,7 +88,7 @@ async function seedUsers() {
         email: "maria@luxehair.com",
         name: "Maria Rodriguez",
         phone: "+1 (555) 345-6789",
-        role: "salon",
+        role_id: roleMap["salon"],
         status: "active",
         join_date: new Date("2024-01-15"),
         last_login: new Date(),
@@ -102,7 +101,7 @@ async function seedUsers() {
         email: "david@urbancuts.com",
         name: "David Chen",
         phone: "+1 (555) 456-7890",
-        role: "salon",
+        role_id: roleMap["salon"],
         status: "active",
         join_date: new Date("2024-02-20"),
         last_login: new Date(),
@@ -115,7 +114,7 @@ async function seedUsers() {
         email: "lisa@styleandgrace.com",
         name: "Lisa Thompson",
         phone: "+1 (555) 567-8901",
-        role: "salon",
+        role_id: roleMap["salon"],
         status: "pending",
         join_date: new Date("2024-03-10"),
         last_login: new Date(),
@@ -128,7 +127,7 @@ async function seedUsers() {
         email: "emily.davis@email.com",
         name: "Emily Davis",
         phone: "+1 (555) 678-9012",
-        role: "user",
+        role_id: roleMap["user"],
         status: "active",
         join_date: new Date("2024-02-01"),
         last_login: new Date(),
@@ -141,7 +140,7 @@ async function seedUsers() {
         email: "michael.brown@email.com",
         name: "Michael Brown",
         phone: "+1 (555) 789-0123",
-        role: "user",
+        role_id: roleMap["user"],
         status: "active",
         join_date: new Date("2024-03-15"),
         last_login: new Date(),
@@ -156,7 +155,7 @@ async function seedUsers() {
 
     // Create salon owners records
     const salonOwners = users
-      .filter((user) => user.role === "salon")
+      .filter((user) => user.role_id === roleMap["salon"])
       .map((user) => ({
         user_id: user.id,
         total_salons: 0,
@@ -170,7 +169,7 @@ async function seedUsers() {
 
     // Create customer records
     const customers = users
-      .filter((user) => user.role === "user")
+      .filter((user) => user.role_id === roleMap["user"])
       .map((user) => ({
         user_id: user.id,
         total_spent: 0,
@@ -189,16 +188,24 @@ async function seedUsers() {
       id: String(uuidv4()), // ensure id is a string
       user_id: user.id,
       department:
-        user.role === "super_admin"
+        user.role_id === roleMap["super_admin"]
           ? "Administration"
-          : user.role === "admin"
+          : user.role_id === roleMap["admin"]
           ? "Management"
-          : user.role === "salon"
+          : user.role_id === roleMap["salon"]
           ? "Salon"
           : "Customer",
       timezone: "America/New_York",
       language: "en",
-      bio: `${user.name} - ${user.role}`,
+      bio: `${user.name} - ${
+        user.role_id === roleMap["super_admin"]
+          ? "Super Admin"
+          : user.role_id === roleMap["admin"]
+          ? "Admin"
+          : user.role_id === roleMap["salon"]
+          ? "Salon"
+          : "User"
+      }`,
       created_at: new Date(),
       updated_at: new Date(),
     }));
@@ -540,6 +547,18 @@ async function seedNotificationTemplates() {
 }
 
 // Add the new seeders
+async function seedRoles() {
+  console.log("Seeding roles...");
+  const seeder = require("./20250710192000-seed-roles.js");
+  await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
+}
+
+async function seedPermissions() {
+  console.log("Seeding permissions...");
+  const seeder = require("./20250710193000-seed-permissions.js");
+  await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
+}
+
 async function seedServices() {
   console.log("Seeding services...");
   const seeder = require("./20250707000200-demo-services.js");

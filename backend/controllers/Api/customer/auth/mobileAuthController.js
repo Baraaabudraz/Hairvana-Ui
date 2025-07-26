@@ -12,21 +12,22 @@ exports.register = async (req, res) => {
       return res.status(409).json({ error: "Email already registered." });
     }
     const hash = await bcrypt.hash(password, 10);
+    const userRole = await User.sequelize.models.Role.findOne({
+      where: { name: "user" },
+    });
     const user = await User.create({
       name,
       email,
       password_hash: hash,
       phone,
-      role: "user",
+      role_id: userRole ? userRole.id : null,
       status: "active",
     });
     await Customer.create({ user_id: user.id });
-    return res
-      .status(201)
-      .json({
-        success: true,
-        user: { id: user.id, name: user.name, email: user.email },
-      });
+    return res.status(201).json({
+      success: true,
+      user: { id: user.id, name: user.name, email: user.email },
+    });
   } catch (err) {
     return res.status(500).json({ error: "Registration failed." });
   }
@@ -44,7 +45,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials." });
     }
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role_id: user.role_id },
       config.jwtSecret || process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );

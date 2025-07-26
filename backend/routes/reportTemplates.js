@@ -1,10 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const reportTemplateController = require("../controllers/reportTemplateController");
-const {
-  authorizeNoDelete,
-  blockUserDashboard,
-} = require("../middleware/authMiddleware");
+const checkPermission = require("../middleware/permissionMiddleware");
+const { blockUserDashboard } = require("../middleware/authMiddleware");
 
 router.use(blockUserDashboard());
 router.get("/", reportTemplateController.getAllReportTemplates);
@@ -13,7 +11,7 @@ router.post("/", reportTemplateController.createReportTemplate);
 router.put("/:id", reportTemplateController.updateReportTemplate);
 router.delete(
   "/:id",
-  authorizeNoDelete(),
+  checkPermission("report_templates", "delete"),
   reportTemplateController.deleteReportTemplate
 );
 

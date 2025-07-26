@@ -30,7 +30,7 @@ exports.findAll = async (query) => {
       {
         model: User,
         as: "owner",
-        attributes: ["id", "name", "email", "phone", "avatar", "role"],
+        attributes: ["id", "name", "email", "phone", "avatar", "role_id"],
       },
     ],
     limit,
@@ -46,7 +46,7 @@ exports.findById = async (id) => {
       {
         model: User,
         as: "owner",
-        attributes: ["id", "name", "email", "phone", "avatar", "role"],
+        attributes: ["id", "name", "email", "phone", "avatar", "role_id"],
       },
       { model: Service, as: "services" },
     ],

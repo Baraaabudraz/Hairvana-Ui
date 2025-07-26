@@ -1,53 +1,59 @@
-const { Notification, NotificationTemplate, NotificationUser, User } = require('../models');
-const { Sequelize } = require('sequelize');
-const notificationService = require('../services/notificationService');
+const {
+  Notification,
+  NotificationTemplate,
+  NotificationUser,
+  User,
+} = require("../models");
+const { Sequelize } = require("sequelize");
+const notificationService = require("../services/notificationService");
 
 // Get all notifications
 exports.getAllNotifications = async (req, res, next) => {
   try {
     const { type, status, search } = req.query;
     const where = {};
-    if (type && type !== 'all') where.type = type;
-    if (status && status !== 'all') where.status = status;
+    if (type && type !== "all") where.type = type;
+    if (status && status !== "all") where.status = status;
     if (search) {
       where[Sequelize.Op.or] = [
         { title: { [Sequelize.Op.iLike]: `%${search}%` } },
-        { message: { [Sequelize.Op.iLike]: `%${search}%` } }
+        { message: { [Sequelize.Op.iLike]: `%${search}%` } },
       ];
     }
-    
-    const notifications = await Notification.findAll({ 
+
+    const notifications = await Notification.findAll({
       where,
       include: [
         {
           model: NotificationUser,
-          as: 'notificationUsers',
+          as: "notificationUsers",
           include: [
             {
               model: User,
-              as: 'user',
-              attributes: ['id', 'name', 'email']
-            }
-          ]
-        }
-      ]
+              as: "user",
+              attributes: ["id", "name", "email"],
+            },
+          ],
+        },
+      ],
     });
 
     // Transform the data to match frontend expectations
-    const transformedNotifications = notifications.map(notification => {
+    const transformedNotifications = notifications.map((notification) => {
       const totalRecipients = notification.notificationUsers?.length || 0;
       const sentCount = totalRecipients; // All notifications in the join table are considered "sent"
-      const openedCount = notification.notificationUsers?.filter(nu => nu.is_read).length || 0;
-      
+      const openedCount =
+        notification.notificationUsers?.filter((nu) => nu.is_read).length || 0;
+
       return {
         id: notification.id,
         title: notification.title,
         message: notification.message,
         type: notification.type,
-        priority: 'medium', // Default since we don't store this
+        priority: "medium", // Default since we don't store this
         status: notification.status,
         targetAudience: notification.target_audience,
-        channels: ['email'], // Default since we don't store this
+        channels: ["email"], // Default since we don't store this
         scheduledAt: notification.scheduledAt,
         sentAt: notification.sentAt,
         createdAt: notification.created_at,
@@ -57,13 +63,13 @@ exports.getAllNotifications = async (req, res, next) => {
           sent: sentCount,
           delivered: sentCount, // Assuming all sent are delivered
           opened: openedCount,
-          clicked: 0 // We don't track clicks yet
+          clicked: 0, // We don't track clicks yet
         },
         customFilters: {
           userType: [],
           location: [],
-          subscriptionPlan: []
-        }
+          subscriptionPlan: [],
+        },
       };
     });
 
@@ -78,11 +84,15 @@ exports.createNotification = async (req, res, next) => {
   try {
     const notificationData = req.body;
     // Remove id if present at top level
-    if ('id' in notificationData) {
+    if ("id" in notificationData) {
       delete notificationData.id;
     }
     // Remove id if present in template
-    if (notificationData.template && typeof notificationData.template === 'object' && 'id' in notificationData.template) {
+    if (
+      notificationData.template &&
+      typeof notificationData.template === "object" &&
+      "id" in notificationData.template
+    ) {
       delete notificationData.template.id;
     }
     // Map camelCase fields to snake_case for DB consistency
@@ -94,21 +104,21 @@ exports.createNotification = async (req, res, next) => {
       notificationData.created_by = notificationData.createdBy;
       delete notificationData.createdBy;
     }
-    
+
     // Set created_by if not present
     if (!notificationData.created_by) {
       notificationData.created_by = req.user.name || req.user.email;
     }
-    
+
     // Set status and dates based on schedule type
-    if (notificationData.scheduleType === 'now') {
-      notificationData.status = 'sent';
+    if (notificationData.scheduleType === "now") {
+      notificationData.status = "sent";
       notificationData.sentAt = new Date();
-    } else if (notificationData.scheduleType === 'later') {
-      notificationData.status = 'scheduled';
+    } else if (notificationData.scheduleType === "later") {
+      notificationData.status = "scheduled";
       notificationData.scheduledAt = notificationData.scheduledAt;
     } else {
-      notificationData.status = 'draft';
+      notificationData.status = "draft";
     }
     delete notificationData.scheduleType;
 
@@ -117,48 +127,70 @@ exports.createNotification = async (req, res, next) => {
 
     // Determine target audience and create notification-user relationships
     let users = [];
-    if (notificationData.target_audience === 'all') {
-      users = await User.findAll({ attributes: ['id'] });
-    } else if (notificationData.target_audience === 'customers') {
-      users = await User.findAll({ where: { role: 'user' }, attributes: ['id'] });
-    } else if (notificationData.target_audience === 'salons') {
-      users = await User.findAll({ where: { role: 'salon' }, attributes: ['id'] });
-    } else if (notificationData.target_audience === 'admins') {
-      users = await User.findAll({ where: { role: ['admin', 'super_admin'] }, attributes: ['id'] });
+    if (notificationData.target_audience === "all") {
+      users = await User.findAll({ attributes: ["id"] });
+    } else if (notificationData.target_audience === "customers") {
+      // Find role_id for 'user'
+      const userRole = await require("../models").Role.findOne({
+        where: { name: "user" },
+      });
+      users = await User.findAll({
+        where: { role_id: userRole ? userRole.id : null },
+        attributes: ["id"],
+      });
+    } else if (notificationData.target_audience === "salons") {
+      const salonRole = await require("../models").Role.findOne({
+        where: { name: "salon" },
+      });
+      users = await User.findAll({
+        where: { role_id: salonRole ? salonRole.id : null },
+        attributes: ["id"],
+      });
+    } else if (notificationData.target_audience === "admins") {
+      const adminRoles = await require("../models").Role.findAll({
+        where: { name: ["admin", "super_admin"] },
+      });
+      users = await User.findAll({
+        where: { role_id: adminRoles.map((r) => r.id) },
+        attributes: ["id"],
+      });
     } else {
       // For specific user or default case
       const userId = req.user.userId || req.user.id;
       users = [{ id: userId }];
     }
 
-    console.log('Found users for notification:', users.map(u => ({ id: u.id, idLength: u.id.length })));
+    console.log(
+      "Found users for notification:",
+      users.map((u) => ({ id: u.id, idLength: u.id.length }))
+    );
 
     // Create notification-user relationships with cleaned user IDs
-    const notificationUsers = users.map(user => {
+    const notificationUsers = users.map((user) => {
       const cleanUserId = user.id.toString().trim(); // Remove any whitespace
-      console.log('Creating notification-user relationship:', {
+      console.log("Creating notification-user relationship:", {
         notification_id: notification.id,
         user_id: cleanUserId,
-        original_user_id: user.id
+        original_user_id: user.id,
       });
-      
+
       return {
         notification_id: notification.id,
         user_id: cleanUserId,
-        is_read: false
+        is_read: false,
       };
     });
 
-    console.log('Notification users to create:', notificationUsers);
+    console.log("Notification users to create:", notificationUsers);
 
     await NotificationUser.bulkCreate(notificationUsers);
 
     // Send push notifications to all users
-    const userIds = users.map(u => u.id);
+    const userIds = users.map((u) => u.id);
     await notificationService.sendToUsers(
       userIds,
       notification.title,
-      notification.message || '',
+      notification.message || "",
       { notificationId: notification.id }
     );
 
@@ -167,32 +199,34 @@ exports.createNotification = async (req, res, next) => {
       include: [
         {
           model: NotificationUser,
-          as: 'notificationUsers',
+          as: "notificationUsers",
           include: [
             {
               model: User,
-              as: 'user',
-              attributes: ['id', 'name', 'email']
-            }
-          ]
-        }
-      ]
+              as: "user",
+              attributes: ["id", "name", "email"],
+            },
+          ],
+        },
+      ],
     });
 
     // Transform the created notification to match frontend expectations
     const totalRecipients = createdNotification.notificationUsers?.length || 0;
     const sentCount = totalRecipients;
-    const openedCount = createdNotification.notificationUsers?.filter(nu => nu.is_read).length || 0;
-    
+    const openedCount =
+      createdNotification.notificationUsers?.filter((nu) => nu.is_read)
+        .length || 0;
+
     const transformedNotification = {
       id: createdNotification.id,
       title: createdNotification.title,
       message: createdNotification.message,
       type: createdNotification.type,
-      priority: 'medium',
+      priority: "medium",
       status: createdNotification.status,
       targetAudience: createdNotification.target_audience,
-      channels: ['email'],
+      channels: ["email"],
       scheduledAt: createdNotification.scheduledAt,
       sentAt: createdNotification.sentAt,
       createdAt: createdNotification.created_at,
@@ -202,13 +236,13 @@ exports.createNotification = async (req, res, next) => {
         sent: sentCount,
         delivered: sentCount,
         opened: openedCount,
-        clicked: 0
+        clicked: 0,
       },
       customFilters: {
         userType: [],
         location: [],
-        subscriptionPlan: []
-      }
+        subscriptionPlan: [],
+      },
     };
 
     res.status(201).json(transformedNotification);
@@ -231,14 +265,14 @@ exports.getNotificationTemplates = async (req, res, next) => {
 exports.deleteNotification = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     // Delete notification-user relationships first
     await NotificationUser.destroy({ where: { notification_id: id } });
-    
+
     // Then delete the notification
     await Notification.destroy({ where: { id } });
-    
-    res.json({ message: 'Notification deleted successfully' });
+
+    res.json({ message: "Notification deleted successfully" });
   } catch (error) {
     next(error);
   }
@@ -250,16 +284,16 @@ exports.sendNotification = async (req, res, next) => {
     const { id } = req.params;
     const notification = await Notification.findByPk(id);
     if (!notification) {
-      return res.status(404).json({ message: 'Notification not found' });
+      return res.status(404).json({ message: "Notification not found" });
     }
-    notification.status = 'sent';
+    notification.status = "sent";
     notification.sentAt = new Date();
     await notification.save();
     res.json({
       id,
-      status: 'sent',
+      status: "sent",
       sentAt: notification.sentAt,
-      message: 'Notification sent successfully'
+      message: "Notification sent successfully",
     });
   } catch (error) {
     next(error);

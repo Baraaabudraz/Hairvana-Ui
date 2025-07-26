@@ -52,6 +52,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "user_id",
         as: "notificationUsers",
       });
+
+      // Add belongsTo association to Role
+      User.belongsTo(models.Role, {
+        foreignKey: "role_id",
+        as: "role",
+      });
     }
   }
   User.init(
@@ -76,19 +82,20 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       phone: DataTypes.STRING,
-      role: {
-        type: DataTypes.ENUM("super_admin", "admin", "salon", "user"),
+      role_id: {
+        type: DataTypes.UUID,
         allowNull: false,
+        references: {
+          model: "roles",
+          key: "id",
+        },
+        onDelete: "SET NULL",
       },
       status: {
         type: DataTypes.ENUM("active", "pending", "inactive"),
         defaultValue: "pending",
       },
       avatar: DataTypes.STRING,
-      permissions: {
-        type: DataTypes.ARRAY(DataTypes.TEXT),
-        defaultValue: [],
-      },
       join_date: {
         type: DataTypes.DATE,
         allowNull: false,

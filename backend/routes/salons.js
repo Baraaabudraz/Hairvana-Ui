@@ -8,11 +8,9 @@ const {
 const validate = require("../middleware/validate");
 const {
   authenticateToken,
-  authorize,
-  authorizeNoDelete,
   blockUserDashboard,
-  enforceSalonOwnership,
 } = require("../middleware/authMiddleware");
+const checkPermission = require("../middleware/permissionMiddleware");
 const { createUploadMiddleware } = require("../helpers/uploadHelper");
 const path = require("path");
 const uploadDir = path.join(__dirname, "../public/uploads/salons");
@@ -29,33 +27,25 @@ router.use(blockUserDashboard());
 // GET all salons
 router.get(
   "/",
-  (req, res, next) => {
-    if (req.user && req.user.role === "salon" && req.user.userId) {
-      req.query.owner_id = req.user.userId;
-    }
-    next();
-  },
+  checkPermission("salons", "view"),
   salonController.getAllSalons
 );
 
 // GET salon by ID
 router.get(
   "/:id",
-  enforceSalonOwnership("id"),
+  checkPermission("salons", "view"),
   salonController.getSalonById
 );
 
 // POST a new salon with validation
 router.post(
   "/",
-  authorize("admin", "super_admin"),
+  checkPermission("salons", "add"),
   upload.fields([
     { name: "avatar", maxCount: 1 },
     { name: "gallery", maxCount: 5 },
   ]),
-  (req, res, next) => {
-    next();
-  },
   createSalonValidation,
   validate,
   salonController.createSalon
@@ -64,64 +54,48 @@ router.post(
 // PUT (update) a salon by ID with validation
 router.put(
   "/:id",
+  checkPermission("salons", "edit"),
   upload.fields([
     { name: "avatar", maxCount: 1 },
     { name: "gallery", maxCount: 5 },
   ]),
-  (req, res, next) => {
-    if (req.user && req.user.role === "salon") {
-      return enforceSalonOwnership("id")(req, res, next);
-    }
-    next();
-  },
   updateSalonValidation,
   validate,
   salonController.updateSalon
 );
 
 // DELETE a salon by ID - super_admin only
-router.delete("/:id", authorizeNoDelete(), salonController.deleteSalon);
+router.delete(
+  "/:id",
+  checkPermission("salons", "delete"),
+  salonController.deleteSalon
+);
 
 // PATCH update salon status - super_admin only
 router.patch(
   "/:id/status",
-  authorizeNoDelete(),
+  checkPermission("salons", "edit"),
   salonController.updateSalonStatus
 );
 
 // GET salon services
 router.get(
   "/:id/services",
-  (req, res, next) => {
-    if (req.user && req.user.role === "salon") {
-      return enforceSalonOwnership("id")(req, res, next);
-    }
-    next();
-  },
+  checkPermission("salons", "view"),
   salonController.getSalonServices
 );
 
 // GET salon staff
 router.get(
   "/:id/staff",
-  (req, res, next) => {
-    if (req.user && req.user.role === "salon") {
-      return enforceSalonOwnership("id")(req, res, next);
-    }
-    next();
-  },
+  checkPermission("salons", "view"),
   salonController.getSalonStaff
 );
 
 // GET salon appointments
 router.get(
   "/:id/appointments",
-  (req, res, next) => {
-    if (req.user && req.user.role === "salon") {
-      return enforceSalonOwnership("id")(req, res, next);
-    }
-    next();
-  },
+  checkPermission("salons", "view"),
   salonController.getSalonAppointments
 );
 

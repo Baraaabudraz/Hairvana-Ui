@@ -1,17 +1,22 @@
-const { User, SalonOwner, Customer, Salon } = require('../models');
+const { User, SalonOwner, Customer, Salon, Role } = require("../models");
 
 exports.findAll = async (query = {}) => {
   const { where = {}, limit = 10, offset = 0 } = query;
   return User.findAndCountAll({
     where,
     include: [
-      { model: SalonOwner, as: 'salonOwner', include: [{ model: Salon, as: 'salons' }] },
-      { model: Customer, as: 'customer' },
-      { model: Salon, as: 'salons' }
+      {
+        model: SalonOwner,
+        as: "salonOwner",
+        include: [{ model: Salon, as: "salons" }],
+      },
+      { model: Customer, as: "customer" },
+      { model: Salon, as: "salons" },
+      { model: Role, as: "role" },
     ],
-    order: [['createdAt', 'DESC']], // Sort by latest users first
+    order: [["createdAt", "DESC"]], // Sort by latest users first
     limit,
-    offset
+    offset,
   });
 };
 
@@ -19,9 +24,14 @@ exports.findById = async (id) => {
   return User.findOne({
     where: { id },
     include: [
-      { model: SalonOwner, as: 'salonOwner', include: [{ model: Salon, as: 'salons' }] },
-      { model: Customer, as: 'customer' }
-    ]
+      {
+        model: SalonOwner,
+        as: "salonOwner",
+        include: [{ model: Salon, as: "salons" }],
+      },
+      { model: Customer, as: "customer" },
+      { model: Role, as: "role" },
+    ],
   });
 };
 
@@ -32,7 +42,7 @@ exports.create = async (userData) => {
 exports.update = async (id, userData) => {
   return User.update(userData, {
     where: { id },
-    returning: true
+    returning: true,
   });
 };
 
@@ -42,4 +52,4 @@ exports.delete = async (id) => {
 
 exports.updateStatus = async (id, status) => {
   return User.update({ status }, { where: { id } });
-}; 
+};

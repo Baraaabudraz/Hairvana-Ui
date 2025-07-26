@@ -1,23 +1,29 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Save,
@@ -30,16 +36,16 @@ import {
   Users,
   Upload,
   Eye,
-  EyeOff
-} from 'lucide-react';
-import { fetchUserById, updateUser } from '@/api/users';
+  EyeOff,
+} from "lucide-react";
+import { fetchUserById, updateUser } from "@/api/users";
 
 const userSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().min(10, 'Phone number must be at least 10 characters'),
-  role: z.enum(['admin', 'super_admin', 'salon', 'user']),
-  status: z.enum(['active', 'pending', 'suspended']),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(10, "Phone number must be at least 10 characters"),
+  role: z.enum(["admin", "super_admin", "salon", "user"]),
+  status: z.enum(["active", "pending", "suspended"]),
 });
 
 type UserForm = z.infer<typeof userSchema>;
@@ -49,8 +55,8 @@ interface User {
   name: string;
   email: string;
   phone: string;
-  role: 'admin' | 'super_admin' | 'salon' | 'user';
-  status: 'active' | 'pending' | 'suspended';
+  role: "admin" | "super_admin" | "salon" | "user";
+  status: "active" | "pending" | "suspended";
   joinDate: string;
   lastLogin: string | null;
   avatar: string;
@@ -62,19 +68,20 @@ interface User {
   totalSpent?: number;
   favoriteServices?: string[];
   suspensionReason?: string;
+  color?: string; // Added color property
 }
 
 const roleColors = {
-  super_admin: 'bg-purple-100 text-purple-800',
-  admin: 'bg-blue-100 text-blue-800',
-  salon: 'bg-green-100 text-green-800',
-  user: 'bg-gray-100 text-gray-800',
+  super_admin: "bg-purple-100 text-purple-800",
+  admin: "bg-blue-100 text-blue-800",
+  salon: "bg-green-100 text-green-800",
+  user: "bg-gray-100 text-gray-800",
 };
 
 const statusColors = {
-  active: 'bg-green-100 text-green-800',
-  pending: 'bg-yellow-100 text-yellow-800',
-  suspended: 'bg-red-100 text-red-800',
+  active: "bg-green-100 text-green-800",
+  pending: "bg-yellow-100 text-yellow-800",
+  suspended: "bg-red-100 text-red-800",
 };
 
 export default function EditUserPage() {
@@ -84,7 +91,11 @@ export default function EditUserPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploadedAvatar, setUploadedAvatar] = useState<string>('');
+  const [uploadedAvatar, setUploadedAvatar] = useState<string>("");
+  const [roles, setRoles] = useState<any[]>([]); // State to hold roles fetched from API
+  const [selectedRoleId, setSelectedRoleId] = useState<string | undefined>(
+    undefined
+  );
 
   const {
     register,
@@ -92,23 +103,24 @@ export default function EditUserPage() {
     formState: { errors },
     reset,
     setValue,
-    watch
+    watch,
   } = useForm<UserForm>({
     resolver: zodResolver(userSchema),
   });
 
-  const watchedRole = watch('role');
+  const watchedRole = watch("role");
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
         setLoading(true);
-        
+
         // Try to fetch from API first
         try {
           const data = await fetchUserById(params.id as string);
           setUser(data);
-          
+          setSelectedRoleId(data.role); // Set selected role ID
+
           // Set form values
           reset({
             name: data.name,
@@ -118,98 +130,116 @@ export default function EditUserPage() {
             status: data.status,
           });
         } catch (apiError) {
-          console.warn('API fetch failed, using mock data:', apiError);
-          
+          console.warn("API fetch failed, using mock data:", apiError);
+
           // Fallback to mock data if API fails
           const mockUsers: Record<string, User> = {
-            '1': {
-              id: '1',
-              name: 'John Smith',
-              email: 'admin@hairvana.com',
-              phone: '+1 (555) 123-4567',
-              role: 'admin',
-              status: 'active',
-              joinDate: '2024-01-01',
-              lastLogin: '2024-06-15T10:30:00Z',
-              avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              permissions: ['manage_salons', 'manage_users', 'view_analytics', 'manage_subscriptions'],
+            "1": {
+              id: "1",
+              name: "John Smith",
+              email: "admin@hairvana.com",
+              phone: "+1 (555) 123-4567",
+              role: "admin",
+              status: "active",
+              joinDate: "2024-01-01",
+              lastLogin: "2024-06-15T10:30:00Z",
+              avatar:
+                "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2",
+              permissions: [
+                "manage_salons",
+                "manage_users",
+                "view_analytics",
+                "manage_subscriptions",
+              ],
+              color: "#6366f1", // Added color for mock data
             },
-            '2': {
-              id: '2',
-              name: 'Sarah Johnson',
-              email: 'superadmin@hairvana.com',
-              phone: '+1 (555) 234-5678',
-              role: 'super_admin',
-              status: 'active',
-              joinDate: '2024-01-01',
-              lastLogin: '2024-06-15T09:15:00Z',
-              avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              permissions: ['full_access'],
+            "2": {
+              id: "2",
+              name: "Sarah Johnson",
+              email: "superadmin@hairvana.com",
+              phone: "+1 (555) 234-5678",
+              role: "super_admin",
+              status: "active",
+              joinDate: "2024-01-01",
+              lastLogin: "2024-06-15T09:15:00Z",
+              avatar:
+                "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2",
+              permissions: ["full_access"],
+              color: "#8b5cf6", // Added color for mock data
             },
-            '3': {
-              id: '3',
-              name: 'Maria Rodriguez',
-              email: 'maria@luxehair.com',
-              phone: '+1 (555) 345-6789',
-              role: 'salon',
-              status: 'active',
-              joinDate: '2024-01-15',
-              lastLogin: '2024-06-15T14:20:00Z',
-              avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
+            "3": {
+              id: "3",
+              name: "Maria Rodriguez",
+              email: "maria@luxehair.com",
+              phone: "+1 (555) 345-6789",
+              role: "salon",
+              status: "active",
+              joinDate: "2024-01-15",
+              lastLogin: "2024-06-15T14:20:00Z",
+              avatar:
+                "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2",
               salons: [],
               totalSalons: 2,
               totalRevenue: 20250,
               totalBookings: 245,
+              color: "#10b981", // Added color for mock data
             },
-            '4': {
-              id: '4',
-              name: 'David Chen',
-              email: 'david@stylecuts.com',
-              phone: '+1 (555) 456-7890',
-              role: 'salon',
-              status: 'active',
-              joinDate: '2024-01-20',
-              lastLogin: '2024-06-15T11:45:00Z',
-              avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
+            "4": {
+              id: "4",
+              name: "David Chen",
+              email: "david@stylecuts.com",
+              phone: "+1 (555) 456-7890",
+              role: "salon",
+              status: "active",
+              joinDate: "2024-01-20",
+              lastLogin: "2024-06-15T11:45:00Z",
+              avatar:
+                "https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2",
               salons: [],
               totalSalons: 1,
               totalRevenue: 8900,
               totalBookings: 98,
+              color: "#3b82f6", // Added color for mock data
             },
-            '5': {
-              id: '5',
-              name: 'Lisa Thompson',
-              email: 'lisa.thompson@email.com',
-              phone: '+1 (555) 567-8901',
-              role: 'user',
-              status: 'active',
-              joinDate: '2024-02-01',
-              lastLogin: '2024-06-15T15:30:00Z',
-              avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
+            "5": {
+              id: "5",
+              name: "Lisa Thompson",
+              email: "lisa.thompson@email.com",
+              phone: "+1 (555) 567-8901",
+              role: "user",
+              status: "active",
+              joinDate: "2024-02-01",
+              lastLogin: "2024-06-15T15:30:00Z",
+              avatar:
+                "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2",
               totalBookings: 8,
               totalSpent: 650,
-              favoriteServices: ['Haircut', 'Hair Styling'],
+              favoriteServices: ["Haircut", "Hair Styling"],
+              color: "#f59e0b", // Added color for mock data
             },
-            '6': {
-              id: '6',
-              name: 'Emily Davis',
-              email: 'emily.davis@email.com',
-              phone: '+1 (555) 678-9012',
-              role: 'user',
-              status: 'active',
-              joinDate: '2024-02-01',
-              lastLogin: '2024-06-15T13:20:00Z',
-              avatar: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
+            "6": {
+              id: "6",
+              name: "Emily Davis",
+              email: "emily.davis@email.com",
+              phone: "+1 (555) 678-9012",
+              role: "user",
+              status: "active",
+              joinDate: "2024-02-01",
+              lastLogin: "2024-06-15T13:20:00Z",
+              avatar:
+                "https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2",
               totalBookings: 12,
               totalSpent: 850,
-              favoriteServices: ['Haircut', 'Hair Color', 'Hair Styling'],
+              favoriteServices: ["Haircut", "Hair Color", "Hair Styling"],
+              color: "#ef4444", // Added color for mock data
             },
           };
-          
+
           const userData = mockUsers[params.id as string];
           if (userData) {
             setUser(userData);
-            
+            setSelectedRoleId(userData.role); // Set selected role ID for mock data
+
             // Set form values
             reset({
               name: userData.name,
@@ -219,15 +249,15 @@ export default function EditUserPage() {
               status: userData.status,
             });
           } else {
-            throw new Error('User not found');
+            throw new Error("User not found");
           }
         }
       } catch (error) {
-        console.error('Error fetching user:', error);
+        console.error("Error fetching user:", error);
         toast({
-          title: 'Error',
-          description: 'Failed to load user details. Please try again.',
-          variant: 'destructive',
+          title: "Error",
+          description: "Failed to load user details. Please try again.",
+          variant: "destructive",
         });
       } finally {
         setLoading(false);
@@ -243,33 +273,35 @@ export default function EditUserPage() {
     if (!user) return;
     try {
       setSaving(true);
-      
+
       // Create FormData to include the avatar file
       const formData = new FormData();
-      
+
       // Add form fields
-      Object.keys(data).forEach(key => {
+      Object.keys(data).forEach((key) => {
         formData.append(key, data[key as keyof UserForm].toString());
       });
-      
+
       // Add avatar file if one was selected
-      const avatarInput = document.getElementById('avatar') as HTMLInputElement;
+      const avatarInput = document.getElementById("avatar") as HTMLInputElement;
       if (avatarInput && avatarInput.files && avatarInput.files[0]) {
-        formData.append('avatar', avatarInput.files[0]);
+        formData.append("avatar", avatarInput.files[0]);
       }
-      
+
       await updateUser(user.id, formData);
       toast({
-        title: 'Success',
-        description: 'User updated successfully.',
+        title: "Success",
+        description: "User updated successfully.",
       });
       navigate(`/dashboard/users/${user.id}`);
     } catch (error: any) {
-      console.error('Error updating user:', error);
+      console.error("Error updating user:", error);
       toast({
-        title: 'Validation Error',
-        description: error.message || 'Failed to update user. Please check the fields and try again.',
-        variant: 'destructive',
+        title: "Validation Error",
+        description:
+          error.message ||
+          "Failed to update user. Please check the fields and try again.",
+        variant: "destructive",
       });
       // Do not navigate or show success
     } finally {
@@ -290,21 +322,31 @@ export default function EditUserPage() {
 
   const getRoleDisplayName = (role: string) => {
     switch (role) {
-      case 'super_admin': return 'Super Admin';
-      case 'admin': return 'Admin';
-      case 'salon': return 'Salon Owner';
-      case 'user': return 'Customer';
-      default: return role;
+      case "super_admin":
+        return "Super Admin";
+      case "admin":
+        return "Admin";
+      case "salon":
+        return "Salon Owner";
+      case "user":
+        return "Customer";
+      default:
+        return role;
     }
   };
 
   const getRoleIcon = () => {
     switch (user?.role) {
-      case 'super_admin': return Crown;
-      case 'admin': return Shield;
-      case 'salon': return Building2;
-      case 'user': return Users;
-      default: return User;
+      case "super_admin":
+        return Crown;
+      case "admin":
+        return Shield;
+      case "salon":
+        return Building2;
+      case "user":
+        return Users;
+      default:
+        return User;
     }
   };
 
@@ -321,7 +363,9 @@ export default function EditUserPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900">User not found</h2>
-          <p className="text-gray-600 mt-2">The user you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mt-2">
+            The user you're looking for doesn't exist.
+          </p>
           <Link to="/dashboard/users">
             <Button className="mt-4">Back to Users</Button>
           </Link>
@@ -344,7 +388,9 @@ export default function EditUserPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Edit User</h1>
-            <p className="text-gray-600">Update user information and settings</p>
+            <p className="text-gray-600">
+              Update user information and settings
+            </p>
           </div>
         </div>
       </div>
@@ -366,16 +412,30 @@ export default function EditUserPage() {
             <div className="flex items-center gap-6">
               <Avatar className="h-24 w-24">
                 <AvatarImage
-                  src={uploadedAvatar || (user.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/avatar/${user.avatar}` : undefined)}
+                  src={
+                    uploadedAvatar ||
+                    (user.avatar
+                      ? `${
+                          import.meta.env.VITE_BACKEND_URL ||
+                          "http://localhost:5000"
+                        }/images/avatar/${user.avatar}`
+                      : undefined)
+                  }
                   alt={user.name}
                 />
                 <AvatarFallback className="text-lg">
-                  {user.name.split(' ').map(n => n[0]).join('')}
+                  {user.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-2">
                 <Button variant="outline" type="button">
-                  <label htmlFor="avatar" className="cursor-pointer flex items-center gap-2">
+                  <label
+                    htmlFor="avatar"
+                    className="cursor-pointer flex items-center gap-2"
+                  >
                     <Upload className="h-4 w-4" />
                     Upload Photo
                   </label>
@@ -397,7 +457,7 @@ export default function EditUserPage() {
                 <Label htmlFor="name">Full Name</Label>
                 <Input
                   id="name"
-                  {...register('name')}
+                  {...register("name")}
                   placeholder="Enter full name"
                 />
                 {errors.name && (
@@ -410,7 +470,7 @@ export default function EditUserPage() {
                 <Input
                   id="email"
                   type="email"
-                  {...register('email')}
+                  {...register("email")}
                   placeholder="Enter email address"
                 />
                 {errors.email && (
@@ -422,7 +482,7 @@ export default function EditUserPage() {
                 <Label htmlFor="phone">Phone Number</Label>
                 <Input
                   id="phone"
-                  {...register('phone')}
+                  {...register("phone")}
                   placeholder="Enter phone number"
                 />
                 {errors.phone && (
@@ -432,15 +492,30 @@ export default function EditUserPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
-                <Select value={watchedRole} onValueChange={(value) => setValue('role', value as any)}>
-                  <SelectTrigger>
+                <Select
+                  value={selectedRoleId}
+                  onValueChange={setSelectedRoleId}
+                >
+                  <SelectTrigger className="w-40">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="super_admin">Super Admin</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="salon">Salon Owner</SelectItem>
-                    <SelectItem value="user">Customer</SelectItem>
+                    {roles.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        <span
+                          style={{
+                            background: role.color,
+                            color: "#fff",
+                            borderRadius: 4,
+                            padding: "2px 8px",
+                            marginRight: 8,
+                            display: "inline-block",
+                          }}
+                        >
+                          {role.name}
+                        </span>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 {errors.role && (
@@ -450,7 +525,10 @@ export default function EditUserPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select value={watch('status')} onValueChange={(value) => setValue('status', value as any)}>
+                <Select
+                  value={watch("status")}
+                  onValueChange={(value) => setValue("status", value as any)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -461,7 +539,9 @@ export default function EditUserPage() {
                   </SelectContent>
                 </Select>
                 {errors.status && (
-                  <p className="text-sm text-red-600">{errors.status.message}</p>
+                  <p className="text-sm text-red-600">
+                    {errors.status.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -482,7 +562,12 @@ export default function EditUserPage() {
                 <div className="relative">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    <AvatarFallback>
+                      {user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1">
                     <RoleIcon className="h-3 w-3 text-gray-600" />
@@ -492,8 +577,14 @@ export default function EditUserPage() {
                   <h3 className="font-semibold text-gray-900">{user.name}</h3>
                   <p className="text-sm text-gray-600">{user.email}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge className={roleColors[user.role]}>
-                      {getRoleDisplayName(user.role)}
+                    <Badge
+                      style={
+                        user.role?.color
+                          ? { background: user.role.color, color: "#fff" }
+                          : {}
+                      }
+                    >
+                      {user.role?.name || ""}
                     </Badge>
                     <Badge className={statusColors[user.status]}>
                       {user.status}
@@ -511,7 +602,7 @@ export default function EditUserPage() {
                   <Mail className="h-4 w-4 text-gray-400" />
                   <span>{user.email}</span>
                 </div>
-                {user.role === 'salon' && user.totalSalons && (
+                {user.role === "salon" && user.totalSalons && (
                   <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-gray-400" />
                     <span>{user.totalSalons} salon(s)</span>
@@ -529,12 +620,16 @@ export default function EditUserPage() {
               Cancel
             </Button>
           </Link>
-          <Button type="submit" disabled={saving} className="bg-purple-600 hover:bg-purple-700">
+          <Button
+            type="submit"
+            disabled={saving}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
             <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </form>
     </div>
   );
-} 
+}

@@ -6,6 +6,7 @@ const {
   authorize,
   blockUserDashboard,
 } = require("../middleware/authMiddleware");
+const checkPermission = require("../middleware/permissionMiddleware");
 
 // Protect all routes
 router.use(authenticateToken);
@@ -14,7 +15,7 @@ router.use(blockUserDashboard());
 // GET dashboard stats - admin only
 router.get(
   "/stats",
-  authorize("admin", "super_admin"),
+  checkPermission("analytics", "view"),
   dashboardController.getDashboardStats
 );
 

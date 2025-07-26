@@ -8,16 +8,20 @@ const {
 const validate = require("../middleware/validate");
 const {
   authenticateToken,
-  authorizeNoDelete,
   blockUserDashboard,
 } = require("../middleware/authMiddleware");
+const checkPermission = require("../middleware/permissionMiddleware");
 
 // Protect all routes
 router.use(authenticateToken);
 router.use(blockUserDashboard());
 
 // GET all services
-router.get("/", serviceController.getAllServices);
+router.get(
+  "/",
+  checkPermission("services", "view"),
+  serviceController.getAllServices
+);
 
 // GET service by ID
 router.get("/:id", serviceController.getServiceById);
@@ -27,6 +31,7 @@ router.post(
   "/",
   createServiceValidation,
   validate,
+  checkPermission("services", "add"),
   serviceController.createService
 );
 
@@ -35,11 +40,16 @@ router.put(
   "/:id",
   updateServiceValidation,
   validate,
+  checkPermission("services", "edit"),
   serviceController.updateService
 );
 
 // DELETE a service by ID
-router.delete("/:id", authorizeNoDelete(), serviceController.deleteService);
+router.delete(
+  "/:id",
+  checkPermission("services", "delete"),
+  serviceController.deleteService
+);
 
 // GET service categories
 router.get("/categories", serviceController.getServiceCategories);

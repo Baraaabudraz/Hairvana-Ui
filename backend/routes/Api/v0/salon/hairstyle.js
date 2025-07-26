@@ -1,23 +1,46 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { authenticateOwner } = require('../../../../middleware/authMiddleware');
-const hairstyleController = require('../../../../controllers/Api/salon/hairstyleController');
-const { createUploadMiddleware } = require('../../../../helpers/uploadHelper');
-const { createHairstyleValidation, updateHairstyleValidation } = require('../../../../validation/hairstyleValidation');
+const checkPermission = require("../../../../middleware/permissionMiddleware");
+const hairstyleController = require("../../../../controllers/Api/salon/hairstyleController");
+const { createUploadMiddleware } = require("../../../../helpers/uploadHelper");
+const {
+  createHairstyleValidation,
+  updateHairstyleValidation,
+} = require("../../../../validation/hairstyleValidation");
 
 const uploadHairstyle = createUploadMiddleware({
-  uploadDir: 'backend/public/uploads/hairstyles/original',
-  allowedTypes: ['image/jpeg', 'image/png'],
-  maxSize: 5 * 1024 * 1024 // 5MB
+  uploadDir: "backend/public/uploads/hairstyles/original",
+  allowedTypes: ["image/jpeg", "image/png"],
+  maxSize: 5 * 1024 * 1024, // 5MB
 });
 
 // Upload a new hairstyle
-router.post('/hairstyles', authenticateOwner, uploadHairstyle.single('image'), createHairstyleValidation, hairstyleController.uploadHairstyle);
+router.post(
+  "/hairstyles",
+  checkPermission("salon", "edit"),
+  uploadHairstyle.single("image"),
+  createHairstyleValidation,
+  hairstyleController.uploadHairstyle
+);
 // List all hairstyles
-router.get('/hairstyles', authenticateOwner, hairstyleController.getHairstyles);
+router.get(
+  "/hairstyles",
+  checkPermission("salon", "edit"),
+  hairstyleController.getHairstyles
+);
 // Update a hairstyle
-router.put('/hairstyles/:id', authenticateOwner, uploadHairstyle.single('image'), updateHairstyleValidation, hairstyleController.updateHairstyle);
+router.put(
+  "/hairstyles/:id",
+  checkPermission("salon", "edit"),
+  uploadHairstyle.single("image"),
+  updateHairstyleValidation,
+  hairstyleController.updateHairstyle
+);
 // Delete a hairstyle
-router.delete('/hairstyles/:id', authenticateOwner, hairstyleController.deleteHairstyle);
+router.delete(
+  "/hairstyles/:id",
+  checkPermission("salon", "edit"),
+  hairstyleController.deleteHairstyle
+);
 
-module.exports = router; 
+module.exports = router;

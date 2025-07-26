@@ -1,6 +1,7 @@
 const authRepository = require("../repositories/authRepository");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { Role, User } = require("../models");
 
 exports.login = async ({ email, password }) => {
   const user = await authRepository.findUserByEmail(email);
@@ -15,8 +16,19 @@ exports.login = async ({ email, password }) => {
   if (!isValidPassword)
     throw Object.assign(new Error("Invalid credentials"), { status: 401 });
   await authRepository.updateLastLogin(user.id);
+  // Optionally fetch role name for JWT
+  let roleName = null;
+  if (user.role_id) {
+    const role = await Role.findByPk(user.role_id);
+    roleName = role ? role.name : null;
+  }
   const token = jwt.sign(
-    { userId: user.id, email: user.email, role: user.role },
+    {
+      userId: user.id,
+      email: user.email,
+      role_id: user.role_id,
+      role: roleName,
+    },
     process.env.JWT_SECRET || "your-secret-key",
     { expiresIn: "24h" }
   );
@@ -24,7 +36,7 @@ exports.login = async ({ email, password }) => {
   return { user: userWithoutPassword, token };
 };
 
-exports.register = async ({ name, email, password, role, phone }) => {
+exports.register = async ({ name, email, password, role_id, phone }) => {
   const existingUser = await authRepository.findUserByEmail(email);
   if (existingUser)
     throw Object.assign(new Error("User with this email already exists"), {
@@ -36,13 +48,23 @@ exports.register = async ({ name, email, password, role, phone }) => {
     email,
     name,
     phone: phone || null,
-    role,
+    role_id,
     status: "active",
     password_hash: passwordHash,
   });
-  await authRepository.createRoleSpecific(newUser, role);
+  // Optionally fetch role name for JWT
+  let roleName = null;
+  if (newUser.role_id) {
+    const role = await Role.findByPk(newUser.role_id);
+    roleName = role ? role.name : null;
+  }
   const token = jwt.sign(
-    { userId: newUser.id, email: newUser.email, role: newUser.role },
+    {
+      userId: newUser.id,
+      email: newUser.email,
+      role_id: newUser.role_id,
+      role: roleName,
+    },
     process.env.JWT_SECRET || "your-secret-key",
     { expiresIn: "24h" }
   );
@@ -56,7 +78,16 @@ exports.logout = async (user) => {
 };
 
 exports.getCurrentUser = async (userId) => {
-  return authRepository.findUserById(userId);
+  const user = await User.findOne({
+    where: { id: userId },
+    include: [{ model: Role, as: "role" }],
+  });
+  if (!user) return null;
+  const { password_hash, role, ...userWithoutPassword } = user.toJSON();
+  return {
+    ...userWithoutPassword,
+    role: role ? role.name : undefined,
+  };
 };
 
 exports.changePassword = async (userId, { currentPassword, newPassword }) => {

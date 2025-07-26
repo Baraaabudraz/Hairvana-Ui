@@ -11,40 +11,15 @@ const createUserValidation = [
     .withMessage("Name must be at least 2 characters long"),
   commonRules.email(),
   commonRules.password(),
-  commonRules.enum("role", ["admin", "super_admin", "salon", "user"]),
+  body("role_id").isUUID().withMessage("role_id must be a valid UUID"),
   commonRules.phone(),
 
-  // Conditional validation for admin/super_admin roles
-  body("permissions")
-    .if(body("role").isIn(["admin", "super_admin"]))
-    .notEmpty()
-    .withMessage("Permissions are required for admin roles")
-    .isArray()
-    .withMessage("Permissions must be an array"),
-
-  // Conditional validation for salon role
-  body("salonName")
-    .if(body("role").equals("salon"))
-    .trim()
-    .notEmpty()
-    .withMessage("Salon name is required for salon owners"),
-
-  body("salonAddress")
-    .if(body("role").equals("salon"))
-    .trim()
-    .notEmpty()
-    .withMessage("Salon address is required for salon owners"),
-
-  body("businessLicense")
-    .if(body("role").equals("salon"))
-    .trim()
-    .notEmpty()
-    .withMessage("Business license is required for salon owners"),
-
+  // Conditional validation for salon role (if you want to keep this, you may need to fetch role name from DB in controller)
+  body("salonName").optional().trim(),
+  body("salonAddress").optional().trim(),
+  body("businessLicense").optional().trim(),
   body("subscription")
-    .if(body("role").equals("salon"))
-    .notEmpty()
-    .withMessage("Subscription plan is required for salon owners")
+    .optional()
     .isIn(["Basic", "Standard", "Premium"])
     .withMessage("Invalid subscription plan"),
 ];
@@ -70,10 +45,10 @@ const updateUserValidation = [
     .isLength({ min: 8 })
     .withMessage("Password must be at least 8 characters long"),
 
-  body("role")
+  body("role_id")
     .optional()
-    .isIn(["admin", "super_admin", "salon", "user"])
-    .withMessage("Invalid user role"),
+    .isUUID()
+    .withMessage("role_id must be a valid UUID"),
 
   commonRules.phone(),
 
@@ -81,13 +56,6 @@ const updateUserValidation = [
     .optional()
     .isIn(["active", "pending", "suspended"])
     .withMessage("Invalid user status"),
-
-  // Conditional validation for admin/super_admin roles
-  body("permissions")
-    .if(body("role").isIn(["admin", "super_admin"]))
-    .optional()
-    .isArray()
-    .withMessage("Permissions must be an array"),
 
   body("avatar").optional().isURL().withMessage("Avatar must be a valid URL"),
 ];

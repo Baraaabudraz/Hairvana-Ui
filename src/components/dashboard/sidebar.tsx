@@ -51,6 +51,13 @@ const navigation = [
     icon: Bell,
     hideForSalon: true,
   },
+  // Add Roles & Permissions link under Notifications
+  {
+    name: "Roles & Permissions",
+    href: "/dashboard/roles",
+    icon: Shield,
+    adminOnly: true,
+  },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 

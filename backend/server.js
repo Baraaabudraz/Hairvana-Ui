@@ -102,10 +102,7 @@ app.use(
   "/backend/api/v0/salon/salon-profile",
   require("./routes/Api/v0/salon/salonProfile")
 );
-app.use(
-  "/backend/api/v0/salon",
-  require("./routes/Api/v0/salon/salon")
-);
+// Mount specific routes first (before the general salon routes with /:id parameter)
 app.use(
   "/backend/api/v0/salon/hairstyle",
   require("./routes/Api/v0/salon/hairstyle")
@@ -113,6 +110,19 @@ app.use(
 app.use(
   "/backend/api/v0/salon/services",
   require("./routes/Api/v0/salon/services")
+);
+app.use(
+  "/backend/api/v0/salon/appointments",
+  require("./routes/Api/v0/salon/appointments")
+);
+app.use(
+  "/backend/api/v0/salon/staff",
+  require("./routes/Api/v0/salon/staff")
+);
+// Mount general salon routes last (has /:id parameter that could conflict)
+app.use(
+  "/backend/api/v0/salon",
+  require("./routes/Api/v0/salon/salon")
 );
 
 // Serve uploaded images statically
@@ -126,6 +136,11 @@ app.use(
 app.use(
   "/images/salon",
   express.static(path.join(__dirname, "../public/uploads/salons"))
+);
+// Serve staff images from /images/staff/ path
+app.use(
+  "/images/staff",
+  express.static(path.join(__dirname, "../public/uploads/staff"))
 );
 // Salon image upload route
 app.use("/backend/api/salons", require("./routes/salonImages"));

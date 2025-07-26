@@ -41,6 +41,47 @@ exports.cancelAppointment = async (id) => {
   return appointmentRepository.findById(id);
 };
 
+/**
+ * Get appointments by salon IDs with filters
+ * @param {Array} salonIds - Array of salon IDs
+ * @param {Object} filters - Filter options
+ * @returns {Promise<Array>} Appointments
+ */
+exports.getAppointmentsBySalonIds = async (salonIds, filters = {}) => {
+  return appointmentRepository.findBySalonIds(salonIds, filters);
+};
+
+/**
+ * Get appointment by ID if it belongs to specified salon IDs
+ * @param {string} appointmentId - Appointment ID
+ * @param {Array} salonIds - Array of salon IDs
+ * @returns {Promise<Object|null>} Appointment or null
+ */
+exports.getAppointmentByIdForSalons = async (appointmentId, salonIds) => {
+  return appointmentRepository.findByIdForSalons(appointmentId, salonIds);
+};
+
+/**
+ * Update appointment status
+ * @param {string} appointmentId - Appointment ID
+ * @param {Object} updateData - Data to update
+ * @returns {Promise<Object>} Updated appointment
+ */
+exports.updateAppointmentStatus = async (appointmentId, updateData) => {
+  await appointmentRepository.update(appointmentId, updateData);
+  return appointmentRepository.findById(appointmentId);
+};
+
+/**
+ * Get appointment statistics for salon IDs
+ * @param {Array} salonIds - Array of salon IDs
+ * @param {Object} filters - Filter options
+ * @returns {Promise<Object>} Statistics object
+ */
+exports.getAppointmentStatsBySalonIds = async (salonIds, filters = {}) => {
+  return appointmentRepository.getStatsBySalonIds(salonIds, filters);
+};
+
 exports.checkAvailability = async (query) => {
   const { staffId, serviceId, date } = query;
   const service = await Service.findOne({ where: { id: serviceId } });

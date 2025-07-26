@@ -84,7 +84,7 @@ exports.getAvailability = async (req, res) => {
 exports.bookAppointment = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { salon_id, staff_id, start_at, notes, service_ids } = req.body;
+    const { salonId: salon_id, staffId: staff_id, start_at, notes, service_ids } = req.body;
     if (!salon_id || !staff_id || !start_at || !Array.isArray(service_ids) || service_ids.length === 0) {
       return res.status(400).json({ error: 'Missing required fields' });
     }

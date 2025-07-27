@@ -2,6 +2,7 @@
 const { User, Customer, MobileDevice } = require('../../../../models');
 const bcrypt = require('bcryptjs');
 const TokenService = require('../../../../services/tokenService');
+const { ROLES } = require('../../../../constants/roles');
 
 /**
  * Mobile Authentication Controller
@@ -27,24 +28,41 @@ exports.register = async (req, res) => {
     // Hash password
     const hash = await bcrypt.hash(password, 12); // Increased rounds for better security
     
-    // Create user with customer role
-    const userRole = await User.sequelize.models.Role.findOne({
-      where: { name: "user" },
+    // Find customer role (prefer "Customer", fallback to "user")
+    let customerRole = await User.sequelize.models.Role.findOne({
+      where: { 
+        name: { 
+          [User.sequelize.Sequelize.Op.in]: [ROLES.CUSTOMER, ROLES.USER] 
+        } 
+      },
+      order: [['name', 'DESC']] // Prefer "Customer" over "user" alphabetically
     });
+
+    // If no customer role found, create a default one or use fallback
+    if (!customerRole) {
+      console.warn('No customer role found, creating default customer role');
+      try {
+        customerRole = await User.sequelize.models.Role.create({
+          name: ROLES.CUSTOMER,
+          description: "Customer/Regular User",
+          color: "#6B7280"
+        });
+      } catch (roleCreateError) {
+        console.error('Failed to create customer role:', roleCreateError);
+        return res.status(500).json({ 
+          error: 'System configuration error. Please contact administrator.',
+          code: 'ROLE_CONFIG_ERROR'
+        });
+      }
+    }
+
     const user = await User.create({
-      
       name: name.trim(), 
-     
       email: email.toLowerCase().trim(), 
-     
       password_hash: hash, 
-     
       phone: phone?.trim(), 
-     
-      role_id: userRole ? customerRole.id : null,
-      
+      role_id: customerRole.id,
       status: "active",
-    
     });
     
     // Create customer profile
@@ -54,7 +72,7 @@ exports.register = async (req, res) => {
     const tokenData = TokenService.generateTokenPair({
       id: user.id,
       email: user.email,
-      role: user.role
+      role: customerRole.name // Use the role name from the found role
     });
     
     // Log successful registration
@@ -70,7 +88,7 @@ exports.register = async (req, res) => {
         id: user.id, 
         name: user.name, 
         email: user.email,
-        role: user.role,
+        role: customerRole.name, // Use the role name from the found role
         phone: user.phone
       } 
     });
@@ -103,7 +121,7 @@ exports.login = async (req, res) => {
         id: user.id, 
         name: user.name, 
         email: user.email,
-        role: user.role,
+        role: user.role?.name || user.role, // Handle both role object and string
         phone: user.phone,
         lastLogin: user.last_login
       } 

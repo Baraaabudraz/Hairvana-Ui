@@ -33,6 +33,7 @@ import {
   User,
   Mail,
   Phone,
+  AlertTriangle,
 } from "lucide-react";
 import { fetchSalons } from "@/api/salons";
 import {
@@ -89,13 +90,42 @@ interface Salon {
   avatar: string;
 }
 
-const planIcons = {
+const planIcons: Record<string, any> = {
   Basic: Zap,
   Standard: Star,
   Premium: Crown,
 };
 
-const planColors = {
+const getPlanIcon = (planName: string) => {
+  // Normalize plan name for comparison
+  const normalizedName = planName.toLowerCase().trim();
+  
+  // Direct mapping
+  if (planIcons[planName]) {
+    return planIcons[planName];
+  }
+  
+  // Flexible mapping based on keywords
+  if (normalizedName.includes('basic') || normalizedName.includes('starter') || normalizedName.includes('free')) {
+    return Zap;
+  }
+  if (normalizedName.includes('standard') || normalizedName.includes('pro') || normalizedName.includes('business')) {
+    return Star;
+  }
+  if (normalizedName.includes('premium') || normalizedName.includes('enterprise') || normalizedName.includes('unlimited')) {
+    return Crown;
+  }
+  
+  // Default fallback based on common plan types
+  if (normalizedName.includes('trial')) {
+    return AlertTriangle;
+  }
+  
+  // Ultimate fallback
+  return Building2; // Generic business icon
+};
+
+const planColors: Record<string, string> = {
   Basic: "from-gray-600 to-gray-700",
   Standard: "from-blue-600 to-blue-700",
   Premium: "from-purple-600 to-purple-700",
@@ -532,7 +562,7 @@ export default function CreateSubscriptionPage() {
                 </div>
               ) : (
                 plans.map((plan) => {
-                  const PlanIcon = planIcons[plan.name];
+                  const PlanIcon = getPlanIcon(plan.name);
                   const isSelected = selectedPlan?.id === plan.id;
                   const price =
                     billingCycle === "yearly"
@@ -577,7 +607,7 @@ export default function CreateSubscriptionPage() {
                         <div className="flex justify-center mb-4">
                           <div
                             className={`p-3 rounded-lg bg-gradient-to-r ${
-                              planColors[plan.name]
+                              planColors[plan.name] || "from-gray-600 to-gray-700"
                             }`}
                           >
                             <PlanIcon className="h-6 w-6 text-white" />

@@ -87,48 +87,58 @@ export default function NewSalonPage() {
         
         console.log('Loading salon owners...');
         
-        // Try different possible role names for salon owners
-        const possibleRoleNames = ['salon', 'Salon', 'salon_owner', 'Salon Owner', 'salonowner'];
+        // Try different possible role names for salon owners - prioritize exact matches
+        const possibleRoleNames = ['Salon Owner', 'salon_owner', 'salon', 'Salon', 'salonowner'];
         let response = null;
         let usedRoleName = '';
         
-        for (const roleName of possibleRoleNames) {
-          try {
-            console.log(`Trying role name: "${roleName}"`);
-            response = await fetchUsersByRole(roleName);
-            usedRoleName = roleName;
-            console.log(`Successfully found users with role "${roleName}":`, response);
-            break;
-          } catch (roleError) {
-            console.log(`Role "${roleName}" not found or failed:`, roleError);
-            continue;
-          }
-        }
+        // Try to fetch users by specific "Salon Owner" role for better performance
+        console.log('Attempting to fetch users with "Salon Owner" role...');
         
-        if (!response) {
-          // If no specific salon role found, try fetching all users and filter later
-          console.log('No salon role found, fetching all users...');
-          const allUsersResponse = await fetchUsers();
-          console.log('All users response:', allUsersResponse);
+        try {
+          const salonOwnersResponse = await fetchUsersByRole('Salon Owner');
+          console.log('Salon owners API response:', salonOwnersResponse);
           
-          // Filter users that might be salon owners (you can adjust this logic)
-          const potentialOwners = allUsersResponse.users?.filter((user: any) => 
-            user.role?.name?.toLowerCase().includes('salon') ||
-            user.role?.name?.toLowerCase().includes('owner')
-          ) || [];
-          
-          setOwners(potentialOwners);
-          
-          if (potentialOwners.length === 0) {
-            toast({
-              title: 'No salon owners found',
-              description: 'No users with salon owner roles were found. You may need to create salon owner accounts first.',
-              variant: 'destructive',
-            });
+          if (salonOwnersResponse && salonOwnersResponse.users) {
+            console.log(`Successfully fetched ${salonOwnersResponse.users.length} salon owners directly from API`);
+            setOwners(salonOwnersResponse.users);
+            
+            if (salonOwnersResponse.users.length === 0) {
+              toast({
+                title: 'No salon owners found',
+                description: 'No users with salon owner roles were found. You may need to create salon owner accounts first.',
+                variant: 'destructive',
+              });
+            }
+          } else {
+            throw new Error('Invalid response structure');
           }
-        } else {
-          setOwners(response.users || response || []);
-          console.log(`Set ${(response.users || response || []).length} owners from role "${usedRoleName}"`);
+        } catch (roleApiError) {
+          console.warn('Role-specific API failed, falling back to fetch all users:', roleApiError);
+          
+          // Fallback: fetch all users and filter if role-specific API fails
+          const allUsersResponse = await fetchUsers();
+          console.log('All users fallback response:', allUsersResponse);
+          
+          if (allUsersResponse && allUsersResponse.users) {
+            const salonOwners = allUsersResponse.users.filter((user: any) => {
+              const roleName = typeof user.role === 'string' ? user.role : user.role?.name || '';
+              return roleName === 'Salon Owner';
+            });
+            
+            console.log(`Filtered ${salonOwners.length} salon owners from ${allUsersResponse.users.length} total users (fallback)`);
+            setOwners(salonOwners);
+            
+            if (salonOwners.length === 0) {
+              toast({
+                title: 'No salon owners found',
+                description: 'No users with salon owner roles were found. You may need to create salon owner accounts first.',
+                variant: 'destructive',
+              });
+            }
+          } else {
+            throw new Error('Failed to fetch users');
+          }
         }
         
       } catch (error) {
@@ -502,11 +512,14 @@ export default function NewSalonPage() {
                   ) : owners.length === 0 ? (
                     <SelectItem value="no-owners" disabled>No owners available</SelectItem>
                   ) : (
-                    owners.map((owner) => (
-                      <SelectItem key={owner.id} value={owner.id}>
-                        {owner.name} ({owner.email})
-                      </SelectItem>
-                    ))
+                    owners.map((owner) => {
+                      const roleName = typeof owner.role === 'string' ? owner.role : owner.role?.name || 'N/A';
+                      return (
+                        <SelectItem key={owner.id} value={owner.id}>
+                          {owner.name} ({owner.email}) - {roleName}
+                        </SelectItem>
+                      );
+                    })
                   )}
                 </SelectContent>
               </Select>
@@ -537,7 +550,11 @@ export default function NewSalonPage() {
                         </div>
                       )}
                       <div>
-                        <span className="font-medium">Role:</span> {selectedOwner.role?.name || 'N/A'}
+                        <span className="font-medium">Role:</span> {
+                          typeof selectedOwner.role === 'string' 
+                            ? selectedOwner.role 
+                            : selectedOwner.role?.name || 'N/A'
+                        }
                       </div>
                       {selectedOwner.status && (
                         <div>

@@ -1,15 +1,15 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const checkPermission = require("../../../../middleware/permissionMiddleware");
-const salonProfileController = require("../../../../controllers/Api/salon/salonProfileController");
-const { createUploadMiddleware } = require("../../../../helpers/uploadHelper");
+const { authenticateOwner } = require('../../../../middleware/authMiddleware');
+const salonProfileController = require('../../../../controllers/Api/salon/salonProfileController');
+const { createUploadMiddleware } = require('../../../../helpers/uploadHelper');
 const { updateSalonProfileValidation } = require('../../../../validation/salonValidation');
 const validate = require('../../../../middleware/validate');
 
 const uploadSalonFiles = createUploadMiddleware({
-  uploadDir: "backend/public/uploads/salons",
-  allowedTypes: ["image/jpeg", "image/png"],
-  maxSize: 5 * 1024 * 1024, // 5MB per image
+  uploadDir: 'backend/public/uploads/salons',
+  allowedTypes: ['image/jpeg', 'image/png'],
+  maxSize: 5 * 1024 * 1024 // 5MB per image
 });
 
 // Get salon profile for the authenticated owner
@@ -26,16 +26,5 @@ router.put('/salon-profile',
   validate,
   salonProfileController.updateSalonProfile
 );
-router.get(
-  "/salon-profile",
-  checkPermission("salon", "edit"),
-  salonProfileController.getSalonProfile
-);
-router.put(
-  "/salon-profile",
-  checkPermission("salon", "edit"),
-  uploadSalonImages.array("images", 5),
-  salonProfileController.updateSalonProfile
-);
 
-module.exports = router;
+module.exports = router; 

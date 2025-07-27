@@ -98,15 +98,26 @@ const createSalonValidation = [
     .withMessage('Longitude must be between -180 and 180'),
   
   body('hours')
-    .notEmpty()
-    .withMessage('Operating hours are required')
+    .optional()
     .custom((value) => {
       // Allow object, array, or string format
       if (typeof value === 'object' && value !== null) {
         return true; // Object or array is valid
       }
       if (typeof value === 'string') {
-        return true; // String is valid
+        // Try to parse as JSON if it looks like JSON
+        if (value.startsWith('{') && value.endsWith('}')) {
+          try {
+            JSON.parse(value);
+            return true;
+          } catch (e) {
+            throw new Error('Hours must be valid JSON if provided as string');
+          }
+        }
+        return true; // Plain string is valid
+      }
+      if (value === undefined || value === null) {
+        return true; // Optional field
       }
       throw new Error('Hours must be an object, array, or string');
     })

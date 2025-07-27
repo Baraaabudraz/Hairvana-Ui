@@ -22,12 +22,14 @@ module.exports = {
       phone: {
         type: Sequelize.TEXT,
       },
-      role: {
-        type: Sequelize.TEXT,
-        allowNull: false,
-        validate: {
-          isIn: [["super_admin", "admin", "salon", "user"]],
+      role_id: {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: "roles",
+          key: "id",
         },
+        onDelete: "SET NULL",
       },
       status: {
         type: Sequelize.TEXT,

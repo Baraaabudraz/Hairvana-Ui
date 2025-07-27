@@ -6,6 +6,7 @@ const path = require('path');
 
 exports.getAllSalons = async (query, req) => {
   const user = req.user;
+  console.log("user=======", user);
   // Enforce salon owner can only see their own salons
   if (req.user && req.user.role === "salon" && req.user.userId) {
     query = { ...query, owner_id: req.user.userId };
@@ -63,6 +64,15 @@ exports.getAllSalonsByOwnerId = async (ownerId, req) => {
 exports.createSalon = async (req) => {
   const salonData = req.body;
   
+  // Parse hours if it's a JSON string
+  if (salonData.hours && typeof salonData.hours === 'string') {
+    try {
+      salonData.hours = JSON.parse(salonData.hours);
+    } catch (e) {
+      // If parsing fails, leave as string
+    }
+  }
+  
   // Ensure owner_id is set
   if (!salonData.owner_id) {
     throw new Error('Owner ID is required for salon creation');
@@ -113,6 +123,15 @@ exports.createSalon = async (req) => {
 };
 
 exports.updateSalon = async (id, data, req) => {
+  // Parse hours if it's a JSON string
+  if (data.hours && typeof data.hours === 'string') {
+    try {
+      data.hours = JSON.parse(data.hours);
+    } catch (e) {
+      // If parsing fails, leave as string
+    }
+  }
+  
   // Get the old salon before updating
   const oldSalon = await salonRepository.findById(id);
   // Handle image uploads and existing gallery

@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api";
+import { fetchRoles } from "@/api/roles";
 
 export async function fetchUsers(
   params: {
@@ -30,6 +31,33 @@ export async function fetchUsers(
     return await apiFetch(`/users?${queryParams.toString()}`);
   } catch (error) {
     console.error("Error fetching users:", error);
+    throw error;
+  }
+}
+
+// Helper function to fetch users by role name
+export async function fetchUsersByRole(
+  roleName: string,
+  params: {
+    status?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  } = {}
+) {
+  try {
+    // First fetch roles to get the role ID
+    const roles = await fetchRoles();
+    const role = roles?.find((r: any) => r.name === roleName);
+    
+    if (!role) {
+      throw new Error(`Role '${roleName}' not found`);
+    }
+    
+    // Then fetch users with the role ID
+    return await fetchUsers({ ...params, role_id: role.id });
+  } catch (error) {
+    console.error(`Error fetching users by role '${roleName}':`, error);
     throw error;
   }
 }

@@ -13,7 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Upload, X, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createSalon } from '@/api/salons';
-import { fetchUsers } from '@/api/users';
+import { fetchUsersByRole } from '@/api/users';
+import type { User } from '@/types/user';
 
 const salonSchema = z.object({
   name: z.string().min(2, 'Salon name must be at least 2 characters'),
@@ -49,7 +50,7 @@ export default function NewSalonPage() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [customService, setCustomService] = useState('');
   const [selectedOwnerId, setSelectedOwnerId] = useState<string>('');
-  const [owners, setOwners] = useState<any[]>([]);
+  const [owners, setOwners] = useState<User[]>([]);
   const [loadingOwners, setLoadingOwners] = useState(true);
   const [hours, setHours] = useState<Record<string, { open: string; close: string; closed: boolean }>>({
     monday: { open: '09:00', close: '18:00', closed: false },
@@ -83,7 +84,9 @@ export default function NewSalonPage() {
     const loadOwners = async () => {
       try {
         setLoadingOwners(true);
-        const response = await fetchUsers({ role: 'salon' });
+        
+        // Fetch users with salon role
+        const response = await fetchUsersByRole('salon');
         setOwners(response.users || []);
       } catch (error) {
         console.error('Error loading owners:', error);
@@ -201,10 +204,8 @@ export default function NewSalonPage() {
       formData.append('status', 'pending');
       // Append services
       selectedServices.forEach(service => formData.append('services', service));
-      // Append hours
-      Object.entries(formattedHours).forEach(([day, value]) => {
-        formData.append(`hours[${day}]`, value);
-      });
+      // Append hours as JSON string
+      formData.append('hours', JSON.stringify(formattedHours));
       // Append images
       if (avatarFile) {
         formData.append('avatar', avatarFile);
@@ -493,7 +494,7 @@ export default function NewSalonPage() {
                         </div>
                       )}
                       <div>
-                        <span className="font-medium">Role:</span> {selectedOwner.role}
+                        <span className="font-medium">Role:</span> {selectedOwner.role?.name || 'N/A'}
                       </div>
                       {selectedOwner.status && (
                         <div>

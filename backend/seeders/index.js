@@ -12,6 +12,8 @@ async function seed() {
     // Seed roles and permissions first
     await seedRoles();
     await seedPermissions();
+    // Seed addresses before users and salons
+    await seedAddresses();
     // Seed in sequence to avoid race conditions
     await seedUsers();
     await seedSalons();
@@ -447,6 +449,12 @@ async function seedPermissions() {
   await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
 }
 
+async function seedAddresses() {
+  console.log("Seeding addresses...");
+  const seeder = require("./20250724000001-demo-addresses.js");
+  await seeder.up(db.sequelize.getQueryInterface(), Sequelize);
+}
+
 async function seedServices() {
   console.log("Seeding services...");
   const seeder = require("./20250707000200-demo-services.js");
@@ -491,8 +499,15 @@ async function seedOwnerDocuments() {
   try {
     await db.OwnerDocument.destroy({ where: {} });
     
+    // Get salon role ID first
+    const salonRole = await db.Role.findOne({ where: { name: 'salon' } });
+    if (!salonRole) {
+      console.log('Salon role not found, skipping owner documents seeding');
+      return;
+    }
+    
     const salonOwners = await db.User.findAll({
-      where: { role: 'salon' },
+      where: { role_id: salonRole.id },
       attributes: ['id']
     });
 
@@ -519,8 +534,15 @@ async function seedReviews() {
   try {
     await db.Review.destroy({ where: {} });
     
+    // Get user role ID first
+    const userRole = await db.Role.findOne({ where: { name: 'user' } });
+    if (!userRole) {
+      console.log('User role not found, skipping reviews seeding');
+      return;
+    }
+    
     const users = await db.User.findAll({
-      where: { role: 'user' },
+      where: { role_id: userRole.id },
       attributes: ['id']
     });
     
@@ -580,8 +602,15 @@ async function seedBillingSettings() {
   try {
     await db.BillingSettings.destroy({ where: {} });
     
+    // Get salon role ID first
+    const salonRole = await db.Role.findOne({ where: { name: 'salon' } });
+    if (!salonRole) {
+      console.log('Salon role not found, skipping billing settings seeding');
+      return;
+    }
+    
     const users = await db.User.findAll({
-      where: { role: 'salon' },
+      where: { role_id: salonRole.id },
       attributes: ['id']
     });
 
@@ -769,8 +798,15 @@ async function seedMobileDevices() {
   try {
     await db.MobileDevice.destroy({ where: {} });
     
+    // Get user role ID first  
+    const userRole = await db.Role.findOne({ where: { name: 'user' } });
+    if (!userRole) {
+      console.log('User role not found, skipping mobile devices seeding');
+      return;
+    }
+    
     const users = await db.User.findAll({
-      where: { role: 'user' },
+      where: { role_id: userRole.id },
       attributes: ['id']
     });
 

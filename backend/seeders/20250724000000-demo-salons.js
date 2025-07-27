@@ -8,7 +8,7 @@ module.exports = {
     
     // Get salon owners from users table
     const salonOwners = await queryInterface.sequelize.query(
-      'SELECT id FROM users WHERE role = \'salon\' LIMIT 3',
+      'SELECT id FROM users WHERE role_id IN (SELECT id FROM roles WHERE name = \'salon\') LIMIT 3',
       { type: Sequelize.QueryTypes.SELECT }
     );
 
@@ -16,44 +16,6 @@ module.exports = {
       console.log('No salon owners found, skipping salon seeding');
       return;
     }
-
-    // First, create addresses for the salons
-    const addresses = [
-      {
-        id: '00000000-0000-0000-0000-000000000011',
-        street_address: '123 Rodeo Drive',
-        city: 'Beverly Hills',
-        state: 'CA',
-        zip_code: '90210',
-        country: 'US',
-        created_at: new Date(),
-        updated_at: new Date()
-      },
-      {
-        id: '00000000-0000-0000-0000-000000000012',
-        street_address: '456 Main Street',
-        city: 'Los Angeles',
-        state: 'CA',
-        zip_code: '90012',
-        country: 'US',
-        created_at: new Date(),
-        updated_at: new Date()
-      },
-      {
-        id: '00000000-0000-0000-0000-000000000013',
-        street_address: '789 Fashion Avenue',
-        city: 'New York',
-        state: 'NY',
-        zip_code: '10001',
-        country: 'US',
-        created_at: new Date(),
-        updated_at: new Date()
-      }
-    ];
-
-    // Insert addresses first
-    await queryInterface.bulkInsert('addresses', addresses, {});
-    console.log('Created salon addresses successfully.');
 
     const salons = [
       {
@@ -201,6 +163,5 @@ module.exports = {
 
   down: async (queryInterface, Sequelize) => {
     await queryInterface.bulkDelete('salons', null, {});
-    await queryInterface.bulkDelete('addresses', null, {});
   }
 }; 

@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createUser } from "@/api/users";
+import { fetchRoles } from "@/api/roles";
+import { Role } from "@/types/user";
 import { apiFetch } from "@/lib/api";
 import {
   Select,
@@ -36,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useEffect } from "react";
 
 const baseUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -101,10 +104,11 @@ export default function NewUserPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedRoleId, setSelectedRoleId] = useState<string>("user"); // Changed to string to match SelectItem value
+  const [selectedRoleId, setSelectedRoleId] = useState<string>(""); // Will be set when roles are loaded
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [uploadedAvatar, setUploadedAvatar] = useState<string>("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null); // Store selected file
+  const [roles, setRoles] = useState<Role[]>([]);
 
   const {
     register,
@@ -119,18 +123,46 @@ export default function NewUserPage() {
     },
   });
 
+  useEffect(() => {
+    const loadRoles = async () => {
+      try {
+        const fetchedRoles = await fetchRoles();
+        setRoles(fetchedRoles);
+        
+        // Set default role to "user" or first available role
+        if (fetchedRoles.length > 0) {
+          const defaultRole = fetchedRoles.find(role => 
+            role.name.toLowerCase().includes("user") || 
+            role.name.toLowerCase().includes("customer")
+          ) || fetchedRoles[0];
+          
+          setSelectedRoleId(defaultRole.id);
+          setValue("role", defaultRole.name.toLowerCase().replace(" ", "_") as any);
+        }
+      } catch (error) {
+        toast({
+          title: "Error fetching roles",
+          description: "Could not load user roles. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    };
+    loadRoles();
+  }, [toast, setValue]);
+
   const watchedRole = watch("role");
 
-  const handleRoleChange = (
-    role: "admin" | "super_admin" | "salon" | "user"
-  ) => {
-    setSelectedRoleId(role); // Update state variable
-    setValue("role", role);
+  const handleRoleChange = (roleId: string) => {
+    const selectedRole = roles.find(role => role.id === roleId);
+    if (selectedRole) {
+      setSelectedRoleId(roleId);
+      setValue("role", selectedRole.name.toLowerCase().replace(" ", "_") as any);
 
-    // Reset role-specific fields
-    setSelectedPermissions([]);
-    if (role === "super_admin") {
-      setSelectedPermissions(["full_access"]);
+      // Reset role-specific fields
+      setSelectedPermissions([]);
+      if (selectedRole.name.toLowerCase().includes("super") || selectedRole.name.toLowerCase().includes("admin")) {
+        setSelectedPermissions(["full_access"]);
+      }
     }
   };
 
@@ -166,8 +198,10 @@ export default function NewUserPage() {
         }
       });
       // Append permissions if admin or super_admin
+      const selectedRole = roles.find(role => role.id === selectedRoleId);
       if (
-        (data.role === "admin" || data.role === "super_admin") &&
+        selectedRole && 
+        selectedRole.name.toLowerCase().includes("admin") &&
         selectedPermissions.length > 0
       ) {
         selectedPermissions.forEach((perm) =>
@@ -267,7 +301,7 @@ export default function NewUserPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+            <Select value={selectedRoleId} onValueChange={handleRoleChange}>
               <SelectTrigger className="w-40">
                 <SelectValue />
               </SelectTrigger>
@@ -424,18 +458,27 @@ export default function NewUserPage() {
         </Card>
 
         {/* Admin Permissions */}
-        {(selectedRoleId === "admin" || selectedRoleId === "super_admin") && (
+        {(() => {
+          const selectedRole = roles.find(role => role.id === selectedRoleId);
+          return selectedRole && (selectedRole.name.toLowerCase().includes("admin"));
+        })() && (
           <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle>Admin Permissions</CardTitle>
               <CardDescription>
-                {selectedRoleId === "super_admin"
-                  ? "Super admins have full access to all platform features"
-                  : "Select the permissions for this admin user"}
+                {(() => {
+                  const selectedRole = roles.find(role => role.id === selectedRoleId);
+                  return selectedRole && selectedRole.name.toLowerCase().includes("super")
+                    ? "Super admins have full access to all platform features"
+                    : "Select the permissions for this admin user";
+                })()}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {selectedRoleId === "super_admin" ? (
+              {(() => {
+                const selectedRole = roles.find(role => role.id === selectedRoleId);
+                return selectedRole && selectedRole.name.toLowerCase().includes("super");
+              })() ? (
                 <div className="p-4 bg-purple-50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <Crown className="h-5 w-5 text-purple-600" />
@@ -483,7 +526,10 @@ export default function NewUserPage() {
         )}
 
         {/* Salon Information */}
-        {selectedRoleId === "salon" && (
+        {(() => {
+          const selectedRole = roles.find(role => role.id === selectedRoleId);
+          return selectedRole && selectedRole.name.toLowerCase().includes("salon");
+        })() && (
           <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle>Salon Information</CardTitle>
@@ -500,7 +546,10 @@ export default function NewUserPage() {
                     placeholder="Enter salon name"
                     {...register("salonName")}
                   />
-                  {selectedRoleId === "salon" && salonErrors.salonName && (
+                  {(() => {
+                    const selectedRole = roles.find(role => role.id === selectedRoleId);
+                    return selectedRole && selectedRole.name.toLowerCase().includes("salon") && salonErrors.salonName;
+                  })() && (
                     <p className="text-sm text-red-500">
                       {typeof salonErrors.salonName.message === "string"
                         ? salonErrors.salonName.message
@@ -515,8 +564,10 @@ export default function NewUserPage() {
                     placeholder="BL123456789"
                     {...register("businessLicense")}
                   />
-                  {selectedRoleId === "salon" &&
-                    salonErrors.businessLicense && (
+                  {(() => {
+                    const selectedRole = roles.find(role => role.id === selectedRoleId);
+                    return selectedRole && selectedRole.name.toLowerCase().includes("salon") && salonErrors.businessLicense;
+                  })() && (
                       <p className="text-sm text-red-500">
                         {typeof salonErrors.businessLicense.message === "string"
                           ? salonErrors.businessLicense.message
@@ -533,7 +584,10 @@ export default function NewUserPage() {
                   placeholder="123 Main Street, City, State, ZIP"
                   {...register("salonAddress")}
                 />
-                {selectedRoleId === "salon" && salonErrors.salonAddress && (
+                {(() => {
+                  const selectedRole = roles.find(role => role.id === selectedRoleId);
+                  return selectedRole && selectedRole.name.toLowerCase().includes("salon") && salonErrors.salonAddress;
+                })() && (
                   <p className="text-sm text-red-500">
                     {typeof salonErrors.salonAddress.message === "string"
                       ? salonErrors.salonAddress.message
@@ -560,7 +614,10 @@ export default function NewUserPage() {
                     </button>
                   ))}
                 </div>
-                {selectedRoleId === "salon" && salonErrors.subscription && (
+                {(() => {
+                  const selectedRole = roles.find(role => role.id === selectedRoleId);
+                  return selectedRole && selectedRole.name.toLowerCase().includes("salon") && salonErrors.subscription;
+                })() && (
                   <p className="text-sm text-red-500">
                     {typeof salonErrors.subscription.message === "string"
                       ? salonErrors.subscription.message

@@ -104,6 +104,9 @@ async function syncOrdered(options = {}) {
 
     // Create tables in dependency order
     const tableOrder = [
+      "roles",
+      "permissions", 
+      "addresses",
       "users",
       "salons",
       "subscription_plans",
@@ -123,13 +126,13 @@ async function syncOrdered(options = {}) {
       "billing_settings",
       "reports",
       "security_settings",
-      'platform_settings',
-      'backup_settings',
-      'notification_preferences',
+      "platform_settings",
+      "backup_settings",
+      "notification_preferences",
       "reviews",
       "owner_documents",
-      "roles",
-      "permissions",
+      "mobile_devices",
+      "integration_settings",
     ];
 
     for (const tableName of tableOrder) {

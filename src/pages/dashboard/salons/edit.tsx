@@ -323,14 +323,16 @@ export default function EditSalonPage() {
         formData.append('services[]', service);
       });
 
-      // Add hours
+      // Add hours as JSON string
+      const formattedHours: Record<string, string> = {};
       Object.entries(hours).forEach(([day, timeData]) => {
         if (timeData.closed) {
-          formData.append(`hours[${day}]`, 'Closed');
+          formattedHours[day] = 'Closed';
         } else {
-          formData.append(`hours[${day}]`, `${convertTo12Hour(timeData.open)} - ${convertTo12Hour(timeData.close)}`);
+          formattedHours[day] = `${convertTo12Hour(timeData.open)} - ${convertTo12Hour(timeData.close)}`;
         }
       });
+      formData.append('hours', JSON.stringify(formattedHours));
 
       // Add existing images
       uploadedImages.forEach(img => {

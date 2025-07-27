@@ -20,11 +20,28 @@ const ACTIONS = ["view", "add", "edit", "delete"];
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Check if permissions already exist
+    const existingPermissions = await queryInterface.sequelize.query(
+      'SELECT COUNT(*) as count FROM permissions',
+      { type: Sequelize.QueryTypes.SELECT }
+    ).catch(() => [{ count: 0 }]);
+    
+    if (existingPermissions[0].count > 0) {
+      console.log('Permissions already exist, skipping permissions seeding.');
+      return;
+    }
+
     // Get role IDs
     const roles = await queryInterface.sequelize.query(
       `SELECT id, name FROM roles WHERE name IN ('super_admin', 'admin', 'salon', 'user')`,
       { type: Sequelize.QueryTypes.SELECT }
     );
+    
+    if (roles.length === 0) {
+      console.log('No roles found, skipping permissions seeding.');
+      return;
+    }
+    
     const roleMap = Object.fromEntries(roles.map((r) => [r.name, r.id]));
     const now = new Date();
     const permissions = [];
@@ -112,6 +129,7 @@ module.exports = {
     }
 
     await queryInterface.bulkInsert("permissions", permissions);
+    console.log(`Seeded ${permissions.length} permissions successfully.`);
   },
 
   async down(queryInterface, Sequelize) {

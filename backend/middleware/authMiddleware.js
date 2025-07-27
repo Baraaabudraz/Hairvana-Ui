@@ -59,7 +59,15 @@ const blockUserDashboard = () => {
     next();
   };
 };
-
+// Add authenticateOwner middleware
+const authenticateOwner = (req, res, next) => {
+  protect(req, res, function() {
+    if (req.user && req.user.role === 'salon') {
+      return next();
+    }
+    return res.status(403).json({ error: 'Only salon owners can access this endpoint.' });
+  });
+};
 module.exports = {
   authenticateToken: protect,
   authorize,
@@ -67,6 +75,6 @@ module.exports = {
   isAdmin,
   isUser,
   blockUserDashboard,
+  authenticateOwner,
+  authenticateCustomer
 };
-
-module.exports = { authenticateToken: protect, authorize, authenticateOwner, authenticateCustomer };

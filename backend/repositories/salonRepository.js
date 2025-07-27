@@ -10,14 +10,15 @@ const { Op, Sequelize } = require("sequelize");
 
 exports.findAll = async (query) => {
   const where = {};
+  let includeModels =[];
   if (query.owner_id) {
     where.owner_id = query.owner_id;
   } else {
     if (query.status && query.status !== "all") where.status = query.status;
     if (query.ownerId) where.owner_id = query.ownerId;
   
-  const includeModels = [
-    { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] },
+   includeModels = [
+    { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role_id'] },
     { model: Address, as: 'address' }
   ];
   
@@ -45,7 +46,7 @@ exports.findById = async (id) => {
   return Salon.findOne({
     where: { id },
     include: [
-      { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] },
+      { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role_id'] },
       { model: Address, as: 'address' },
       { model: Service, as: 'services' }
     ]
@@ -56,7 +57,7 @@ exports.findByOwnerId = async (ownerId) => {
   return Salon.findOne({
     where: { owner_id: ownerId },
     include: [
-      { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] },
+      { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role_id'] },
       { model: Address, as: 'address' },
       { model: Service, as: 'services' }
     ]
@@ -67,7 +68,7 @@ exports.findAllByOwnerId = async (ownerId) => {
   return Salon.findAll({
     where: { owner_id: ownerId },
     include: [
-      { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role'] },
+      { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role_id'] },
       { model: Address, as: 'address' },
       { model: Service, as: 'services' }
     ],

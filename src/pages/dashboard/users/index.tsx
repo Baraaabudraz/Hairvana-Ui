@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fetchUsers, updateUserStatus, deleteUser } from "@/api/users";
+import { fetchRoles } from "@/api/roles";
 import {
   Select,
   SelectTrigger,
@@ -72,12 +73,19 @@ interface Salon {
   status: string;
 }
 
+interface UserRoleObject {
+  id: string;
+  name: string;
+  color?: string;
+  description?: string;
+}
+
 interface User {
   id: string;
   name: string;
   email: string;
   phone: string;
-  role: UserRole;
+  role: UserRoleObject | UserRole; // Allow both object and string for backward compatibility
   status: UserStatus;
   join_date: string;
   last_login: string | null;
@@ -140,6 +148,20 @@ const formatDateSafely = (
   return formatDistanceToNow(date, { addSuffix: true });
 };
 
+// Helper function to safely get role properties
+const getRoleInfo = (role: UserRoleObject | UserRole) => {
+  if (typeof role === 'string') {
+    return {
+      name: role,
+      color: undefined
+    };
+  }
+  return {
+    name: role?.name || '',
+    color: role?.color
+  };
+};
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<UserStats>({
@@ -179,12 +201,34 @@ export default function UsersPage() {
 
   useEffect(() => {
     loadUsers();
+    loadRoles();
     // eslint-disable-next-line
   }, [selectedRole, statusFilter, searchTerm, page, limit]);
+
+  const loadRoles = async () => {
+    if (rolesLoaded) return; // Only load roles once
+    
+    try {
+      console.log('Loading roles separately...');
+      const rolesData = await fetchRoles();
+      console.log('Roles loaded:', rolesData);
+      setRoles(rolesData || []);
+      setRolesLoaded(true);
+    } catch (error) {
+      console.error("Error loading roles:", error);
+      toast({
+        title: "Warning",
+        description: "Roles could not be loaded. Role filtering may not work properly.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const loadUsers = async () => {
     try {
       setLoading(true);
+      console.log('Loading users with params:', { selectedRole, statusFilter, searchTerm, page, limit });
+      
       const params: any = { page, limit };
 
       if (selectedRole?.id) {
@@ -199,18 +243,59 @@ export default function UsersPage() {
         params.search = searchTerm;
       }
 
-      const data = await fetchUsers(params);
-      setUsers(data.users);
-      setStats(data.stats);
-      setTotalPages(data.totalPages || 1);
-      setTotal(data.total || 0);
-      setRoles(data.roles || []);
+      console.log('Fetching users with params:', params);
+      
+      // Try the API call with robust error handling
+      try {
+        const data = await fetchUsers(params);
+        console.log('Users API response:', data);
+        
+        setUsers(Array.isArray(data) ? data : (data.users || []));
+        setStats(data.stats || {
+          total: 0, admin: 0, salon: 0, user: 0, 
+          active: 0, pending: 0, suspended: 0
+        });
+        setTotalPages(data.totalPages || 1);
+        setTotal(data.total || (data.users ? data.users.length : 0));
+        
+        // Try to get roles from users response, but don't fail if not available
+        if (data.roles && !rolesLoaded) {
+          console.log('Setting roles from users response:', data.roles);
+          setRoles(data.roles);
+          setRolesLoaded(true);
+        }
+      } catch (fetchError: any) {
+        console.error("API fetch error:", fetchError);
+        
+        // If this is the specific "roles is not defined" error, provide a helpful message
+        if (fetchError.message && fetchError.message.includes("roles is not defined")) {
+          toast({
+            title: "Database Configuration Issue",
+            description: "The roles table appears to be missing or not properly configured. Please check the backend setup.",
+            variant: "destructive",
+          });
+        } else {
+          throw fetchError; // Re-throw other errors
+        }
+      }
+      
     } catch (error) {
       console.error("Error loading users:", error);
+      
+      // Provide more specific error information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
       toast({
         title: "Error",
-        description: "Failed to load users. Please try again.",
+        description: `Failed to load users: ${errorMessage}. Please try again or check the console for details.`,
         variant: "destructive",
+      });
+      
+      // Set empty data on error to prevent crashes
+      setUsers([]);
+      setStats({
+        total: 0, admin: 0, salon: 0, user: 0, 
+        active: 0, pending: 0, suspended: 0
       });
     } finally {
       setLoading(false);
@@ -594,9 +679,11 @@ export default function UsersPage() {
         <CardContent>
           <div className="space-y-4">
             {users.map((user) => {
-              let RoleIcon = roleIcons[user.role];
+              // Get role info safely
+              const roleInfo = getRoleInfo(user.role);
+              let RoleIcon = roleIcons[roleInfo.name.toLowerCase().replace(' ', '_')];
               if (!RoleIcon) {
-                console.warn("Missing icon for role:", user.role);
+                console.warn("Missing icon for role:", roleInfo.name, "- using fallback");
                 RoleIcon = Users; // fallback icon
               }
               return (
@@ -662,12 +749,12 @@ export default function UsersPage() {
                     <div className="flex flex-col gap-1">
                       <Badge
                         style={
-                          user.role?.color
-                            ? { background: user.role.color, color: "#fff" }
+                          getRoleInfo(user.role).color
+                            ? { background: getRoleInfo(user.role).color, color: "#fff" }
                             : {}
                         }
                       >
-                        {user.role?.name || ""}
+                        {getRoleInfo(user.role).name}
                       </Badge>
                       <Badge className={statusColors[user.status]}>
                         {user.status}

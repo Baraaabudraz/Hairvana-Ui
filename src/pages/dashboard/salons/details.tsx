@@ -148,9 +148,6 @@ export default function SalonDetailsPage() {
           });
           setLoading(false);
           return;
-          } else {
-            throw new Error('Salon not found');
-          }
         }
       } catch (error) {
         console.error('Error loading salon:', error);

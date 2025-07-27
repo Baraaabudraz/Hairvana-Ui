@@ -104,6 +104,7 @@ const getDefaultRoleColors = (): Record<UserRole, string> => ({
   admin: 'bg-blue-100 text-blue-800',
   salon: 'bg-green-100 text-green-800',
   user: 'bg-gray-100 text-gray-800',
+  customer: 'bg-gray-100 text-gray-800',
 });
 
 const statusColors: Record<UserStatus, string> = {
@@ -117,6 +118,7 @@ const roleIcons = {
   admin: Shield,
   salon: Building2,
   user: Users,
+  customer: Users, // Use Users icon for customer role
 };
 
 // Helper function to safely get role information

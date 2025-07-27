@@ -31,13 +31,6 @@ import { createUser } from "@/api/users";
 import { fetchRoles } from "@/api/roles";
 import { Role } from "@/types/user";
 import { apiFetch } from "@/lib/api";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useEffect } from "react";
 
 const baseUserSchema = z.object({
@@ -104,7 +97,7 @@ export default function NewUserPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedRoleId, setSelectedRoleId] = useState<string>(""); // Will be set when roles are loaded
+  const [selectedRole, setSelectedRole] = useState<string>(""); // Will be set when roles are loaded
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [uploadedAvatar, setUploadedAvatar] = useState<string>("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null); // Store selected file
@@ -131,12 +124,12 @@ export default function NewUserPage() {
         
         // Set default role to "user" or first available role
         if (fetchedRoles.length > 0) {
-          const defaultRole = fetchedRoles.find(role => 
+          const defaultRole = fetchedRoles.find((role: Role) => 
             role.name.toLowerCase().includes("user") || 
             role.name.toLowerCase().includes("customer")
           ) || fetchedRoles[0];
           
-          setSelectedRoleId(defaultRole.id);
+          setSelectedRole(defaultRole.name.toLowerCase().replace(" ", "_"));
           setValue("role", defaultRole.name.toLowerCase().replace(" ", "_") as any);
         }
       } catch (error) {
@@ -152,31 +145,42 @@ export default function NewUserPage() {
 
   const watchedRole = watch("role");
 
-  const handleRoleChange = (roleId: string) => {
-    const selectedRole = roles.find(role => role.id === roleId);
-    if (selectedRole) {
-      setSelectedRoleId(roleId);
-      setValue("role", selectedRole.name.toLowerCase().replace(" ", "_") as any);
+  const handleRoleChange = (roleKey: string) => {
+    const selectedRoleData = roles.find(role => role.name.toLowerCase().replace(" ", "_") === roleKey);
+    if (selectedRoleData) {
+      setSelectedRole(roleKey);
+      setValue("role", roleKey as any);
 
       // Reset role-specific fields
       setSelectedPermissions([]);
-      if (selectedRole.name.toLowerCase().includes("super") || selectedRole.name.toLowerCase().includes("admin")) {
+      if (selectedRoleData.name.toLowerCase().includes("super")) {
         setSelectedPermissions(["full_access"]);
+        setValue("permissions", ["full_access"] as any);
+      } else if (selectedRoleData.name.toLowerCase().includes("admin")) {
+        // For regular admin, don't auto-select permissions - let user choose
+        setValue("permissions", [] as any);
+      } else {
+        // For non-admin roles, clear permissions
+        setValue("permissions", undefined as any);
       }
     }
   };
 
   const handlePermissionToggle = (permission: string) => {
+    let newPermissions: string[];
+    
     if (permission === "full_access") {
-      setSelectedPermissions(["full_access"]);
+      newPermissions = ["full_access"];
     } else {
-      setSelectedPermissions((prev) => {
-        const filtered = prev.filter((p) => p !== "full_access");
-        return prev.includes(permission)
-          ? filtered.filter((p) => p !== permission)
-          : [...filtered, permission];
-      });
+      const filtered = selectedPermissions.filter((p) => p !== "full_access");
+      newPermissions = selectedPermissions.includes(permission)
+        ? filtered.filter((p) => p !== permission)
+        : [...filtered, permission];
     }
+    
+    setSelectedPermissions(newPermissions);
+    // Update form value for validation
+    setValue("permissions", newPermissions as any);
   };
 
   const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,23 +194,61 @@ export default function NewUserPage() {
   const onSubmit = async (data: UserForm) => {
     setIsSubmitting(true);
     try {
+      console.log("Form submission started", { data, selectedRole, selectedPermissions });
+      
       const formData = new FormData();
-      // Append all user fields
+      
+      // Get the selected role data to extract the role_id
+      const selectedRoleData = roles.find(role => role.name.toLowerCase().replace(" ", "_") === selectedRole);
+      if (!selectedRoleData) {
+        toast({
+          title: "Error",
+          description: "Please select a valid role.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      console.log("Selected role data:", selectedRoleData);
+
+      // For admin/super_admin roles, ensure permissions are set
+      if (selectedRoleData.name.toLowerCase().includes("admin")) {
+        if (selectedPermissions.length === 0) {
+          toast({
+            title: "Error", 
+            description: "Please select at least one permission for admin users.",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Append all user fields except confirmPassword and role
       Object.entries(data).forEach(([key, value]) => {
-        if (key !== "confirmPassword") {
+        if (key !== "confirmPassword" && key !== "role") {
           formData.append(key, value as string);
         }
       });
+      
+      // Append the role_id (UUID) instead of role string
+      formData.append("role_id", selectedRoleData.id);
+      
       // Append permissions if admin or super_admin
-      const selectedRole = roles.find(role => role.id === selectedRoleId);
       if (
-        selectedRole && 
-        selectedRole.name.toLowerCase().includes("admin") &&
+        selectedRoleData && 
+        selectedRoleData.name.toLowerCase().includes("admin") &&
         selectedPermissions.length > 0
       ) {
         selectedPermissions.forEach((perm) =>
           formData.append("permissions", perm)
         );
+      }
+
+      console.log("FormData contents:");
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
       }
       // Append avatar file if selected
       if (avatarFile) {
@@ -217,7 +259,7 @@ export default function NewUserPage() {
         formData.append("avatar", "");
       }
       const token = localStorage.getItem("token");
-      await fetch(
+      const response = await fetch(
         `${
           import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
         }/backend/api/users`,
@@ -227,15 +269,24 @@ export default function NewUserPage() {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         }
       );
+
+      const result = await response.json();
+      console.log("API Response:", result);
+
+      if (!response.ok) {
+        throw new Error(result.message || `HTTP error! status: ${response.status}`);
+      }
+
       toast({
         title: "User created successfully",
         description: `${data.name} has been added to the platform.`,
       });
       navigate("/dashboard/users");
     } catch (error) {
+      console.error("Error creating user:", error);
       toast({
         title: "Error creating user",
-        description: "Please try again later.",
+        description: error instanceof Error ? error.message : "Please try again later.",
         variant: "destructive",
       });
     } finally {
@@ -291,7 +342,14 @@ export default function NewUserPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={handleSubmit(onSubmit, (errors) => {
+          console.log("Form validation errors:", errors);
+          toast({
+            title: "Form validation failed",
+            description: "Please check all required fields and try again.",
+            variant: "destructive",
+          });
+        })} className="space-y-6">
         {/* Role Selection */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
@@ -301,29 +359,33 @@ export default function NewUserPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Select value={selectedRoleId} onValueChange={handleRoleChange}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {roles.map((role) => (
-                  <SelectItem key={role.id} value={role.id}>
-                    <span
-                      style={{
-                        background: role.color,
-                        color: "#fff",
-                        borderRadius: 4,
-                        padding: "2px 8px",
-                        marginRight: 8,
-                        display: "inline-block",
-                      }}
-                    >
-                      {role.name}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {roles.map((role) => {
+                const roleKey = role.name.toLowerCase().replace(" ", "_");
+                const Icon = getRoleIcon(roleKey);
+                const isSelected = selectedRole === roleKey;
+                return (
+                  <button
+                    key={role.id}
+                    type="button"
+                    onClick={() => handleRoleChange(roleKey)}
+                    className={`p-4 rounded-lg border-2 text-left transition-all ${
+                      isSelected
+                        ? 'border-purple-200 bg-purple-50'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className={`p-2 rounded-lg bg-gradient-to-r ${getRoleColor(roleKey)}`}>
+                        <Icon className="h-4 w-4 text-white" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900">{role.name}</h3>
+                    </div>
+                    <p className="text-sm text-gray-600">{role.description || `${role.name} user with appropriate access level`}</p>
+                  </button>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
 
@@ -459,16 +521,16 @@ export default function NewUserPage() {
 
         {/* Admin Permissions */}
         {(() => {
-          const selectedRole = roles.find(role => role.id === selectedRoleId);
-          return selectedRole && (selectedRole.name.toLowerCase().includes("admin"));
+          const selectedRoleData = roles.find(role => role.name.toLowerCase().replace(" ", "_") === selectedRole);
+          return selectedRoleData && (selectedRoleData.name.toLowerCase().includes("admin"));
         })() && (
           <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle>Admin Permissions</CardTitle>
               <CardDescription>
                 {(() => {
-                  const selectedRole = roles.find(role => role.id === selectedRoleId);
-                  return selectedRole && selectedRole.name.toLowerCase().includes("super")
+                  const selectedRoleData = roles.find(role => role.name.toLowerCase().replace(" ", "_") === selectedRole);
+                  return selectedRoleData && selectedRoleData.name.toLowerCase().includes("super")
                     ? "Super admins have full access to all platform features"
                     : "Select the permissions for this admin user";
                 })()}
@@ -476,8 +538,8 @@ export default function NewUserPage() {
             </CardHeader>
             <CardContent>
               {(() => {
-                const selectedRole = roles.find(role => role.id === selectedRoleId);
-                return selectedRole && selectedRole.name.toLowerCase().includes("super");
+                const selectedRoleData = roles.find(role => role.name.toLowerCase().replace(" ", "_") === selectedRole);
+                return selectedRoleData && selectedRoleData.name.toLowerCase().includes("super");
               })() ? (
                 <div className="p-4 bg-purple-50 rounded-lg">
                   <div className="flex items-center gap-2">
@@ -527,8 +589,8 @@ export default function NewUserPage() {
 
         {/* Salon Information */}
         {(() => {
-          const selectedRole = roles.find(role => role.id === selectedRoleId);
-          return selectedRole && selectedRole.name.toLowerCase().includes("salon");
+          const selectedRoleData = roles.find(role => role.name.toLowerCase().replace(" ", "_") === selectedRole);
+          return selectedRoleData && selectedRoleData.name.toLowerCase().includes("salon");
         })() && (
           <Card className="border-0 shadow-sm">
             <CardHeader>
@@ -547,12 +609,12 @@ export default function NewUserPage() {
                     {...register("salonName")}
                   />
                   {(() => {
-                    const selectedRole = roles.find(role => role.id === selectedRoleId);
-                    return selectedRole && selectedRole.name.toLowerCase().includes("salon") && salonErrors.salonName;
+                    const selectedRoleData = roles.find(role => role.name.toLowerCase().replace(" ", "_") === selectedRole);
+                    return selectedRoleData && selectedRoleData.name.toLowerCase().includes("salon") && salonErrors.salonName;
                   })() && (
                     <p className="text-sm text-red-500">
-                      {typeof salonErrors.salonName.message === "string"
-                        ? salonErrors.salonName.message
+                      {typeof salonErrors.salonName?.message === "string" 
+                        ? salonErrors.salonName.message 
                         : ""}
                     </p>
                   )}
@@ -565,12 +627,12 @@ export default function NewUserPage() {
                     {...register("businessLicense")}
                   />
                   {(() => {
-                    const selectedRole = roles.find(role => role.id === selectedRoleId);
-                    return selectedRole && selectedRole.name.toLowerCase().includes("salon") && salonErrors.businessLicense;
+                    const selectedRoleData = roles.find(role => role.name.toLowerCase().replace(" ", "_") === selectedRole);
+                    return selectedRoleData && selectedRoleData.name.toLowerCase().includes("salon") && salonErrors.businessLicense;
                   })() && (
                       <p className="text-sm text-red-500">
-                        {typeof salonErrors.businessLicense.message === "string"
-                          ? salonErrors.businessLicense.message
+                        {typeof salonErrors.businessLicense?.message === "string" 
+                          ? salonErrors.businessLicense.message 
                           : ""}
                       </p>
                     )}
@@ -585,12 +647,12 @@ export default function NewUserPage() {
                   {...register("salonAddress")}
                 />
                 {(() => {
-                  const selectedRole = roles.find(role => role.id === selectedRoleId);
-                  return selectedRole && selectedRole.name.toLowerCase().includes("salon") && salonErrors.salonAddress;
+                  const selectedRoleData = roles.find(role => role.name.toLowerCase().replace(" ", "_") === selectedRole);
+                  return selectedRoleData && selectedRoleData.name.toLowerCase().includes("salon") && salonErrors.salonAddress;
                 })() && (
                   <p className="text-sm text-red-500">
-                    {typeof salonErrors.salonAddress.message === "string"
-                      ? salonErrors.salonAddress.message
+                    {typeof salonErrors.salonAddress?.message === "string" 
+                      ? salonErrors.salonAddress.message 
                       : ""}
                   </p>
                 )}
@@ -615,12 +677,12 @@ export default function NewUserPage() {
                   ))}
                 </div>
                 {(() => {
-                  const selectedRole = roles.find(role => role.id === selectedRoleId);
-                  return selectedRole && selectedRole.name.toLowerCase().includes("salon") && salonErrors.subscription;
+                  const selectedRoleData = roles.find(role => role.name.toLowerCase().replace(" ", "_") === selectedRole);
+                  return selectedRoleData && selectedRoleData.name.toLowerCase().includes("salon") && salonErrors.subscription;
                 })() && (
                   <p className="text-sm text-red-500">
-                    {typeof salonErrors.subscription.message === "string"
-                      ? salonErrors.subscription.message
+                    {typeof salonErrors.subscription?.message === "string" 
+                      ? salonErrors.subscription.message 
                       : ""}
                   </p>
                 )}

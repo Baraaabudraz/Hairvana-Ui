@@ -47,9 +47,13 @@ const Review = require('./review');
 const MobileDevice = require('./mobile_device');
 const OwnerDocument = require('./owner_document');
 const TokenBlacklist = require('./token_blacklist');
+const Role = require('./role');
+const Permission = require('./permission');
 
 // Initialize models in dependency order
 const models = {
+  Role: Role(sequelize, Sequelize.DataTypes),
+  Permission: Permission(sequelize, Sequelize.DataTypes),
   User: User(sequelize, Sequelize.DataTypes),
   Customer: Customer(sequelize, Sequelize.DataTypes),
   SalonOwner: SalonOwner(sequelize, Sequelize.DataTypes),

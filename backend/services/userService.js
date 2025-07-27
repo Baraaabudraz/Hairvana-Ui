@@ -7,15 +7,23 @@ const path = require('path');
 
 exports.getAllUsers = async (query, req) => {
   try {
-    const { role, status, search, page = 1, limit = 10 } = query;
+    const { role, role_id, status, search, page = 1, limit = 10 } = query;
     const where = {};
-    if (role && role !== 'all') {
+    
+    // Handle role_id filtering (UUID format from frontend)
+    if (role_id && role_id !== 'all') {
+      console.log('Filtering users by role_id:', role_id);
+      where.role_id = role_id;
+    }
+    // Handle legacy role filtering (string format)
+    else if (role && role !== 'all') {
       if (role === 'admin') {
         where.role = ['admin', 'super_admin'];
       } else {
         where.role = role;
       }
     }
+    
     if (status && status !== 'all') {
       where.status = status;
     }
@@ -29,7 +37,9 @@ exports.getAllUsers = async (query, req) => {
     const parsedLimit = parseInt(limit, 10) || 10;
     const parsedPage = parseInt(page, 10) || 1;
     const offset = (parsedPage - 1) * parsedLimit;
+    console.log('Database query where clause:', where);
     const { rows, count } = await userRepository.findAll({ where, limit: parsedLimit, offset });
+    console.log(`Query returned ${count} users (showing ${rows.length} on page ${parsedPage})`);
     const users = rows.map(user => serializeUser(user, { req }));
     const stats = {
       total: count,
@@ -40,13 +50,31 @@ exports.getAllUsers = async (query, req) => {
       pending: users.filter(u => u.status === 'pending').length,
       suspended: users.filter(u => u.status === 'suspended').length,
     };
-     // Prepare roles array for frontend (id, name, description, color)
-     const rolesArray = roles.map((role) => ({
-          id: role.id,
-          name: role.name,
-          description: role.description,
-          color: role.color,
-        }));
+
+    // Fetch roles from database
+    let rolesArray = [];
+    try {
+      const { Role } = require('../models');
+      const roles = await Role.findAll({
+        attributes: ['id', 'name', 'description', 'color']
+      });
+      rolesArray = roles.map((role) => ({
+        id: role.id,
+        name: role.name,
+        description: role.description,
+        color: role.color,
+      }));
+    } catch (roleError) {
+      console.warn('Failed to fetch roles:', roleError.message);
+      // If roles table doesn't exist, provide default roles
+      rolesArray = [
+        { id: '1', name: 'admin', description: 'Administrator', color: '#3B82F6' },
+        { id: '2', name: 'super_admin', description: 'Super Administrator', color: '#8B5CF6' },
+        { id: '3', name: 'salon', description: 'Salon Owner', color: '#10B981' },
+        { id: '4', name: 'user', description: 'Regular User', color: '#6B7280' }
+      ];
+    }
+
     return {
       users,
       stats,

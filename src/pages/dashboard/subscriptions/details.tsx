@@ -150,10 +150,39 @@ const planColors = {
   Premium: "bg-purple-100 text-purple-800",
 };
 
-const planIcons = {
+const planIcons: Record<string, any> = {
   Basic: Zap,
   Standard: Star,
   Premium: Crown,
+};
+
+const getPlanIcon = (planName: string) => {
+  // Normalize plan name for comparison
+  const normalizedName = planName.toLowerCase().trim();
+  
+  // Direct mapping
+  if (planIcons[planName]) {
+    return planIcons[planName];
+  }
+  
+  // Flexible mapping based on keywords
+  if (normalizedName.includes('basic') || normalizedName.includes('starter') || normalizedName.includes('free')) {
+    return Zap;
+  }
+  if (normalizedName.includes('standard') || normalizedName.includes('pro') || normalizedName.includes('business')) {
+    return Star;
+  }
+  if (normalizedName.includes('premium') || normalizedName.includes('enterprise') || normalizedName.includes('unlimited')) {
+    return Crown;
+  }
+  
+  // Default fallback based on common plan types
+  if (normalizedName.includes('trial')) {
+    return AlertTriangle;
+  }
+  
+  // Ultimate fallback
+  return Building2; // Generic business icon
 };
 
 const billingStatusColors = {
@@ -196,6 +225,12 @@ export default function SubscriptionDetailsPage() {
   });
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
+  const [editSubscriptionDialogOpen, setEditSubscriptionDialogOpen] = useState(false);
+  const [editSubscriptionData, setEditSubscriptionData] = useState({
+    billingCycle: "",
+    autoRenew: true,
+    trialDays: 0,
+  });
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -659,6 +694,17 @@ Hairvana Team`;
     setGenerateInvoiceDialogOpen(true);
   };
 
+  const openEditSubscriptionDialog = () => {
+    if (subscription) {
+      setEditSubscriptionData({
+        billingCycle: subscription.billingCycle,
+        autoRenew: true, // You might want to get this from subscription data
+        trialDays: 0, // You might want to get this from subscription data
+      });
+    }
+    setEditSubscriptionDialogOpen(true);
+  };
+
   // Confirm actions
   const confirmCancel = async () => {
     if (!subscription) return;
@@ -814,6 +860,39 @@ Hairvana Team`;
     return errors;
   };
 
+  const handleUpdateSubscription = async () => {
+    if (!subscription) return;
+    try {
+      await updateSubscription(subscription.id, {
+        billing_cycle: editSubscriptionData.billingCycle,
+        auto_renew: editSubscriptionData.autoRenew,
+        trial_days: editSubscriptionData.trialDays,
+      });
+      
+      setSubscription((prev) =>
+        prev
+          ? {
+              ...prev,
+              billingCycle: editSubscriptionData.billingCycle,
+            }
+          : prev
+      );
+      
+      toast({
+        title: "Subscription updated",
+        description: "Subscription details have been updated successfully.",
+      });
+      
+      setEditSubscriptionDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update subscription. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleGenerateInvoice = async () => {
     const errors = validateInvoice();
     setFormErrors(errors);
@@ -940,7 +1019,7 @@ Hairvana Team`;
     );
   }
 
-  const PlanIcon = planIcons[subscription.plan];
+  const PlanIcon = getPlanIcon(subscription.plan);
 
   const getUsagePercentage = (current: number, limit: number | "unlimited") => {
     if (limit === "unlimited") return 0;
@@ -984,7 +1063,7 @@ Hairvana Team`;
             <RefreshCw className="h-4 w-4 mr-2" />
             Sync Billing
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={openEditSubscriptionDialog}>
             <Edit className="h-4 w-4 mr-2" />
             Edit Subscription
           </Button>
@@ -1511,8 +1590,7 @@ Hairvana Team`;
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {subscription &&
                 getAvailableUpgrades(subscription.plan).map((plan) => {
-                  const PlanIcon =
-                    planIcons[plan.name as keyof typeof planIcons];
+                  const PlanIcon = getPlanIcon(plan.name);
                   const isSelected = selectedNewPlan?.id === plan.id;
                   return (
                     <div
@@ -1532,11 +1610,7 @@ Hairvana Team`;
                               : "from-purple-600 to-purple-700"
                           }`}
                         >
-                          {PlanIcon ? (
-                            <PlanIcon className="h-5 w-5 text-white" />
-                          ) : (
-                            <span className="h-5 w-5">?</span>
-                          )}
+                          <PlanIcon className="h-5 w-5 text-white" />
                         </div>
                         <div>
                           <h3 className="font-bold text-gray-900">
@@ -1616,8 +1690,7 @@ Hairvana Team`;
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {subscription &&
                 getAvailableDowngrades(subscription.plan).map((plan) => {
-                  const PlanIcon =
-                    planIcons[plan.name as keyof typeof planIcons];
+                  const PlanIcon = getPlanIcon(plan.name);
                   const isSelected = selectedNewPlan?.id === plan.id;
                   return (
                     <div
@@ -1637,11 +1710,7 @@ Hairvana Team`;
                               : "from-blue-600 to-blue-700"
                           }`}
                         >
-                          {PlanIcon ? (
-                            <PlanIcon className="h-5 w-5 text-white" />
-                          ) : (
-                            <span className="h-5 w-5">?</span>
-                          )}
+                          <PlanIcon className="h-5 w-5 text-white" />
                         </div>
                         <div>
                           <h3 className="font-bold text-gray-900">
@@ -1961,6 +2030,92 @@ Hairvana Team`;
             >
               <FileText className="h-4 w-4 mr-2" />
               {generatingInvoice ? "Generating..." : "Generate Invoice"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Subscription Dialog */}
+      <Dialog
+        open={editSubscriptionDialogOpen}
+        onOpenChange={setEditSubscriptionDialogOpen}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Subscription</DialogTitle>
+            <DialogDescription>
+              Update subscription settings for "{subscription?.salonName}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="billingCycle">Billing Cycle</Label>
+              <select
+                id="billingCycle"
+                className="w-full border rounded px-3 py-2"
+                value={editSubscriptionData.billingCycle}
+                onChange={(e) =>
+                  setEditSubscriptionData((prev) => ({
+                    ...prev,
+                    billingCycle: e.target.value,
+                  }))
+                }
+              >
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="trialDays">Trial Days</Label>
+              <Input
+                id="trialDays"
+                type="number"
+                min="0"
+                max="30"
+                placeholder="0"
+                value={editSubscriptionData.trialDays}
+                onChange={(e) =>
+                  setEditSubscriptionData((prev) => ({
+                    ...prev,
+                    trialDays: parseInt(e.target.value) || 0,
+                  }))
+                }
+              />
+              <p className="text-xs text-gray-500">0-30 days trial period</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="autoRenew"
+                checked={editSubscriptionData.autoRenew}
+                onChange={(e) =>
+                  setEditSubscriptionData((prev) => ({
+                    ...prev,
+                    autoRenew: e.target.checked,
+                  }))
+                }
+                className="rounded"
+              />
+              <Label htmlFor="autoRenew" className="text-sm">
+                Enable automatic renewal
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditSubscriptionDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateSubscription}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Update Subscription
             </Button>
           </DialogFooter>
         </DialogContent>

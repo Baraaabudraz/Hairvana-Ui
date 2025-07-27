@@ -71,11 +71,12 @@ interface User {
   suspensionReason?: string;
 }
 
-const roleColors = {
+const roleColors: Record<string, string> = {
   super_admin: 'bg-purple-100 text-purple-800',
   admin: 'bg-blue-100 text-blue-800',
   salon: 'bg-green-100 text-green-800',
   user: 'bg-gray-100 text-gray-800',
+  customer: 'bg-gray-100 text-gray-800', // Add customer role
 };
 
 const statusColors = {
@@ -179,109 +180,14 @@ export default function EditUserPage() {
           
           console.log('Form reset complete, watchedRole should be:', roleString);
         } catch (apiError) {
-          console.warn('API fetch failed, using mock data:', apiError);
-          
-          // Fallback to mock data if API fails
-          const mockUsers: Record<string, User> = {
-            '1': {
-              id: '1',
-              name: 'John Smith',
-              email: 'admin@hairvana.com',
-              phone: '+1 (555) 123-4567',
-              role: 'admin',
-              status: 'active',
-              joinDate: '2024-01-01',
-              lastLogin: '2024-06-15T10:30:00Z',
-              avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              permissions: ['manage_salons', 'manage_users', 'view_analytics', 'manage_subscriptions'],
-            },
-            '2': {
-              id: '2',
-              name: 'Sarah Johnson',
-              email: 'superadmin@hairvana.com',
-              phone: '+1 (555) 234-5678',
-              role: 'super_admin',
-              status: 'active',
-              joinDate: '2024-01-01',
-              lastLogin: '2024-06-15T09:15:00Z',
-              avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              permissions: ['full_access'],
-            },
-            '3': {
-              id: '3',
-              name: 'Maria Rodriguez',
-              email: 'maria@luxehair.com',
-              phone: '+1 (555) 345-6789',
-              role: 'salon',
-              status: 'active',
-              joinDate: '2024-01-15',
-              lastLogin: '2024-06-15T14:20:00Z',
-              avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              salons: [],
-              totalSalons: 2,
-              totalRevenue: 20250,
-              totalBookings: 245,
-            },
-            '4': {
-              id: '4',
-              name: 'David Chen',
-              email: 'david@stylecuts.com',
-              phone: '+1 (555) 456-7890',
-              role: 'salon',
-              status: 'active',
-              joinDate: '2024-01-20',
-              lastLogin: '2024-06-15T11:45:00Z',
-              avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              salons: [],
-              totalSalons: 1,
-              totalRevenue: 8900,
-              totalBookings: 98,
-            },
-            '5': {
-              id: '5',
-              name: 'Lisa Thompson',
-              email: 'lisa.thompson@email.com',
-              phone: '+1 (555) 567-8901',
-              role: 'user',
-              status: 'active',
-              joinDate: '2024-02-01',
-              lastLogin: '2024-06-15T15:30:00Z',
-              avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              totalBookings: 8,
-              totalSpent: 650,
-              favoriteServices: ['Haircut', 'Hair Styling'],
-            },
-            '6': {
-              id: '6',
-              name: 'Emily Davis',
-              email: 'emily.davis@email.com',
-              phone: '+1 (555) 678-9012',
-              role: 'user',
-              status: 'active',
-              joinDate: '2024-02-01',
-              lastLogin: '2024-06-15T13:20:00Z',
-              avatar: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2',
-              totalBookings: 12,
-              totalSpent: 850,
-              favoriteServices: ['Haircut', 'Hair Color', 'Hair Styling'],
-            },
-          };
-          
-          const userData = mockUsers[params.id as string];
-          if (userData) {
-            setUser(userData);
-            
-            // Set form values
-            reset({
-              name: userData.name,
-              email: userData.email,
-              phone: userData.phone,
-              role: getRoleString(userData.role),
-              status: userData.status,
-            });
-          } else {
-            throw new Error('User not found');
-          }
+          console.error('Failed to fetch user:', apiError);
+          toast({
+            title: 'Error',
+            description: 'Failed to load user data. Please try again.',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
         }
       } catch (error) {
         console.error('Error fetching user:', error);

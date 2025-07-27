@@ -1,24 +1,18 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,16 +22,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Search,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-  CheckCircle,
-  XCircle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Search, 
+  MoreHorizontal, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  CheckCircle, 
+  XCircle, 
   Plus,
   Users,
   Building2,
@@ -45,23 +39,21 @@ import {
   Crown,
   Calendar,
   DollarSign,
-  Star,
-} from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { fetchUsers, updateUserStatus, deleteUser } from "@/api/users";
-import { fetchRoles } from "@/api/roles";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
-import { apiFetch } from "@/lib/api";
-import { Value } from "@radix-ui/react-select";
+  Star
+} from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { fetchUsers, updateUserStatus, deleteUser } from '@/api/users';
+import { fetchRoles } from '@/api/roles';
 
-type UserRole = "admin" | "super_admin" | "salon" | "user";
-type UserStatus = "active" | "pending" | "suspended";
+type UserRole = 'admin' | 'super_admin' | 'salon' | 'user';
+type UserStatus = 'active' | 'pending' | 'suspended';
+
+interface UserRoleObject {
+  id: string;
+  name: string;
+  color?: string;
+  description?: string;
+}
 
 interface Salon {
   id: string;
@@ -73,19 +65,12 @@ interface Salon {
   status: string;
 }
 
-interface UserRoleObject {
-  id: string;
-  name: string;
-  color?: string;
-  description?: string;
-}
-
 interface User {
   id: string;
   name: string;
   email: string;
   phone: string;
-  role: UserRoleObject | UserRole; // Allow both object and string for backward compatibility
+  role: UserRoleObject | UserRole; // Allow both object and string roles
   status: UserStatus;
   join_date: string;
   last_login: string | null;
@@ -101,8 +86,6 @@ interface User {
   totalSpent?: number;
   favoriteServices?: string[];
   suspensionReason?: string;
-  // Add color property to User interface
-  color?: string;
 }
 
 interface UserStats {
@@ -115,17 +98,18 @@ interface UserStats {
   suspended: number;
 }
 
-const roleColors: Record<UserRole, string> = {
-  super_admin: "bg-purple-100 text-purple-800",
-  admin: "bg-blue-100 text-blue-800",
-  salon: "bg-green-100 text-green-800",
-  user: "bg-gray-100 text-gray-800",
-};
+// Dynamic role colors from backend (fallback to defaults)
+const getDefaultRoleColors = (): Record<UserRole, string> => ({
+  super_admin: 'bg-purple-100 text-purple-800',
+  admin: 'bg-blue-100 text-blue-800',
+  salon: 'bg-green-100 text-green-800',
+  user: 'bg-gray-100 text-gray-800',
+});
 
 const statusColors: Record<UserStatus, string> = {
-  active: "bg-green-100 text-green-800",
-  pending: "bg-yellow-100 text-yellow-800",
-  suspended: "bg-red-100 text-red-800",
+  active: 'bg-green-100 text-green-800',
+  pending: 'bg-yellow-100 text-yellow-800',
+  suspended: 'bg-red-100 text-red-800',
 };
 
 const roleIcons = {
@@ -135,20 +119,7 @@ const roleIcons = {
   user: Users,
 };
 
-// Helper function to safely format dates
-const formatDateSafely = (
-  dateString: string | null | undefined,
-  fallback: string = "N/A"
-): string => {
-  if (!dateString) return fallback;
-
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return fallback;
-
-  return formatDistanceToNow(date, { addSuffix: true });
-};
-
-// Helper function to safely get role properties
+// Helper function to safely get role information
 const getRoleInfo = (role: UserRoleObject | UserRole) => {
   if (typeof role === 'string') {
     return {
@@ -160,6 +131,59 @@ const getRoleInfo = (role: UserRoleObject | UserRole) => {
     name: role?.name || '',
     color: role?.color
   };
+};
+
+// Helper function to get role key for icons and colors
+const getRoleKey = (role: UserRoleObject | UserRole): UserRole => {
+  const roleInfo = getRoleInfo(role);
+  const roleName = roleInfo.name.toLowerCase();
+  
+  if (roleName.includes('super admin') || roleName === 'super_admin') return 'super_admin';
+  if (roleName.includes('admin')) return 'admin';
+  if (roleName.includes('salon')) return 'salon';
+  return 'user';
+};
+
+// Helper function to get role badge className (fallback when no backend color)
+const getRoleBadgeClassName = (role: UserRoleObject | UserRole): string => {
+  const roleInfo = getRoleInfo(role);
+  
+  // If we have backend color, use border class
+  if (roleInfo.color) {
+    return 'border';
+  }
+  
+  // Fallback to default Tailwind colors
+  const roleKey = getRoleKey(role);
+  const defaultColors = getDefaultRoleColors();
+  return defaultColors[roleKey] || 'bg-gray-100 text-gray-800';
+};
+
+// Helper function to get role badge inline styles (when using backend color)
+const getRoleBadgeInlineStyle = (role: UserRoleObject | UserRole): React.CSSProperties | undefined => {
+  const roleInfo = getRoleInfo(role);
+  
+  // If we have a backend color, create inline styles
+  if (roleInfo.color) {
+    return {
+      backgroundColor: `${roleInfo.color}20`, // Add transparency
+      color: roleInfo.color,
+      borderColor: `${roleInfo.color}40`,
+      borderWidth: '1px'
+    };
+  }
+  
+  return undefined;
+};
+
+// Helper function to safely format dates
+const formatDateSafely = (dateString: string | null | undefined, fallback: string = 'N/A'): string => {
+  if (!dateString) return fallback;
+  
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return fallback;
+  
+  return formatDistanceToNow(date, { addSuffix: true });
 };
 
 export default function UsersPage() {
@@ -174,10 +198,9 @@ export default function UsersPage() {
     suspended: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  // Change roleFilter type to string for dynamic roles
-  // Remove: const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | UserStatus>("all");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | UserStatus>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false);
@@ -186,116 +209,171 @@ export default function UsersPage() {
   const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const { toast } = useToast();
-  // Add roles state
-  const [roles, setRoles] = useState<
-    { id: string; name: string; description?: string; color?: string }[]
-  >([]);
+  const [roles, setRoles] = useState<any[]>([]);
   const [rolesLoaded, setRolesLoaded] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<{
-    id: string;
-    name: string;
-    description?: string;
-    color?: string;
-  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  // Error boundary to prevent blank page
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('Page error:', event.error);
+      setError(`Page error: ${event.error?.message || 'Unknown error'}`);
+      setLoading(false);
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
+  // Load roles separately to avoid multiple fetches
+  useEffect(() => {
+    const loadRoles = async () => {
+      if (rolesLoaded) return;
+      
+      try {
+        console.log('Loading roles...');
+        const rolesData = await fetchRoles();
+        console.log('Roles loaded:', rolesData);
+        setRoles(rolesData || []);
+        setRolesLoaded(true);
+      } catch (error) {
+        console.error('Failed to load roles:', error);
+        // Provide default roles if API fails
+        setRoles([
+          { id: '1', name: 'admin', description: 'Administrator', color: '#3B82F6' },
+          { id: '2', name: 'super_admin', description: 'Super Administrator', color: '#8B5CF6' },
+          { id: '3', name: 'salon', description: 'Salon Owner', color: '#10B981' },
+          { id: '4', name: 'user', description: 'Regular User', color: '#6B7280' }
+        ]);
+        setRolesLoaded(true);
+      }
+    };
+
+    loadRoles();
+  }, [rolesLoaded]);
 
   useEffect(() => {
-    loadUsers();
-    loadRoles();
-    // eslint-disable-next-line
-  }, [selectedRole, statusFilter, searchTerm, page, limit]);
-
-  const loadRoles = async () => {
-    if (rolesLoaded) return; // Only load roles once
-    
-    try {
-      console.log('Loading roles separately...');
-      const rolesData = await fetchRoles();
-      console.log('Roles loaded:', rolesData);
-      setRoles(rolesData || []);
-      setRolesLoaded(true);
-    } catch (error) {
-      console.error("Error loading roles:", error);
-      toast({
-        title: "Warning",
-        description: "Roles could not be loaded. Role filtering may not work properly.",
-        variant: "destructive",
-      });
+    // Only load users if roles are loaded (or if not filtering by role)
+    if (rolesLoaded || roleFilter === 'all') {
+      loadUsers();
     }
-  };
+    // eslint-disable-next-line
+  }, [roleFilter, statusFilter, searchTerm, page, limit, rolesLoaded]);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
-      console.log('Loading users with params:', { selectedRole, statusFilter, searchTerm, page, limit });
+      console.log('Loading users with filters - roleFilter:', roleFilter, 'statusFilter:', statusFilter);
       
       const params: any = { page, limit };
-
-      if (selectedRole?.id) {
-        params.role_id = selectedRole.id;
+      
+      // Convert roleFilter to backend role_id or role name
+      if (roleFilter !== 'all') {
+        // Find the actual role from backend data that matches our filter key
+        const matchingRole = roles.find(role => getRoleKey(role) === roleFilter);
+        if (matchingRole) {
+          // Use role_id for better filtering performance
+          params.role_id = matchingRole.id;
+          console.log('Filtering by role_id:', matchingRole.id, 'for role:', matchingRole.name);
+        } else {
+          // Fallback to role name if no matching role found
+          params.role = roleFilter;
+          console.log('Fallback: filtering by role name:', roleFilter);
+        }
       }
-
-      if (statusFilter !== "all") {
+      
+      if (statusFilter !== 'all') {
         params.status = statusFilter;
       }
-
+      
       if (searchTerm) {
         params.search = searchTerm;
       }
-
-      console.log('Fetching users with params:', params);
       
-      // Try the API call with robust error handling
-      try {
-        const data = await fetchUsers(params);
-        console.log('Users API response:', data);
-        
-        setUsers(Array.isArray(data) ? data : (data.users || []));
-        setStats(data.stats || {
-          total: 0, admin: 0, salon: 0, user: 0, 
-          active: 0, pending: 0, suspended: 0
-        });
-        setTotalPages(data.totalPages || 1);
-        setTotal(data.total || (data.users ? data.users.length : 0));
-        
-        // Try to get roles from users response, but don't fail if not available
-        if (data.roles && !rolesLoaded) {
-          console.log('Setting roles from users response:', data.roles);
-          setRoles(data.roles);
-          setRolesLoaded(true);
-        }
-      } catch (fetchError: any) {
-        console.error("API fetch error:", fetchError);
-        
-        // If this is the specific "roles is not defined" error, provide a helpful message
-        if (fetchError.message && fetchError.message.includes("roles is not defined")) {
-          toast({
-            title: "Database Configuration Issue",
-            description: "The roles table appears to be missing or not properly configured. Please check the backend setup.",
-            variant: "destructive",
-          });
-        } else {
-          throw fetchError; // Re-throw other errors
-        }
+      const data = await fetchUsers(params);
+      console.log('Users API response:', data);
+      
+      // Log role data for debugging
+      if (data.users && data.users.length > 0) {
+        console.log('Sample user role data:', data.users[0]?.role);
+        console.log('All unique roles found:', [...new Set(data.users.map((u: any) => 
+          typeof u.role === 'string' ? u.role : u.role?.name
+        ))]);
       }
       
-    } catch (error) {
-      console.error("Error loading users:", error);
+      // Handle the case where users API response includes roles
+      if (data.roles && !rolesLoaded) {
+        console.log('Setting roles from users response:', data.roles);
+        setRoles(data.roles);
+        setRolesLoaded(true);
+      }
       
-      // Provide more specific error information
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const users = data.users || [];
+      setUsers(users);
       
-      toast({
-        title: "Error",
-        description: `Failed to load users: ${errorMessage}. Please try again or check the console for details.`,
-        variant: "destructive",
+      // Calculate stats from actual user data regardless of backend stats
+      console.log('Calculating stats from user data...');
+      const calculatedStats = {
+        total: users.length,
+        admin: users.filter((u: any) => {
+          const roleKey = getRoleKey(u.role);
+          return roleKey === 'admin' || roleKey === 'super_admin';
+        }).length,
+        salon: users.filter((u: any) => getRoleKey(u.role) === 'salon').length,
+        user: users.filter((u: any) => getRoleKey(u.role) === 'user').length,
+        active: users.filter((u: any) => u.status === 'active').length,
+        pending: users.filter((u: any) => u.status === 'pending').length,
+        suspended: users.filter((u: any) => u.status === 'suspended').length,
+      };
+      
+      console.log('Calculated stats:', calculatedStats);
+      console.log('Backend stats (for comparison):', data.stats);
+      
+      // Debug individual user roles for stats calculation
+      if (users.length > 0) {
+        console.log('Sample user roles for stats debugging:');
+        users.slice(0, 3).forEach((u: any, i: number) => {
+          const roleKey = getRoleKey(u.role);
+          console.log(`User ${i + 1}: ${u.name} - role:`, u.role, '- mapped key:', roleKey);
+        });
+      }
+      
+      setStats(calculatedStats || {
+        total: 0,
+        admin: 0,
+        salon: 0,
+        user: 0,
+        active: 0,
+        pending: 0,
+        suspended: 0,
       });
+      setTotalPages(data.totalPages || 1);
+      setTotal(data.total || 0);
+    } catch (error) {
+      console.error('Error loading users:', error);
       
-      // Set empty data on error to prevent crashes
+      // Set empty data to prevent crashes
       setUsers([]);
       setStats({
-        total: 0, admin: 0, salon: 0, user: 0, 
-        active: 0, pending: 0, suspended: 0
+        total: 0,
+        admin: 0,
+        salon: 0,
+        user: 0,
+        active: 0,
+        pending: 0,
+        suspended: 0,
+      });
+      
+      // Show specific error for "roles is not defined"
+      const errorMessage = error instanceof Error && error.message.includes('roles is not defined')
+        ? 'Backend role configuration issue. Using fallback data.'
+        : 'Failed to load users. Please try again.';
+      
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -306,27 +384,25 @@ export default function UsersPage() {
     try {
       await updateUserStatus(userId, newStatus);
 
-      setUsers((prev) =>
-        prev.map((user) =>
-          user.id === userId ? { ...user, status: newStatus } : user
-        )
-      );
+      setUsers(prev => prev.map(user => 
+        user.id === userId ? { ...user, status: newStatus } : user
+      ));
 
       const statusMessages = {
-        active: "User has been reactivated",
-        suspended: "User has been suspended",
-        pending: "User status updated to pending",
+        active: 'User has been reactivated',
+        suspended: 'User has been suspended',
+        pending: 'User status updated to pending',
       };
 
       toast({
-        title: "Status updated",
+        title: 'Status updated',
         description: statusMessages[newStatus],
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to update user status. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update user status. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -334,17 +410,17 @@ export default function UsersPage() {
   const handleDelete = async (userId: string) => {
     try {
       await deleteUser(userId);
-      setUsers((prev) => prev.filter((user) => user.id !== userId));
+      setUsers(prev => prev.filter(user => user.id !== userId));
 
       toast({
-        title: "User deleted",
-        description: "The user has been permanently removed from the platform.",
+        title: 'User deleted',
+        description: 'The user has been permanently removed from the platform.',
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to delete user. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to delete user. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -374,7 +450,7 @@ export default function UsersPage() {
 
   const confirmSuspend = () => {
     if (selectedUser) {
-      handleStatusChange(selectedUser.id, "suspended");
+      handleStatusChange(selectedUser.id, 'suspended');
       setSuspendDialogOpen(false);
       setSelectedUser(null);
     }
@@ -382,31 +458,40 @@ export default function UsersPage() {
 
   const confirmReactivate = () => {
     if (selectedUser) {
-      handleStatusChange(selectedUser.id, "active");
+      handleStatusChange(selectedUser.id, 'active');
       setReactivateDialogOpen(false);
       setSelectedUser(null);
     }
   };
 
-  const getRoleDisplayName = (role: UserRole) => {
-    switch (role) {
-      case "super_admin":
-        return "Super Admin";
-      case "admin":
-        return "Admin";
-      case "salon":
-        return "Salon Owner";
-      case "user":
-        return "Customer";
-      default:
-        return role;
+  // Helper function to get role display name from backend or fallback
+  const getRoleDisplayName = (role: UserRoleObject | UserRole): string => {
+    const roleInfo = getRoleInfo(role);
+    
+    // Use backend role name if available
+    if (typeof role === 'object' && role.name) {
+      return role.name;
     }
+    
+    // Fallback for string roles
+    if (typeof role === 'string') {
+      switch (role) {
+        case 'super_admin': return 'Super Admin';
+        case 'admin': return 'Admin';
+        case 'salon': return 'Salon Owner';
+        case 'user': return 'Customer';
+        default: return role;
+      }
+    }
+    
+    return roleInfo.name || 'Unknown Role';
   };
 
   const renderUserSpecificInfo = (user: User) => {
-    switch (user.role) {
-      case "admin":
-      case "super_admin":
+    const roleKey = getRoleKey(user.role);
+    switch (roleKey) {
+      case 'admin':
+      case 'super_admin':
         return (
           <div className="text-center">
             <p className="text-sm font-semibold text-gray-900">
@@ -415,7 +500,7 @@ export default function UsersPage() {
             <p className="text-xs text-gray-500">Permissions</p>
           </div>
         );
-      case "salon":
+      case 'salon':
         return (
           <>
             <div className="text-center">
@@ -432,7 +517,7 @@ export default function UsersPage() {
             </div>
           </>
         );
-      case "user":
+      case 'user':
         return (
           <>
             <div className="text-center">
@@ -455,7 +540,8 @@ export default function UsersPage() {
   };
 
   const renderSalonOwnerDetails = (user: User) => {
-    if (user.role !== "salon" || !user.salons || user.salons.length === 0) {
+    const roleKey = getRoleKey(user.role);
+    if (roleKey !== 'salon' || !user.salons || user.salons.length === 0) {
       return null;
     }
 
@@ -477,20 +563,22 @@ export default function UsersPage() {
     );
   };
 
-  const fetchRoles = async () => {
-    if (rolesLoaded) return;
-    try {
-      const data = await apiFetch("/roles/list");
-      setRoles(data);
-      setRolesLoaded(true);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load roles",
-        variant: "destructive",
-      });
-    }
-  };
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-bold text-red-600">Page Error</h2>
+          <p className="text-gray-600 mt-2">{error}</p>
+          <p className="text-sm text-gray-500 mt-4">Please check the browser console for more details.</p>
+          <div className="flex gap-2 justify-center mt-6">
+            <Button onClick={() => window.location.reload()}>Reload Page</Button>
+            <Button variant="outline" onClick={() => setError(null)}>Dismiss Error</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -507,6 +595,11 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
           <p className="text-gray-600">
             Manage all platform users: admins, salon owners, and customers
+            {roles.length > 0 && (
+              <span className="ml-2 text-sm text-green-600">
+                {/* ✓ Using {roles.length} roles from backend */}
+              </span>
+            )}
           </p>
         </div>
         <Link to="/dashboard/users/new">
@@ -527,29 +620,34 @@ export default function UsersPage() {
             </div>
           </CardContent>
         </Card>
-        {/* Dynamic role cards */}
-        {roles.map((role) => (
-          <Card key={role.id} className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="text-center">
-                <p
-                  className="text-2xl font-bold"
-                  style={{ color: role.color || "#7c3aed" }}
-                >
-                  {stats[role.id] || 0}
-                </p>
-                <p className="text-xs text-gray-500">{role.name}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {/* Status cards */}
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">
-                {stats.active}
-              </p>
+              <p className="text-2xl font-bold text-purple-600">{stats.admin}</p>
+              <p className="text-xs text-gray-500">Admins</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-green-600">{stats.salon}</p>
+              <p className="text-xs text-gray-500">Salon Owners</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-blue-600">{stats.user}</p>
+              <p className="text-xs text-gray-500">Customers</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-green-600">{stats.active}</p>
               <p className="text-xs text-gray-500">Active</p>
             </div>
           </CardContent>
@@ -557,9 +655,7 @@ export default function UsersPage() {
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-yellow-600">
-                {stats.pending}
-              </p>
+              <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
               <p className="text-xs text-gray-500">Pending</p>
             </div>
           </CardContent>
@@ -567,9 +663,7 @@ export default function UsersPage() {
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-red-600">
-                {stats.suspended}
-              </p>
+              <p className="text-2xl font-bold text-red-600">{stats.suspended}</p>
               <p className="text-xs text-gray-500">Suspended</p>
             </div>
           </CardContent>
@@ -589,86 +683,105 @@ export default function UsersPage() {
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              {/* Role Filter Dropdown */}
-              <Select
-                value={selectedRole?.id || "all"}
-                onValueChange={(value) => {
-                  if (value === "all") {
-                    setSelectedRole(null);
-                  } else {
-                    const roleObj = roles.find((role) => role.id === value);
-                    console.log(roleObj);
-                    setSelectedRole(roleObj || null);
-                  }
+              {/* Role Filters - Dynamic based on backend roles */}
+              <Button
+                variant={roleFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => {
+                  console.log('All roles filter clicked');
+                  setRoleFilter('all');
                 }}
-                onOpenChange={(open) => {
-                  if (open) fetchRoles();
-                }}
+                size="sm"
               >
-                <SelectTrigger className="w-40">
-                  {selectedRole ? (
-                    <span
-                      style={{
-                        background: selectedRole.color,
-                        color: "#fff",
-                        borderRadius: 4,
-                        padding: "2px 8px",
-                        display: "inline-block",
+                All Roles
+              </Button>
+              
+              {/* Generate role filter buttons dynamically from backend data */}
+              {roles.length > 0 ? (
+                roles.map((role) => {
+                  const roleKey = getRoleKey(role);
+                  const RoleIcon = roleIcons[roleKey] || Users;
+                  
+                  return (
+                    <Button
+                      key={role.id || role.name}
+                      variant={roleFilter === roleKey ? 'default' : 'outline'}
+                      onClick={() => {
+                        console.log('Role filter clicked:', roleKey, 'for role:', role.name);
+                        setRoleFilter(roleKey);
                       }}
+                      size="sm"
+                      style={role.color ? { borderColor: role.color } : undefined}
                     >
-                      {selectedRole.name}
-                    </span>
-                  ) : (
-                    <span>All Roles</span>
-                  )}
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      <span
-                        style={{
-                          background: role.color,
-                          color: "#fff",
-                          borderRadius: 4,
-                          padding: "2px 8px",
-                          marginRight: 8,
-                          display: "inline-block",
-                        }}
-                      >
-                        {role.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
+                      <RoleIcon className="h-3 w-3 mr-1" />
+                      {role.name}
+                    </Button>
+                  );
+                })
+              ) : (
+                // Fallback to hardcoded buttons if no backend roles available
+                <>
+                  <Button
+                    variant={roleFilter === 'admin' || roleFilter === 'super_admin' ? 'default' : 'outline'}
+                    onClick={() => {
+                      console.log('Fallback admin filter clicked');
+                      setRoleFilter('admin');
+                    }}
+                    size="sm"
+                  >
+                    <Shield className="h-3 w-3 mr-1" />
+                    Admins
+                  </Button>
+                  <Button
+                    variant={roleFilter === 'salon' ? 'default' : 'outline'}
+                    onClick={() => {
+                      console.log('Fallback salon filter clicked');
+                      setRoleFilter('salon');
+                    }}
+                    size="sm"
+                  >
+                    <Building2 className="h-3 w-3 mr-1" />
+                    Salons
+                  </Button>
+                  <Button
+                    variant={roleFilter === 'user' ? 'default' : 'outline'}
+                    onClick={() => {
+                      console.log('Fallback user filter clicked');
+                      setRoleFilter('user');
+                    }}
+                    size="sm"
+                  >
+                    <Users className="h-3 w-3 mr-1" />
+                    Customers
+                  </Button>
+                </>
+              )}
+              
               {/* Status Filters */}
               <div className="w-px h-6 bg-gray-300 mx-2" />
               <Button
-                variant={statusFilter === "all" ? "default" : "outline"}
-                onClick={() => setStatusFilter("all")}
+                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('all')}
                 size="sm"
               >
                 All Status
               </Button>
               <Button
-                variant={statusFilter === "active" ? "default" : "outline"}
-                onClick={() => setStatusFilter("active")}
+                variant={statusFilter === 'active' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('active')}
                 size="sm"
               >
                 Active
               </Button>
               <Button
-                variant={statusFilter === "pending" ? "default" : "outline"}
-                onClick={() => setStatusFilter("pending")}
+                variant={statusFilter === 'pending' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('pending')}
                 size="sm"
               >
                 Pending
               </Button>
               <Button
-                variant={statusFilter === "suspended" ? "default" : "outline"}
-                onClick={() => setStatusFilter("suspended")}
+                variant={statusFilter === 'suspended' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('suspended')}
                 size="sm"
               >
                 Suspended
@@ -679,47 +792,25 @@ export default function UsersPage() {
         <CardContent>
           <div className="space-y-4">
             {users.map((user) => {
-              // Get role info safely
-              const roleInfo = getRoleInfo(user.role);
-              let RoleIcon = roleIcons[roleInfo.name.toLowerCase().replace(' ', '_')];
-              if (!RoleIcon) {
-                console.warn("Missing icon for role:", roleInfo.name, "- using fallback");
-                RoleIcon = Users; // fallback icon
-              }
+              const roleKey = getRoleKey(user.role);
+              const RoleIcon = roleIcons[roleKey] || Users;
               return (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                >
+                <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center space-x-4">
                     <div className="relative">
                       <Avatar className="h-12 w-12">
                         <AvatarImage
-                          src={
-                            user.avatar
-                              ? `${
-                                  import.meta.env.VITE_BACKEND_URL ||
-                                  "http://localhost:5000"
-                                }/images/avatar/${user.avatar}`
-                              : undefined
-                          }
+                          src={user.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/avatar/${user.avatar}` : undefined}
                           alt={user.name}
                         />
-                        <AvatarFallback>
-                          {user.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
+                        <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                       </Avatar>
                       <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1">
                         <RoleIcon className="h-3 w-3 text-gray-600" />
                       </div>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">
-                        {user.name}
-                      </h3>
+                      <h3 className="font-semibold text-gray-900">{user.name}</h3>
                       <p className="text-sm text-gray-600">{user.email}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <p className="text-xs text-gray-500">{user.phone}</p>
@@ -727,14 +818,13 @@ export default function UsersPage() {
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-3 w-3 text-gray-400" />
                         <span className="text-xs text-gray-500">
-                          Joined {formatDateSafely(user.join_date, "Unknown")}
+                          Joined {formatDateSafely(user.join_date, 'Unknown')}
                         </span>
                         {user.last_login && (
                           <>
                             <span className="text-gray-300">•</span>
                             <span className="text-xs text-gray-500">
-                              Last seen{" "}
-                              {formatDateSafely(user.last_login, "Unknown")}
+                              Last seen {formatDateSafely(user.last_login, 'Unknown')}
                             </span>
                           </>
                         )}
@@ -742,17 +832,15 @@ export default function UsersPage() {
                       {renderSalonOwnerDetails(user)}
                     </div>
                   </div>
-
+                  
                   <div className="flex items-center space-x-6">
                     {renderUserSpecificInfo(user)}
-
+                    
                     <div className="flex flex-col gap-1">
-                      <Badge
-                        style={
-                          getRoleInfo(user.role).color
-                            ? { background: getRoleInfo(user.role).color, color: "#fff" }
-                            : {}
-                        }
+                      <Badge 
+                        className={getRoleBadgeClassName(user.role)}
+                        style={getRoleBadgeInlineStyle(user.role)}
+                        title={typeof user.role === 'object' && user.role.description ? user.role.description : getRoleInfo(user.role).name}
                       >
                         {getRoleInfo(user.role).name}
                       </Badge>
@@ -760,7 +848,7 @@ export default function UsersPage() {
                         {user.status}
                       </Badge>
                     </div>
-
+                    
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -769,36 +857,27 @@ export default function UsersPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                          <Link
-                            to={`/dashboard/users/${user.id}`}
-                            className="flex items-center w-full"
-                          >
+                          <Link to={`/dashboard/users/${user.id}`} className="flex items-center w-full">
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link
-                            to={`/dashboard/users/${user.id}/edit`}
-                            className="flex items-center w-full"
-                          >
+                          <Link to={`/dashboard/users/${user.id}/edit`} className="flex items-center w-full">
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </Link>
                         </DropdownMenuItem>
-                        {user.role === "salon" && (
+                        {roleKey === 'salon' && (
                           <DropdownMenuItem asChild>
-                            <Link
-                              to={`/dashboard/salons?ownerId=${user.id}`}
-                              className="flex items-center w-full"
-                            >
+                            <Link to={`/dashboard/salons?ownerId=${user.id}`} className="flex items-center w-full">
                               <Building2 className="mr-2 h-4 w-4" />
                               View Salons ({user.salons?.length || 0})
                             </Link>
                           </DropdownMenuItem>
                         )}
-                        {user.status === "active" && (
-                          <DropdownMenuItem
+                        {user.status === 'active' && (
+                          <DropdownMenuItem 
                             className="text-red-600 cursor-pointer"
                             onClick={() => openSuspendDialog(user)}
                           >
@@ -806,8 +885,8 @@ export default function UsersPage() {
                             Suspend
                           </DropdownMenuItem>
                         )}
-                        {user.status === "suspended" && (
-                          <DropdownMenuItem
+                        {user.status === 'suspended' && (
+                          <DropdownMenuItem 
                             className="text-green-600 cursor-pointer"
                             onClick={() => openReactivateDialog(user)}
                           >
@@ -815,7 +894,7 @@ export default function UsersPage() {
                             Reactivate
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem
+                        <DropdownMenuItem 
                           className="text-red-600 cursor-pointer"
                           onClick={() => openDeleteDialog(user)}
                         >
@@ -831,30 +910,13 @@ export default function UsersPage() {
           </div>
           {/* Pagination Controls */}
           <div className="flex justify-center items-center gap-4 mt-6">
-            <Button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              variant="outline"
-            >
-              Previous
-            </Button>
-            <span>
-              Page {page} of {totalPages} ({total} users)
-            </span>
-            <Button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              variant="outline"
-            >
-              Next
-            </Button>
+            <Button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} variant="outline">Previous</Button>
+            <span>Page {page} of {totalPages} ({total} users)</span>
+            <Button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} variant="outline">Next</Button>
             <select
               className="ml-4 border rounded px-2 py-1"
               value={limit}
-              onChange={(e) => {
-                setLimit(Number(e.target.value));
-                setPage(1);
-              }}
+              onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
             >
               <option value={5}>5</option>
               <option value={10}>10</option>
@@ -872,22 +934,17 @@ export default function UsersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete User</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{selectedUser?.name}"? This
-              action cannot be undone and will permanently remove the user from
-              the platform.
-              {selectedUser?.role === "salon" &&
-                selectedUser.totalSalons &&
-                selectedUser.totalSalons > 0 && (
-                  <span className="block mt-2 text-red-600 font-medium">
-                    Warning: This user owns {selectedUser.totalSalons} salon(s).
-                    Deleting this user will also affect their salon(s).
-                  </span>
-                )}
+              Are you sure you want to delete "{selectedUser?.name}"? This action cannot be undone and will permanently remove the user from the platform.
+              {selectedUser && getRoleKey(selectedUser.role) === 'salon' && selectedUser.totalSalons && selectedUser.totalSalons > 0 && (
+                <span className="block mt-2 text-red-600 font-medium">
+                  Warning: This user owns {selectedUser.totalSalons} salon(s). Deleting this user will also affect their salon(s).
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogAction 
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700"
             >
@@ -903,21 +960,17 @@ export default function UsersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Suspend User</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to suspend "{selectedUser?.name}"? This will
-              temporarily disable their access to the platform.
-              {selectedUser?.role === "salon" &&
-                selectedUser.totalSalons &&
-                selectedUser.totalSalons > 0 && (
-                  <span className="block mt-2 text-yellow-600 font-medium">
-                    Note: This user owns {selectedUser.totalSalons} salon(s).
-                    Suspending this user may affect their salon operations.
-                  </span>
-                )}
+              Are you sure you want to suspend "{selectedUser?.name}"? This will temporarily disable their access to the platform.
+              {selectedUser && getRoleKey(selectedUser.role) === 'salon' && selectedUser.totalSalons && selectedUser.totalSalons > 0 && (
+                <span className="block mt-2 text-yellow-600 font-medium">
+                  Note: This user owns {selectedUser.totalSalons} salon(s). Suspending this user may affect their salon operations.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogAction 
               onClick={confirmSuspend}
               className="bg-red-600 hover:bg-red-700"
             >
@@ -928,21 +981,17 @@ export default function UsersPage() {
       </AlertDialog>
 
       {/* Reactivate Confirmation Dialog */}
-      <AlertDialog
-        open={reactivateDialogOpen}
-        onOpenChange={setReactivateDialogOpen}
-      >
+      <AlertDialog open={reactivateDialogOpen} onOpenChange={setReactivateDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Reactivate User</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to reactivate "{selectedUser?.name}"? This
-              will restore their access to the platform.
+              Are you sure you want to reactivate "{selectedUser?.name}"? This will restore their access to the platform.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogAction 
               onClick={confirmReactivate}
               className="bg-green-600 hover:bg-green-700"
             >

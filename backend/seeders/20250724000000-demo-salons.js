@@ -6,7 +6,7 @@ module.exports = {
     // Clean up existing data to avoid duplicates
     await queryInterface.bulkDelete('salon_services', null, {});
     await queryInterface.bulkDelete('salons', null, {});
-    await queryInterface.bulkDelete('addresses', null, {});
+    // Don't delete addresses as they are needed for foreign key constraints
     
     // Get salon owners from users table
     const salonOwners = await queryInterface.sequelize.query(

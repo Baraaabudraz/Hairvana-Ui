@@ -23,30 +23,8 @@ export function Header() {
     navigate("/auth/login");
   };
 
-  // Mock notifications data
-  const notifications = [
-    {
-      id: 1,
-      title: "New salon registered",
-      description: "Bella Hair Studio submitted registration",
-      time: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-      read: false,
-    },
-    {
-      id: 2,
-      title: "User reported salon",
-      description: "Sarah Johnson reported inappropriate behavior",
-      time: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-      read: false,
-    },
-    {
-      id: 3,
-      title: "Subscription upgraded",
-      description: "Urban Cuts upgraded to Premium plan",
-      time: new Date(Date.now() - 1000 * 60 * 60 * 4), // 4 hours ago
-      read: true,
-    },
-  ];
+  // TODO: Replace with real notifications from API
+  const notifications: any[] = [];
 
   return (
     <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">

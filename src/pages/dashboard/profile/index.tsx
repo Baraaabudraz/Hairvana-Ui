@@ -313,7 +313,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-2 mt-2">
                 <Badge
                   style={
-                    user?.role?.color
+                    typeof user?.role === 'object' && user?.role?.color
                       ? { background: user.role.color, color: "#fff" }
                       : {}
                   }

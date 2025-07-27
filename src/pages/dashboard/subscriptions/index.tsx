@@ -156,10 +156,39 @@ const planColors: Record<PlanType, string> = {
   Premium: "bg-purple-100 text-purple-800",
 };
 
-const planIcons = {
-  Basic: Zap || (() => <span>⚡</span>),
-  Standard: Star || (() => <span>★</span>),
-  Premium: Crown || (() => <span>👑</span>),
+const planIcons: Record<string, any> = {
+  Basic: Zap,
+  Standard: Star,
+  Premium: Crown,
+};
+
+const getPlanIcon = (planName: string) => {
+  // Normalize plan name for comparison
+  const normalizedName = planName.toLowerCase().trim();
+  
+  // Direct mapping
+  if (planIcons[planName]) {
+    return planIcons[planName];
+  }
+  
+  // Flexible mapping based on keywords
+  if (normalizedName.includes('basic') || normalizedName.includes('starter') || normalizedName.includes('free')) {
+    return Zap;
+  }
+  if (normalizedName.includes('standard') || normalizedName.includes('pro') || normalizedName.includes('business')) {
+    return Star;
+  }
+  if (normalizedName.includes('premium') || normalizedName.includes('enterprise') || normalizedName.includes('unlimited')) {
+    return Crown;
+  }
+  
+  // Default fallback based on common plan types
+  if (normalizedName.includes('trial')) {
+    return AlertTriangle;
+  }
+  
+  // Ultimate fallback
+  return Building2; // Generic business icon
 };
 
 export default function SubscriptionsPage() {
@@ -614,7 +643,7 @@ export default function SubscriptionsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {plans.map((plan) => {
-                const PlanIcon = planIcons[plan.name as PlanType];
+                const PlanIcon = getPlanIcon(plan.name);
                 return (
                   <div
                     key={plan.id}
@@ -642,11 +671,7 @@ export default function SubscriptionsPage() {
                               : "from-purple-600 to-purple-700"
                           }`}
                         >
-                          {PlanIcon ? (
-                            <PlanIcon className="h-6 w-6 text-white" />
-                          ) : (
-                            <span className="h-6 w-6">?</span>
-                          )}
+                          <PlanIcon className="h-6 w-6 text-white" />
                         </div>
                       </div>
                       <h3 className="text-xl font-bold text-gray-900">
@@ -765,7 +790,7 @@ export default function SubscriptionsPage() {
         <CardContent>
           <div className="space-y-4">
             {subscriptions.map((subscription) => {
-              const PlanIcon = planIcons[subscription.plan];
+              const PlanIcon = getPlanIcon(subscription.plan);
               const usage = subscription.usage || {};
               const bookings = usage.bookings ?? 0;
               const bookingsLimit = usage.bookingsLimit ?? "unlimited";
@@ -799,11 +824,7 @@ export default function SubscriptionsPage() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1">
-                        {PlanIcon ? (
-                          <PlanIcon className="h-3 w-3 text-gray-600" />
-                        ) : (
-                          <span className="h-3 w-3">?</span>
-                        )}
+                        <PlanIcon className="h-3 w-3 text-gray-600" />
                       </div>
                     </div>
                     <div>
@@ -1045,7 +1066,7 @@ export default function SubscriptionsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {selectedSubscription &&
                 getAvailableUpgrades(selectedSubscription?.plan).map((plan) => {
-                  const PlanIcon = planIcons[plan.name as PlanType];
+                  const PlanIcon = getPlanIcon(plan.name);
                   const isSelected = selectedNewPlan?.id === plan.id;
                   return (
                     <div
@@ -1064,13 +1085,9 @@ export default function SubscriptionsPage() {
                               ? "from-blue-600 to-blue-700"
                               : "from-purple-600 to-purple-700"
                           }`}
-                        >
-                          {PlanIcon ? (
-                            <PlanIcon className="h-5 w-5 text-white" />
-                          ) : (
-                            <span className="h-5 w-5">?</span>
-                          )}
-                        </div>
+                                                    >
+                              <PlanIcon className="h-5 w-5 text-white" />
+                            </div>
                         <div>
                           <h3 className="font-bold text-gray-900">
                             {plan.name}
@@ -1150,7 +1167,7 @@ export default function SubscriptionsPage() {
               {selectedSubscription &&
                 getAvailableDowngrades(selectedSubscription?.plan).map(
                   (plan) => {
-                    const PlanIcon = planIcons[plan.name as PlanType];
+                    const PlanIcon = getPlanIcon(plan.name);
                     const isSelected = selectedNewPlan?.id === plan.id;
                     return (
                       <div
@@ -1170,11 +1187,7 @@ export default function SubscriptionsPage() {
                                 : "from-blue-600 to-blue-700"
                             }`}
                           >
-                            {PlanIcon ? (
-                              <PlanIcon className="h-5 w-5 text-white" />
-                            ) : (
-                              <span className="h-5 w-5">?</span>
-                            )}
+                            <PlanIcon className="h-5 w-5 text-white" />
                           </div>
                           <div>
                             <h3 className="font-bold text-gray-900">

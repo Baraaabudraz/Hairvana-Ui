@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Upload, X, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createSalon } from '@/api/salons';
-import { fetchUsersByRole } from '@/api/users';
+import { fetchUsersByRole, fetchUsers } from '@/api/users';
 import type { User } from '@/types/user';
 
 const salonSchema = z.object({
@@ -85,14 +85,57 @@ export default function NewSalonPage() {
       try {
         setLoadingOwners(true);
         
-        // Fetch users with salon role
-        const response = await fetchUsersByRole('salon');
-        setOwners(response.users || []);
+        console.log('Loading salon owners...');
+        
+        // Try different possible role names for salon owners
+        const possibleRoleNames = ['salon', 'Salon', 'salon_owner', 'Salon Owner', 'salonowner'];
+        let response = null;
+        let usedRoleName = '';
+        
+        for (const roleName of possibleRoleNames) {
+          try {
+            console.log(`Trying role name: "${roleName}"`);
+            response = await fetchUsersByRole(roleName);
+            usedRoleName = roleName;
+            console.log(`Successfully found users with role "${roleName}":`, response);
+            break;
+          } catch (roleError) {
+            console.log(`Role "${roleName}" not found or failed:`, roleError);
+            continue;
+          }
+        }
+        
+        if (!response) {
+          // If no specific salon role found, try fetching all users and filter later
+          console.log('No salon role found, fetching all users...');
+          const allUsersResponse = await fetchUsers();
+          console.log('All users response:', allUsersResponse);
+          
+          // Filter users that might be salon owners (you can adjust this logic)
+          const potentialOwners = allUsersResponse.users?.filter((user: any) => 
+            user.role?.name?.toLowerCase().includes('salon') ||
+            user.role?.name?.toLowerCase().includes('owner')
+          ) || [];
+          
+          setOwners(potentialOwners);
+          
+          if (potentialOwners.length === 0) {
+            toast({
+              title: 'No salon owners found',
+              description: 'No users with salon owner roles were found. You may need to create salon owner accounts first.',
+              variant: 'destructive',
+            });
+          }
+        } else {
+          setOwners(response.users || response || []);
+          console.log(`Set ${(response.users || response || []).length} owners from role "${usedRoleName}"`);
+        }
+        
       } catch (error) {
         console.error('Error loading owners:', error);
         toast({
           title: 'Error',
-          description: 'Failed to load salon owners. Please try again.',
+          description: `Failed to load salon owners: ${error instanceof Error ? error.message : 'Please try again.'}`,
           variant: 'destructive',
         });
       } finally {

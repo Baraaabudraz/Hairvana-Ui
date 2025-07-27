@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const appointmentController = require('../../../../controllers/Api/customer/appointmentController');
-const { authenticateCustomer } = require('../../../../middleware/authMiddleware');
+const { authenticateCustomer } = require('../../../../middleware/passportMiddleware');
 const { 
   createAppointmentValidation, 
   bookAppointmentValidation,

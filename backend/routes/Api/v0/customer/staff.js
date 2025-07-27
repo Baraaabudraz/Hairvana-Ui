@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mobileStaffController = require('../../../../controllers/Api/customer/mobileStaffController');
-const { authenticateCustomer } = require('../../../../middleware/authMiddleware');
+const { authenticateCustomer } = require('../../../../middleware/passportMiddleware');
 
 router.use(authenticateCustomer);
 

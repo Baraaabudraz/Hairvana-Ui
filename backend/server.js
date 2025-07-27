@@ -3,6 +3,7 @@ require("dotenv").config({ path: path.join(__dirname, ".env") });
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const passport = require('./config/passport');
 const { sequelize } = require("./lib/supabase");
 
 // Passenger setup
@@ -24,6 +25,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(morgan("dev"));
+
+// Initialize Passport
+app.use(passport.initialize());
 app.use((req, res, next) => {
   res.set("Cache-Control", "no-store");
   next();

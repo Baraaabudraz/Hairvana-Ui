@@ -3,6 +3,8 @@ const router = express.Router();
 const checkPermission = require("../../../../middleware/permissionMiddleware");
 const ownerProfileController = require("../../../../controllers/Api/salon/ownerProfileController");
 const { createUploadMiddleware } = require("../../../../helpers/uploadHelper");
+const { authenticateOwner } = require('../../../../middleware/passportMiddleware');
+
 
 const uploadAvatar = createUploadMiddleware({
   uploadDir: "backend/public/uploads/avatars",

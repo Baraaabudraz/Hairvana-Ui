@@ -27,7 +27,7 @@ async function seed() {
     await seedIntegrationSettings();
     await seedReportTemplates();
     await seedOwnerDocuments();
-    await seedReviews();
+    // await seedReviews(); // Temporarily disabled
     await seedBillingSettings();
     await seedSecuritySettings();
     await seedPlatformSettings();

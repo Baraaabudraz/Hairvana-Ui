@@ -3,8 +3,10 @@ const { v4: uuidv4 } = require('uuid');
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // Clean up existing salon_services to avoid duplicates
+    // Clean up existing data to avoid duplicates
     await queryInterface.bulkDelete('salon_services', null, {});
+    await queryInterface.bulkDelete('salons', null, {});
+    await queryInterface.bulkDelete('addresses', null, {});
     
     // Get salon owners from users table
     const salonOwners = await queryInterface.sequelize.query(

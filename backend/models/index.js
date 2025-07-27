@@ -42,12 +42,11 @@ const SecuritySettings = require("./security_settings");
 const PlatformSettings = require('./platform_settings');
 const BackupSettings = require('./backup_settings');
 const NotificationPreferences = require('./notification_preferences');
-const IntegrationSettings = require("./integration_settings")(sequelize);
-const Review = require("./review");
-const MobileDevice = require("./mobile_device");
-const OwnerDocument = require("./owner_document");
-const Role = require("./role");
-const Permission = require("./permission");
+const IntegrationSettings = require('./integration_settings')(sequelize);
+const Review = require('./review');
+const MobileDevice = require('./mobile_device');
+const OwnerDocument = require('./owner_document');
+const TokenBlacklist = require('./token_blacklist');
 
 // Initialize models in dependency order
 const models = {
@@ -80,8 +79,7 @@ const models = {
   Review: Review(sequelize, Sequelize.DataTypes),
   MobileDevice: MobileDevice(sequelize, Sequelize.DataTypes),
   OwnerDocument: OwnerDocument(sequelize, Sequelize.DataTypes),
-  Role: Role(sequelize, Sequelize.DataTypes),
-  Permission: Permission(sequelize, Sequelize.DataTypes),
+  TokenBlacklist: TokenBlacklist(sequelize, Sequelize.DataTypes)
 };
 
 // Initialize associations

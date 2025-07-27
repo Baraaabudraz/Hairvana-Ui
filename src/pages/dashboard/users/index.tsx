@@ -45,7 +45,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { fetchUsers, updateUserStatus, deleteUser } from '@/api/users';
 import { fetchRoles } from '@/api/roles';
 
-type UserRole = 'admin' | 'super_admin' | 'salon' | 'user';
+type UserRole = 'admin' | 'super_admin' | 'salon' | 'user' | 'customer';
 type UserStatus = 'active' | 'pending' | 'suspended';
 
 interface UserRoleObject {
@@ -518,6 +518,7 @@ export default function UsersPage() {
           </>
         );
       case 'user':
+      case 'customer': // Handle customer role same as user
         return (
           <>
             <div className="text-center">
@@ -800,7 +801,7 @@ export default function UsersPage() {
                     <div className="relative">
                       <Avatar className="h-12 w-12">
                         <AvatarImage
-                          src={user.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/images/avatar/${user.avatar}` : undefined}
+                          src={user.avatar ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${user.avatar}` : undefined}
                           alt={user.name}
                         />
                         <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>

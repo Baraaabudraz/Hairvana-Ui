@@ -34,7 +34,7 @@ const authorize = (...roleNames) => {
 
 const authenticateCustomer = (req, res, next) => {
   protect(req, res, function() {
-    if(req.user && req.user.role === 'customer') {
+    if(req.user && req.user.role === 'user') {
       return next();
     }
     return res.status(403).json({ error: 'Only customers can access this endpoint.' });

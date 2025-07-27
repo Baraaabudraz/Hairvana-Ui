@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { createUploadMiddleware } = require("../../../../helpers/uploadHelper");
-const ownerAuthController = require("../../../../controllers/Api/salon/auth/ownerAuthController");
-const ownerProfileController = require("../../../../controllers/Api/salon/ownerProfileController");
+const { createUploadMiddleware } = require('../../../../helpers/uploadHelper');
+const ownerAuthController = require('../../../../controllers/Api/salon/auth/ownerAuthController');
+const ownerProfileController = require('../../../../controllers/Api/salon/ownerProfileController');
+const { authenticateOwner, authenticateForLogout } = require('../../../../middleware/passportMiddleware');
 const checkPermission = require("../../../../middleware/permissionMiddleware");
 
 // Multer setup for file uploads using uploadHelper
@@ -27,7 +28,8 @@ router.post("/login", ownerAuthController.login);
 // Logout
 router.post(
   "/logout",
-  checkPermission("salon", "edit"),
+  authenticateForLogout
+  ,checkPermission("salon", "edit"),
   ownerAuthController.logout
 );
 

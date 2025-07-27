@@ -1,14 +1,10 @@
-const {
-  User,
-  Salon,
-  SalonOwner,
-  OwnerDocument,
-} = require("../../../../models");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const config = require("../../../../config/config.json");
-const { getFileInfo } = require("../../../../helpers/uploadHelper");
-const { error } = require("console");
+const { User, Salon, SalonOwner, OwnerDocument } = require('../../../../models');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const config = require('../../../../config/config.json');
+const { getFileInfo } = require('../../../../helpers/uploadHelper');
+const { error } = require('console');
+const TokenService = require('../../../../services/tokenService');
 
 exports.register = async (req, res) => {
   try {
@@ -99,15 +95,18 @@ exports.login = async (req, res) => {
     if (!valid) {
       return res.status(401).json({ error: "Invalid credentials." });
     }
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role_id: user.role_id },
-      config.jwtSecret || process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    // Generate token pair using TokenService
+    const tokenPair = await TokenService.generateTokenPair({
+      userId: user.id,
+      email: user.email,
+      role: user.role
+    });
+
     return res.json({
       success: true,
-      token,
-      user: { id: user.id, name: user.name, email: user.email },
+      accessToken: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      user: { id: user.id, name: user.name, email: user.email }
     });
   } catch (err) {
     return res.status(500).json({ error: "Login failed." });
@@ -116,19 +115,48 @@ exports.login = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    // If you use device tokens for push notifications, remove them here (optional)
+    // Blacklist the current token to revoke it immediately
+    const tokenInfo = req.tokenInfo || req.user; // From authenticateForLogout middleware
+    let tokenBlacklisted = false;
+
+    if (tokenInfo && tokenInfo.jti) {
+      try {
+        await TokenService.blacklistToken(
+          tokenInfo.jti,
+          tokenInfo.id || tokenInfo.userId,
+          'owner_logout',
+          {
+            ip_address: req.ip,
+            user_agent: req.get('User-Agent')
+          }
+        );
+        tokenBlacklisted = true;
+        console.log(`✅ Salon owner logout - Token blacklisted for user ${tokenInfo.id || tokenInfo.userId}`);
+      } catch (blacklistError) {
+        console.error('❌ Error blacklisting token during salon owner logout:', blacklistError);
+      }
+    }
+
+    // Remove device tokens for push notifications
     const { device_token } = req.body;
-    if (device_token && require("../../../../models").MobileDevice) {
-      const { MobileDevice } = require("../../../../models");
-      await MobileDevice.destroy({
-        where: { user_id: req.user.id, device_token },
+    if (device_token && require('../../../../models').MobileDevice) {
+      const { MobileDevice } = require('../../../../models');
+      await MobileDevice.destroy({ 
+        where: { 
+          user_id: tokenInfo.id || tokenInfo.userId, 
+          device_token 
+        } 
       });
     }
-    // For JWT, logout is stateless (client deletes token)
-    // To blacklist tokens, implement a blacklist DB/cache here
-    return res.json({ success: true, message: "Logged out successfully." });
+
+    return res.json({ 
+      success: true, 
+      message: 'Logged out successfully.',
+      tokenBlacklisted 
+    });
   } catch (err) {
-    return res.status(500).json({ error: "Logout failed." });
+    console.error('❌ Salon owner logout failed:', err);
+    return res.status(500).json({ error: 'Logout failed.' });
   }
 };
 

@@ -3,8 +3,9 @@ const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt = require('passport-jwt').ExtractJwt;
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcryptjs');
-const { User, Customer, SalonOwner } = require('../models');
+const { User, Customer, SalonOwner, Role } = require('../models');
 const TokenService = require('../services/tokenService');
+const { ROLES } = require('../constants/roles');
 
 /**
  * Passport Configuration for Hairvana API
@@ -94,7 +95,8 @@ passport.use('customer-jwt', new JwtStrategy(jwtOptions, async (payload, done) =
     }
     
     // Verify customer role from token payload first (faster)
-    if (!['customer', 'user'].includes(payload.role)) {
+    console.log(`Customer JWT Strategy - Token role: ${payload.role}, Expected: [${ROLES.CUSTOMER}, ${ROLES.USER}]`);
+    if (![ROLES.CUSTOMER, ROLES.USER].includes(payload.role)) {
       return done(null, false, { 
         message: 'Customer access required',
         code: 'INSUFFICIENT_ROLE'
@@ -103,12 +105,22 @@ passport.use('customer-jwt', new JwtStrategy(jwtOptions, async (payload, done) =
     
     // Get customer user with relations
     const user = await User.findByPk(payload.id, {
-      where: { role: ['customer', 'user'], status: 'active' },
+      where: { status: 'active' },
       attributes: { exclude: ['password_hash'] },
       include: [
         {
           model: Customer,
           as: 'customer',
+          required: true
+        },
+        {
+          model: Role,
+          as: 'role',
+          where: {
+            name: {
+              [User.sequelize.Sequelize.Op.in]: [ROLES.CUSTOMER, ROLES.USER, 'Customer', 'User'] // Accept both cases for compatibility
+            }
+          },
           required: true
         }
       ]
@@ -152,7 +164,7 @@ passport.use('owner-jwt', new JwtStrategy(jwtOptions, async (payload, done) => {
     }
     
     // Verify salon owner role from token payload first
-    if (payload.role !== 'salon_owner') {
+    if (payload.role !== ROLES.SALON_OWNER) {
       return done(null, false, { 
         message: 'Salon owner access required',
         code: 'INSUFFICIENT_ROLE'
@@ -161,12 +173,20 @@ passport.use('owner-jwt', new JwtStrategy(jwtOptions, async (payload, done) => {
     
     // Get salon owner user with relations
     const user = await User.findByPk(payload.id, {
-      where: { role: 'salon_owner', status: 'active' },
+      where: { status: 'active' },
       attributes: { exclude: ['password_hash'] },
       include: [
         {
           model: SalonOwner,
           as: 'salonOwner',
+          required: true
+        },
+        {
+          model: Role,
+          as: 'role',
+          where: {
+            name: ROLES.SALON_OWNER
+          },
           required: true
         }
       ]
@@ -210,7 +230,7 @@ passport.use('admin-jwt', new JwtStrategy(jwtOptions, async (payload, done) => {
     }
     
     // Verify admin role from token payload first
-    if (!['admin', 'super_admin'].includes(payload.role)) {
+    if (![ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(payload.role)) {
       return done(null, false, { 
         message: 'Admin access required',
         code: 'INSUFFICIENT_ROLE'
@@ -219,10 +239,19 @@ passport.use('admin-jwt', new JwtStrategy(jwtOptions, async (payload, done) => {
     
     const user = await User.findByPk(payload.id, {
       where: { 
-        role: ['admin', 'super_admin'], 
         status: 'active' 
       },
-      attributes: { exclude: ['password_hash'] }
+      attributes: { exclude: ['password_hash'] },
+      include: [
+        {
+          model: Role,
+          as: 'role',
+          where: {
+            name: [ROLES.ADMIN, ROLES.SUPER_ADMIN]
+          },
+          required: true
+        }
+      ]
     });
     
     if (user) {
@@ -258,13 +287,22 @@ passport.use('customer-local', new LocalStrategy({
     const user = await User.findOne({ 
       where: { 
         email: email.toLowerCase().trim(),
-        role: ['customer', 'user'], // Accept both roles for compatibility
         status: 'active'
       },
       include: [
         {
           model: Customer,
           as: 'customer',
+          required: true
+        },
+        {
+          model: Role,
+          as: 'role',
+          where: {
+            name: {
+              [User.sequelize.Sequelize.Op.in]: [ROLES.CUSTOMER, ROLES.USER, 'Customer', 'User'] // Accept both cases for compatibility
+            }
+          },
           required: true
         }
       ]
@@ -308,13 +346,20 @@ passport.use('owner-local', new LocalStrategy({
     const user = await User.findOne({ 
       where: { 
         email: email.toLowerCase().trim(),
-        role: 'salon_owner',
         status: 'active'
       },
       include: [
         {
           model: SalonOwner,
           as: 'salonOwner',
+          required: true
+        },
+        {
+          model: Role,
+          as: 'role',
+          where: {
+            name: ROLES.SALON_OWNER
+          },
           required: true
         }
       ]

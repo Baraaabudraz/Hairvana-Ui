@@ -49,66 +49,8 @@ export function RecentActivity() {
       try {
         setLoading(true);
 
-        // Use fixed dates to avoid any potential issues with date formatting
-        const now = new Date();
-        const activities: Activity[] = [
-          {
-            id: 1,
-            type: "salon_registration",
-            title: "New salon registered",
-            description: "Bella Hair Studio submitted registration",
-            user: "Bella Hair Studio",
-            avatar:
-              "https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2",
-            timestamp: new Date(now.getTime() - 30 * 60 * 1000), // 30 minutes ago
-            status: "pending",
-          },
-          {
-            id: 2,
-            type: "user_report",
-            title: "User reported salon",
-            description: "Sarah Johnson reported inappropriate behavior",
-            user: "Sarah Johnson",
-            avatar:
-              "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2",
-            timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 2 hours ago
-            status: "urgent",
-          },
-          {
-            id: 3,
-            type: "subscription",
-            title: "Subscription upgraded",
-            description: "Urban Cuts upgraded to Premium plan",
-            user: "Urban Cuts",
-            avatar:
-              "https://images.pexels.com/photos/3992656/pexels-photo-3992656.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2",
-            timestamp: new Date(now.getTime() - 4 * 60 * 60 * 1000), // 4 hours ago
-            status: "success",
-          },
-          {
-            id: 4,
-            type: "payment",
-            title: "Payment processed",
-            description: "Monthly subscription payment received",
-            user: "Style & Grace",
-            avatar:
-              "https://images.pexels.com/photos/3993456/pexels-photo-3993456.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2",
-            timestamp: new Date(now.getTime() - 6 * 60 * 60 * 1000), // 6 hours ago
-            status: "success",
-          },
-          {
-            id: 5,
-            type: "salon_approval",
-            title: "Salon approved",
-            description: "The Hair Lounge has been approved and activated",
-            user: "The Hair Lounge",
-            avatar:
-              "https://images.pexels.com/photos/3992660/pexels-photo-3992660.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&dpr=2",
-            timestamp: new Date(now.getTime() - 8 * 60 * 60 * 1000), // 8 hours ago
-            status: "success",
-          },
-        ];
-
+        // TODO: Replace with real API call
+        const activities: Activity[] = [];
         setActivities(activities);
       } catch (error) {
         console.error("Error loading recent activity:", error);

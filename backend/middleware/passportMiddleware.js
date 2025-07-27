@@ -108,10 +108,14 @@ const authenticateCustomerLocal = (req, res, next) => {
     
     // Successful login - generate tokens
     try {
+      console.log('User role object:', JSON.stringify(user.role, null, 2));
+      const roleName = user.role?.name || (typeof user.role === 'string' ? user.role : 'customer');
+      console.log('Extracted role name:', roleName);
+      
       const tokenData = TokenService.generateTokenPair({
         id: user.id,
         email: user.email,
-        role: user.role
+        role: roleName
       });
       
       // Log successful login
@@ -156,10 +160,14 @@ const authenticateOwnerLocal = (req, res, next) => {
     }
     
     try {
+      console.log('Owner role object:', JSON.stringify(user.role, null, 2));
+      const roleName = user.role?.name || (typeof user.role === 'string' ? user.role : 'salon');
+      console.log('Extracted owner role name:', roleName);
+      
       const tokenData = TokenService.generateTokenPair({
         id: user.id,
         email: user.email,
-        role: user.role
+        role: roleName
       });
       
       console.log(`Owner login successful - User: ${user.id}, Email: ${user.email}, IP: ${req.ip}`);

@@ -68,7 +68,7 @@ module.exports = {
 
     // Get all users to create notification-user relationships
     const users = await queryInterface.sequelize.query(
-      'SELECT id FROM users WHERE role IN (\'user\', \'salon\', \'admin\', \'super_admin\')',
+      'SELECT id FROM users WHERE role_id IN (SELECT id FROM roles WHERE name IN (\'customer\', \'salon owner\', \'admin\', \'super admin\'))',
       { type: Sequelize.QueryTypes.SELECT }
     );
 

@@ -10,7 +10,7 @@ module.exports = {
     
     // Get salon owners from users table
     const salonOwners = await queryInterface.sequelize.query(
-      'SELECT id FROM users WHERE role_id IN (SELECT id FROM roles WHERE name = \'salon\') LIMIT 3',
+      'SELECT id FROM users WHERE role_id IN (SELECT id FROM roles WHERE name = \'salon owner\') LIMIT 3',
       { type: Sequelize.QueryTypes.SELECT }
     );
 

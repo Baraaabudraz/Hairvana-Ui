@@ -28,15 +28,31 @@ exports.register = async (req, res) => {
     // Hash password
     const hash = await bcrypt.hash(password, 10);
     // Create user with role 'salon'
-    const salonRole = await User.sequelize.models.Role.findOne({
+    let salonRole = await User.sequelize.models.Role.findOne({
       where: { name: "salon" },
     });
+    
+    if (!salonRole) {
+      console.log("Salon role not found, creating it...");
+      try {
+        salonRole = await User.sequelize.models.Role.create({
+          name: "salon",
+          description: "Salon Owner/Manager",
+          color: "#16a34a"
+        });
+        console.log("Salon role created successfully");
+      } catch (createError) {
+        console.error("Error creating salon role:", createError);
+        return res.status(500).json({ error: "Failed to create salon role. Please contact support." });
+      }
+    }
+    
     const user = await User.create({
       name: owner_name,
       email,
       phone,
       password_hash: hash,
-      role_id: salonRole ? salonRole.id : null,
+      role_id: salonRole.id,
       status: "pending",
     });
     // Create SalonOwner profile
@@ -56,7 +72,8 @@ exports.register = async (req, res) => {
       salon: { id: salon.id, name: salon.name },
     });
   } catch (err) {
-    return res.status(500).json({ error: "Registration failed." });
+    console.error("Registration error:", err);
+    return res.status(500).json({ error: "Registration failed.", details: err.message });
   }
 };
 

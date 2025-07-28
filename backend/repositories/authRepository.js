@@ -29,9 +29,9 @@ exports.createUser = async (data) => {
 };
 
 exports.createRoleSpecific = async (user, role) => {
-  if (role === 'salon') {
+  if (role === 'salon owner') {
     return SalonOwner.create({ user_id: user.id, total_salons: 0, total_revenue: 0, total_bookings: 0 });
-  } else if (role === 'user') {
+  } else if (role === 'customer') {
     return Customer.create({ user_id: user.id, total_spent: 0, total_bookings: 0, favorite_services: [] });
   }
 };

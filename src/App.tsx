@@ -91,29 +91,27 @@ function App() {
 
   return (
     <PermissionProvider>
-      <Routes>
-        {/* Auth Routes */}
-        <Route path="/auth/login" element={<LoginPage />} />
+    <Routes>
+      {/* Auth Routes */}
+      <Route path="/auth/login" element={<LoginPage />} />
 
-        {/* Dashboard Routes */}
-        <Route path="/dashboard" element={<DashboardLayout />}>
-        <Route
+      {/* Dashboard Routes */}
+      <Route path="/dashboard" element={<DashboardLayout />}>
+                <Route
           index
           element={
-            <ProtectedRoute requiredResource="dashboard" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <DashboardPage />
-              </Suspense>
-            </ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <DashboardPage />
+            </Suspense>
           }
         />
         <Route
           path="salons"
           element={
             <ProtectedRoute requiredResource="salons" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <SalonsPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <SalonsPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -121,9 +119,9 @@ function App() {
           path="salons/:id"
           element={
             <ProtectedRoute requiredResource="salons" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <SalonDetailsPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <SalonDetailsPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -131,9 +129,9 @@ function App() {
           path="salons/:id/edit"
           element={
             <ProtectedRoute requiredResource="salons" requiredAction="edit">
-              <Suspense fallback={<PageLoader />}>
-                <EditSalonPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <EditSalonPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -141,9 +139,9 @@ function App() {
           path="salons/new"
           element={
             <ProtectedRoute requiredResource="salons" requiredAction="add">
-              <Suspense fallback={<PageLoader />}>
-                <NewSalonPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <NewSalonPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -151,9 +149,9 @@ function App() {
           path="users"
           element={
             <ProtectedRoute requiredResource="users" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <UsersPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <UsersPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -161,9 +159,9 @@ function App() {
           path="users/:id"
           element={
             <ProtectedRoute requiredResource="users" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <UserDetailsPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <UserDetailsPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -171,9 +169,9 @@ function App() {
           path="users/:id/edit"
           element={
             <ProtectedRoute requiredResource="users" requiredAction="edit">
-              <Suspense fallback={<PageLoader />}>
-                <EditUserPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <EditUserPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -181,9 +179,9 @@ function App() {
           path="users/new"
           element={
             <ProtectedRoute requiredResource="users" requiredAction="add">
-              <Suspense fallback={<PageLoader />}>
-                <NewUserPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <NewUserPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -191,9 +189,9 @@ function App() {
           path="plans"
           element={
             <ProtectedRoute requiredResource="subscriptions" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <PlansPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <PlansPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -201,9 +199,9 @@ function App() {
           path="plans/new"
           element={
             <ProtectedRoute requiredResource="subscriptions" requiredAction="add">
-              <Suspense fallback={<PageLoader />}>
-                <NewPlanPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <NewPlanPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -211,9 +209,9 @@ function App() {
           path="plans/:id/edit"
           element={
             <ProtectedRoute requiredResource="subscriptions" requiredAction="edit">
-              <Suspense fallback={<PageLoader />}>
-                <EditPlanPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <EditPlanPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -221,9 +219,9 @@ function App() {
           path="subscriptions"
           element={
             <ProtectedRoute requiredResource="subscriptions" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <SubscriptionsPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <SubscriptionsPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -231,9 +229,9 @@ function App() {
           path="subscriptions/:id"
           element={
             <ProtectedRoute requiredResource="subscriptions" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <SubscriptionDetailsPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <SubscriptionDetailsPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -241,9 +239,9 @@ function App() {
           path="subscriptions/new"
           element={
             <ProtectedRoute requiredResource="subscriptions" requiredAction="add">
-              <Suspense fallback={<PageLoader />}>
-                <NewSubscriptionPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <NewSubscriptionPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -251,9 +249,9 @@ function App() {
           path="analytics"
           element={
             <ProtectedRoute requiredResource="analytics" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <AnalyticsPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <AnalyticsPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -261,9 +259,9 @@ function App() {
           path="reports"
           element={
             <ProtectedRoute requiredResource="reports" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <ReportsPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <ReportsPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -271,9 +269,9 @@ function App() {
           path="notifications"
           element={
             <ProtectedRoute requiredResource="notifications" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <NotificationsPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <NotificationsPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -281,9 +279,9 @@ function App() {
           path="roles"
           element={
             <ProtectedRoute requiredResource="roles" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <RolesPermissionsMatrixPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <RolesPermissionsMatrixPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -291,9 +289,9 @@ function App() {
           path="settings"
           element={
             <ProtectedRoute requiredResource="settings" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <SettingsPage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <SettingsPage />
+            </Suspense>
             </ProtectedRoute>
           }
         />
@@ -301,9 +299,9 @@ function App() {
           path="profile"
           element={
             <ProtectedRoute requiredResource="dashboard" requiredAction="view">
-              <Suspense fallback={<PageLoader />}>
-                <ProfilePage />
-              </Suspense>
+            <Suspense fallback={<PageLoader />}>
+              <ProfilePage />
+            </Suspense>
             </ProtectedRoute>
           }
         />

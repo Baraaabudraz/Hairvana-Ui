@@ -31,6 +31,11 @@ function checkPermission(resource, action) {
         }
       }
 
+      // For super admin, bypass permission checks
+      if (roleName === 'super admin') {
+        return next();
+      }
+
       if (!roleId) {
         return res.status(401).json({ error: "Unauthorized: No valid role found" });
       }

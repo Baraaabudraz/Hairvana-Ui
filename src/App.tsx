@@ -7,6 +7,8 @@ import {
   useLocation,
 } from "react-router-dom";
 import { useAuthStore } from "./stores/auth-store";
+import { PermissionProvider } from "./hooks/use-permissions";
+import { ProtectedRoute } from "./components/protected-route";
 
 // Auth Pages - Keep login as static import since it's needed immediately
 import LoginPage from "./pages/auth/login";
@@ -88,178 +90,221 @@ function App() {
   }
 
   return (
-    <Routes>
-      {/* Auth Routes */}
-      <Route path="/auth/login" element={<LoginPage />} />
+    <PermissionProvider>
+      <Routes>
+        {/* Auth Routes */}
+        <Route path="/auth/login" element={<LoginPage />} />
 
-      {/* Dashboard Routes */}
-      <Route path="/dashboard" element={<DashboardLayout />}>
+        {/* Dashboard Routes */}
+        <Route path="/dashboard" element={<DashboardLayout />}>
         <Route
           index
           element={
-            <Suspense fallback={<PageLoader />}>
-              <DashboardPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="dashboard" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <DashboardPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="salons"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <SalonsPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="salons" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <SalonsPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="salons/:id"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <SalonDetailsPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="salons" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <SalonDetailsPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="salons/:id/edit"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <EditSalonPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="salons" requiredAction="edit">
+              <Suspense fallback={<PageLoader />}>
+                <EditSalonPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="salons/new"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <NewSalonPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="salons" requiredAction="add">
+              <Suspense fallback={<PageLoader />}>
+                <NewSalonPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="users"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <UsersPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="users" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <UsersPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="users/:id"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <UserDetailsPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="users" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <UserDetailsPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="users/:id/edit"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <EditUserPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="users" requiredAction="edit">
+              <Suspense fallback={<PageLoader />}>
+                <EditUserPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="users/new"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <NewUserPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="users" requiredAction="add">
+              <Suspense fallback={<PageLoader />}>
+                <NewUserPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="plans"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <PlansPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="subscriptions" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <PlansPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="plans/new"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <NewPlanPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="subscriptions" requiredAction="add">
+              <Suspense fallback={<PageLoader />}>
+                <NewPlanPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="plans/:id/edit"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <EditPlanPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="subscriptions" requiredAction="edit">
+              <Suspense fallback={<PageLoader />}>
+                <EditPlanPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="subscriptions"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <SubscriptionsPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="subscriptions" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <SubscriptionsPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="subscriptions/:id"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <SubscriptionDetailsPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="subscriptions" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <SubscriptionDetailsPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="subscriptions/new"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <NewSubscriptionPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="subscriptions" requiredAction="add">
+              <Suspense fallback={<PageLoader />}>
+                <NewSubscriptionPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="analytics"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <AnalyticsPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="analytics" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <AnalyticsPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="reports"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <ReportsPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="reports" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <ReportsPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="notifications"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <NotificationsPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="notifications" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <NotificationsPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="roles"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <RolesPermissionsMatrixPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="roles" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <RolesPermissionsMatrixPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="settings"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <SettingsPage />
-            </Suspense>
+            <ProtectedRoute requiredResource="settings" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <SettingsPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
           path="profile"
           element={
-            <Suspense fallback={<PageLoader />}>
-              <ProfilePage />
-            </Suspense>
+            <ProtectedRoute requiredResource="dashboard" requiredAction="view">
+              <Suspense fallback={<PageLoader />}>
+                <ProfilePage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
       </Route>
@@ -276,6 +321,7 @@ function App() {
         element={<Navigate to={user ? "/dashboard" : "/auth/login"} replace />}
       />
     </Routes>
+    </PermissionProvider>
   );
 }
 

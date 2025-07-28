@@ -16,55 +16,57 @@ import {
   Menu,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PermissionGuard } from "@/components/permission-guard";
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "Salons", href: "/dashboard/salons", icon: Building2 },
-  { name: "Users", href: "/dashboard/users", icon: Users, adminOnly: true },
+  { name: "Dashboard", href: "/dashboard", icon: Home, resource: "dashboard" },
+  { name: "Salons", href: "/dashboard/salons", icon: Building2, resource: "salons" },
+  { name: "Users", href: "/dashboard/users", icon: Users, resource: "users" },
   {
     name: "Plans",
     href: "/dashboard/plans",
     icon: CreditCard,
-    adminOnly: true,
+    resource: "subscriptions",
   },
   {
     name: "Subscriptions",
     href: "/dashboard/subscriptions",
     icon: CreditCard,
-    adminOnly: true,
+    resource: "subscriptions",
   },
   {
     name: "Analytics",
     href: "/dashboard/analytics",
     icon: BarChart3,
-    adminOnly: true,
+    resource: "analytics",
   },
   {
     name: "Reports",
     href: "/dashboard/reports",
     icon: MessageSquare,
-    adminOnly: true,
+    resource: "reports",
   },
   {
     name: "Notifications",
     href: "/dashboard/notifications",
     icon: Bell,
-    hideForSalon: true,
+    resource: "notifications",
   },
-  // Add Roles & Permissions link under Notifications
   {
     name: "Roles & Permissions",
     href: "/dashboard/roles",
     icon: Shield,
-    adminOnly: true,
+    resource: "roles",
   },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings, resource: "settings" },
 ];
 
 export function Sidebar() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { user } = useAuthStore();
+  const { canAccess } = usePermissions();
 
   return (
     <>
@@ -114,15 +116,11 @@ export function Sidebar() {
   );
 
   function SidebarContent() {
-    // Only show navigation if not a 'user' role
-    if (user?.role === "user") {
-      return null;
-    }
-    // For salon owners, filter out adminOnly and hideForSalon items
-    const filteredNav =
-      user?.role === "salon"
-        ? navigation.filter((item) => !item.adminOnly && !item.hideForSalon)
-        : navigation;
+    // Filter navigation based on user permissions
+    const filteredNav = navigation.filter((item) => {
+      if (!item.resource) return true; // Always show items without resource requirement
+      return canAccess(item.resource);
+    });
     return (
       <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-4 shadow-xl">
         <div className="flex h-16 shrink-0 items-center">
@@ -145,27 +143,29 @@ export function Sidebar() {
                     (item.href !== "/dashboard" &&
                       location.pathname.startsWith(item.href));
                   return (
-                    <li key={item.name}>
-                      <Link
-                        to={item.href}
-                        className={cn(
-                          "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors",
-                          isActive
-                            ? "bg-gradient-to-r from-purple-50 to-pink-50 text-purple-600"
-                            : "text-gray-700 hover:text-purple-600 hover:bg-gray-50"
-                        )}
-                      >
-                        <item.icon
+                    <PermissionGuard key={item.name} resource={item.resource || ""} action="view">
+                      <li>
+                        <Link
+                          to={item.href}
                           className={cn(
-                            "h-6 w-6 shrink-0",
+                            "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors",
                             isActive
-                              ? "text-purple-600"
-                              : "text-gray-400 group-hover:text-purple-600"
+                              ? "bg-gradient-to-r from-purple-50 to-pink-50 text-purple-600"
+                              : "text-gray-700 hover:text-purple-600 hover:bg-gray-50"
                           )}
-                        />
-                        {item.name}
-                      </Link>
-                    </li>
+                        >
+                          <item.icon
+                            className={cn(
+                              "h-6 w-6 shrink-0",
+                              isActive
+                                ? "text-purple-600"
+                                : "text-gray-400 group-hover:text-purple-600"
+                            )}
+                          />
+                          {item.name}
+                        </Link>
+                      </li>
+                    </PermissionGuard>
                   );
                 })}
               </ul>

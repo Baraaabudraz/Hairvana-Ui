@@ -28,8 +28,7 @@ router.post("/login", ownerAuthController.login);
 // Logout
 router.post(
   "/logout",
-  authenticateForLogout
-  ,checkPermission("salon", "edit"),
+  authenticateForLogout,
   ownerAuthController.logout
 );
 

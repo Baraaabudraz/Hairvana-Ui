@@ -23,7 +23,7 @@ router.get("/:id", reportController.getReportById);
 router.post("/", validateReport, validate, reportController.createReport);
 router.post(
   "/generate",
-  authorize("admin", "super_admin"),
+  authorize("admin", "super admin"),
   validateGenerateReport, validate, reportController.generateReport
 );
 router.put("/:id", validateReport, validate, reportController.updateReport);

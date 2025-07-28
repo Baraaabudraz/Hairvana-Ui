@@ -177,11 +177,6 @@ passport.use('owner-jwt', new JwtStrategy(jwtOptions, async (payload, done) => {
       attributes: { exclude: ['password_hash'] },
       include: [
         {
-          model: SalonOwner,
-          as: 'salonOwner',
-          required: true
-        },
-        {
           model: Role,
           as: 'role',
           where: {

@@ -43,7 +43,7 @@ router.get("/:id", userController.getUserById);
 // POST a new user with validation - admin only
 router.post(
   "/",
-  authorize("admin", "super_admin"),
+  authorize("admin", "super admin"),
   upload.single("avatar"), // Accept avatar upload
   createUserValidation,
   validate,

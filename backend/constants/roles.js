@@ -1,9 +1,9 @@
 // Role constants for consistent naming across the application
 const ROLES = {
-  SUPER_ADMIN: 'super_admin',
+  SUPER_ADMIN: 'super admin',
   ADMIN: 'admin', 
-  SALON_OWNER: 'salon',
-  CUSTOMER: 'Customer', // Match the actual database value
+  SALON_OWNER: 'salon owner',
+  CUSTOMER: 'customer', // Match the actual database value
   USER: 'user', // Legacy support
 };
 

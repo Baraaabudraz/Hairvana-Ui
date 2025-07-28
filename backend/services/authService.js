@@ -14,7 +14,12 @@ exports.login = async ({ email, password }) => {
   }
   if (!isValidPassword) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
   await authRepository.updateLastLogin(user.id);
-  const token = jwt.sign({ userId: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '24h' });
+  const token = jwt.sign({ 
+    userId: user.id, 
+    email: user.email, 
+    role: user.role?.name || user.role,
+    role_id: user.role_id 
+  }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '24h' });
   const { password_hash, ...userWithoutPassword } = user.toJSON();
   return { user: userWithoutPassword, token };
 };
@@ -26,7 +31,12 @@ exports.register = async ({ name, email, password, role_id, phone }) => {
   const passwordHash = await bcrypt.hash(password, salt);
   const newUser = await authRepository.createUser({ email, name, phone: phone || null, role_id, status: 'active', password_hash: passwordHash });
   await authRepository.createRoleSpecific(newUser, role_id);
-  const token = jwt.sign({ userId: newUser.id, email: newUser.email, role: newUser.role }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '24h' });
+  const token = jwt.sign({ 
+    userId: newUser.id, 
+    email: newUser.email, 
+    role: newUser.role?.name || newUser.role,
+    role_id: newUser.role_id 
+  }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '24h' });
   const { password_hash, ...userWithoutPassword } = newUser.toJSON();
   return { user: userWithoutPassword, token };
 };

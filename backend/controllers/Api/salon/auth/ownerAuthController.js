@@ -85,10 +85,12 @@ exports.login = async (req, res) => {
         .status(400)
         .json({ error: "Email and password are required." });
     }
+    
     // Login
     const salonRole = await User.sequelize.models.Role.findOne({
       where: { name: "salon owner" },
     });
+    
     const user = await User.findOne({
       where: { email, role_id: salonRole ? salonRole.id : null },
       include: [
@@ -98,6 +100,7 @@ exports.login = async (req, res) => {
         }
       ]
     });
+    
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials." });
     }
@@ -121,7 +124,7 @@ exports.login = async (req, res) => {
     // Generate token pair using TokenService
     const roleName = user.role?.name || (typeof user.role === 'string' ? user.role : 'salon');
     const tokenPair = await TokenService.generateTokenPair({
-      userId: user.id,
+      id: user.id,
       email: user.email,
       role: roleName
     });

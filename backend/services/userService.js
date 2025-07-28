@@ -18,7 +18,7 @@ exports.getAllUsers = async (query, req) => {
     // Handle legacy role filtering (string format)
     else if (role && role !== 'all') {
       if (role === 'admin') {
-        where.role = ['admin', 'super_admin'];
+        where.role = ['admin', 'super admin'];
       } else {
         where.role = role;
       }
@@ -43,9 +43,9 @@ exports.getAllUsers = async (query, req) => {
     const users = rows.map(user => serializeUser(user, { req }));
     const stats = {
       total: count,
-      admin: users.filter(u => u.role === 'admin' || u.role === 'super_admin').length,
-      salon: users.filter(u => u.role === 'salon').length,
-      user: users.filter(u => u.role === 'user').length,
+              admin: users.filter(u => u.role === 'admin' || u.role === 'super admin').length,
+        salon: users.filter(u => u.role === 'salon owner').length,
+        customer: users.filter(u => u.role === 'customer').length,
       active: users.filter(u => u.status === 'active').length,
       pending: users.filter(u => u.status === 'pending').length,
       suspended: users.filter(u => u.status === 'suspended').length,
@@ -69,7 +69,7 @@ exports.getAllUsers = async (query, req) => {
       // If roles table doesn't exist, provide default roles
       rolesArray = [
         { id: '1', name: 'admin', description: 'Administrator', color: '#3B82F6' },
-        { id: '2', name: 'super_admin', description: 'Super Administrator', color: '#8B5CF6' },
+        { id: '2', name: 'super admin', description: 'Super Administrator', color: '#8B5CF6' },
         { id: '3', name: 'salon', description: 'Salon Owner', color: '#10B981' },
         { id: '4', name: 'user', description: 'Regular User', color: '#6B7280' }
       ];
@@ -115,7 +115,7 @@ exports.createUser = async (userData, req) => {
     userData.status = 'active';
     const newUser = await userRepository.create(userData);
     // Role-specific logic (still in service)
-    if (userData.role === 'salon') {
+          if (userData.role === 'salon owner') {
       const { SalonOwner, Salon } = require('../models');
       await SalonOwner.create({
         userId: newUser.id,
@@ -133,7 +133,7 @@ exports.createUser = async (userData, req) => {
           status: 'pending'
         });
       }
-    } else if (userData.role === 'user') {
+          } else if (userData.role === 'customer') {
       const { Customer } = require('../models');
       await Customer.create({
         user_id: newUser.id,

@@ -17,7 +17,7 @@ exports.login = async ({ email, password }) => {
   // Extract role name properly
   const roleName = user.role?.name || (typeof user.role === 'string' ? user.role : 'user');
   const token = jwt.sign({ 
-    userId: user.id, 
+    id: user.id, 
     email: user.email, 
     role: roleName,
     role_id: user.role_id 
@@ -36,7 +36,7 @@ exports.register = async ({ name, email, password, role_id, phone }) => {
   // Extract role name properly for new user
   const roleName = newUser.role?.name || (typeof newUser.role === 'string' ? newUser.role : 'user');
   const token = jwt.sign({ 
-    userId: newUser.id, 
+    id: newUser.id, 
     email: newUser.email, 
     role: roleName,
     role_id: newUser.role_id 

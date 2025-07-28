@@ -36,7 +36,7 @@ router.post(
 // Upload documents
 router.post(
   "/upload-documents",
-  checkPermission("salon", "edit"),
+  authenticateOwner,
   upload.fields([
     { name: "commercial_registration", maxCount: 1 },
     { name: "certificate", maxCount: 1 },

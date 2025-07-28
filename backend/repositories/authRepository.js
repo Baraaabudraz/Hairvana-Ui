@@ -1,7 +1,12 @@
-const { User, SalonOwner, Customer } = require('../models');
+const { User, SalonOwner, Customer, Role } = require('../models');
 
 exports.findUserByEmail = async (email) => {
-  return User.findOne({ where: { email } });
+  return User.findOne({ 
+    where: { email },
+    include: [
+      { model: Role, as: 'role' }
+    ]
+  });
 };
 
 exports.findUserById = async (id) => {
@@ -9,7 +14,8 @@ exports.findUserById = async (id) => {
     where: { id },
     include: [
       { model: SalonOwner, as: 'salonOwner' },
-      { model: Customer, as: 'customer' }
+      { model: Customer, as: 'customer' },
+      { model: Role, as: 'role' }
     ]
   });
 };

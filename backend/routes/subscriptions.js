@@ -24,7 +24,7 @@ function handleValidationErrors(req, res, next) {
 
 // Block salon owners from all plan/subscription routes
 function blockSalonOwner(req, res, next) {
-  if (req.user && req.user.role === "salon") {
+      if (req.user && req.user.role === "salon owner") {
     return res.status(403).json({
       message: "Salon owners are not allowed to access this resource.",
     });

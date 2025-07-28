@@ -20,7 +20,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { PermissionGuard } from "@/components/permission-guard";
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Home, resource: "dashboard" },
+  { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Salons", href: "/dashboard/salons", icon: Building2, resource: "salons" },
   { name: "Users", href: "/dashboard/users", icon: Users, resource: "users" },
   {
@@ -142,8 +142,36 @@ export function Sidebar() {
                     location.pathname === item.href ||
                     (item.href !== "/dashboard" &&
                       location.pathname.startsWith(item.href));
+                  
+                  // If no resource is specified, render without PermissionGuard
+                  if (!item.resource) {
+                    return (
+                      <li key={item.name}>
+                        <Link
+                          to={item.href}
+                          className={cn(
+                            "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors",
+                            isActive
+                              ? "bg-gradient-to-r from-purple-50 to-pink-50 text-purple-600"
+                              : "text-gray-700 hover:text-purple-600 hover:bg-gray-50"
+                          )}
+                        >
+                          <item.icon
+                            className={cn(
+                              "h-6 w-6 shrink-0",
+                              isActive
+                                ? "text-purple-600"
+                                : "text-gray-400 group-hover:text-purple-600"
+                            )}
+                          />
+                          {item.name}
+                        </Link>
+                      </li>
+                    );
+                  }
+                  
                   return (
-                    <PermissionGuard key={item.name} resource={item.resource || ""} action="view">
+                    <PermissionGuard key={item.name} resource={item.resource} action="view">
                       <li>
                         <Link
                           to={item.href}

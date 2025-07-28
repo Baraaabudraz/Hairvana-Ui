@@ -24,14 +24,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Search, 
-  MoreHorizontal, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Search,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Trash2,
+  CheckCircle,
+  XCircle,
   Plus,
   Users,
   Building2,
@@ -181,10 +181,10 @@ const getRoleBadgeInlineStyle = (role: UserRoleObject | UserRole): React.CSSProp
 // Helper function to safely format dates
 const formatDateSafely = (dateString: string | null | undefined, fallback: string = 'N/A'): string => {
   if (!dateString) return fallback;
-  
+
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return fallback;
-  
+
   return formatDistanceToNow(date, { addSuffix: true });
 };
 
@@ -258,7 +258,7 @@ export default function UsersPage() {
   useEffect(() => {
     // Only load users if roles are loaded (or if not filtering by role)
     if (rolesLoaded || roleFilter === 'all') {
-      loadUsers();
+    loadUsers();
     }
     // eslint-disable-next-line
   }, [roleFilter, statusFilter, searchTerm, page, limit, rolesLoaded]);
@@ -269,7 +269,7 @@ export default function UsersPage() {
       console.log('Loading users with filters - roleFilter:', roleFilter, 'statusFilter:', statusFilter);
       
       const params: any = { page, limit };
-      
+
       // Convert roleFilter to backend role_id or role name
       if (roleFilter !== 'all') {
         // Find the actual role from backend data that matches our filter key
@@ -284,15 +284,15 @@ export default function UsersPage() {
           console.log('Fallback: filtering by role name:', roleFilter);
         }
       }
-      
+
       if (statusFilter !== 'all') {
         params.status = statusFilter;
       }
-      
+
       if (searchTerm) {
         params.search = searchTerm;
       }
-      
+
       const data = await fetchUsers(params);
       console.log('Users API response:', data);
       
@@ -387,7 +387,7 @@ export default function UsersPage() {
       await updateUserStatus(userId, newStatus);
 
       setUsers(prev => prev.map(user => 
-        user.id === userId ? { ...user, status: newStatus } : user
+          user.id === userId ? { ...user, status: newStatus } : user
       ));
 
       const statusMessages = {
@@ -477,13 +477,13 @@ export default function UsersPage() {
     
     // Fallback for string roles
     if (typeof role === 'string') {
-      switch (role) {
+    switch (role) {
         case 'super_admin': return 'Super Admin';
         case 'admin': return 'Admin';
         case 'salon': return 'Salon Owner';
         case 'user': return 'Customer';
         default: return role;
-      }
+    }
     }
     
     return roleInfo.name || 'Unknown Role';
@@ -581,7 +581,7 @@ export default function UsersPage() {
         </div>
       </div>
     );
-  }
+    }
 
   if (loading) {
     return (
@@ -624,13 +624,13 @@ export default function UsersPage() {
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-4">
-            <div className="text-center">
+            <CardContent className="p-4">
+              <div className="text-center">
               <p className="text-2xl font-bold text-purple-600">{stats.admin}</p>
               <p className="text-xs text-gray-500">Admins</p>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4">
             <div className="text-center">
@@ -758,7 +758,7 @@ export default function UsersPage() {
                   </Button>
                 </>
               )}
-              
+
               {/* Status Filters */}
               <div className="w-px h-6 bg-gray-300 mx-2" />
               <Button
@@ -835,12 +835,12 @@ export default function UsersPage() {
                       {renderSalonOwnerDetails(user)}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-6">
                     {renderUserSpecificInfo(user)}
-                    
+
                     <div className="flex flex-col gap-1">
-                      <Badge 
+                      <Badge
                         className={getRoleBadgeClassName(user.role)}
                         style={getRoleBadgeInlineStyle(user.role)}
                         title={typeof user.role === 'object' && user.role.description ? user.role.description : getRoleInfo(user.role).name}
@@ -851,7 +851,7 @@ export default function UsersPage() {
                         {user.status}
                       </Badge>
                     </div>
-                    
+
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -880,7 +880,7 @@ export default function UsersPage() {
                           </DropdownMenuItem>
                         )}
                         {user.status === 'active' && (
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-red-600 cursor-pointer"
                             onClick={() => openSuspendDialog(user)}
                           >
@@ -889,7 +889,7 @@ export default function UsersPage() {
                           </DropdownMenuItem>
                         )}
                         {user.status === 'suspended' && (
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-green-600 cursor-pointer"
                             onClick={() => openReactivateDialog(user)}
                           >
@@ -897,7 +897,7 @@ export default function UsersPage() {
                             Reactivate
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="text-red-600 cursor-pointer"
                           onClick={() => openDeleteDialog(user)}
                         >
@@ -939,15 +939,15 @@ export default function UsersPage() {
             <AlertDialogDescription>
               Are you sure you want to delete "{selectedUser?.name}"? This action cannot be undone and will permanently remove the user from the platform.
               {selectedUser && getRoleKey(selectedUser.role) === 'salon' && selectedUser.totalSalons && selectedUser.totalSalons > 0 && (
-                <span className="block mt-2 text-red-600 font-medium">
+                  <span className="block mt-2 text-red-600 font-medium">
                   Warning: This user owns {selectedUser.totalSalons} salon(s). Deleting this user will also affect their salon(s).
-                </span>
-              )}
+                  </span>
+                )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700"
             >
@@ -965,15 +965,15 @@ export default function UsersPage() {
             <AlertDialogDescription>
               Are you sure you want to suspend "{selectedUser?.name}"? This will temporarily disable their access to the platform.
               {selectedUser && getRoleKey(selectedUser.role) === 'salon' && selectedUser.totalSalons && selectedUser.totalSalons > 0 && (
-                <span className="block mt-2 text-yellow-600 font-medium">
+                  <span className="block mt-2 text-yellow-600 font-medium">
                   Note: This user owns {selectedUser.totalSalons} salon(s). Suspending this user may affect their salon operations.
-                </span>
-              )}
+                  </span>
+                )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={confirmSuspend}
               className="bg-red-600 hover:bg-red-700"
             >
@@ -994,7 +994,7 @@ export default function UsersPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={confirmReactivate}
               className="bg-green-600 hover:bg-green-700"
             >

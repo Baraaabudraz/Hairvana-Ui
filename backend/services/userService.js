@@ -59,11 +59,11 @@ exports.getAllUsers = async (query, req) => {
         attributes: ['id', 'name', 'description', 'color']
       });
       rolesArray = roles.map((role) => ({
-        id: role.id,
-        name: role.name,
-        description: role.description,
-        color: role.color,
-      }));
+          id: role.id,
+          name: role.name,
+          description: role.description,
+          color: role.color,
+        }));
     } catch (roleError) {
       console.warn('Failed to fetch roles:', roleError.message);
       // If roles table doesn't exist, provide default roles

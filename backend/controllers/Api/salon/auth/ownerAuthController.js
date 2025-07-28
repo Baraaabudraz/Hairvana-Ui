@@ -143,22 +143,23 @@ exports.login = async (req, res) => {
 exports.logout = async (req, res) => {
   try {
     // Blacklist the current token to revoke it immediately
-    const tokenInfo = req.tokenInfo || req.user; // From authenticateForLogout middleware
+    const tokenInfo = req.tokenInfo; // Contains jti and token
+    const user = req.user; // Contains id, email, role
     let tokenBlacklisted = false;
 
-    if (tokenInfo && tokenInfo.jti) {
+    if (tokenInfo && tokenInfo.jti && user && user.id) {
       try {
         await TokenService.blacklistToken(
           tokenInfo.jti,
-          tokenInfo.id || tokenInfo.userId,
-          'owner_logout',
+          user.id, // Use user.id from req.user
+          'logout', // Use valid enum value
           {
             ip_address: req.ip,
             user_agent: req.get('User-Agent')
           }
         );
         tokenBlacklisted = true;
-        console.log(`✅ Salon owner logout - Token blacklisted for user ${tokenInfo.id || tokenInfo.userId}`);
+        console.log(`✅ Salon owner logout - Token blacklisted for user ${user.id}`);
       } catch (blacklistError) {
         console.error('❌ Error blacklisting token during salon owner logout:', blacklistError);
       }
@@ -166,11 +167,11 @@ exports.logout = async (req, res) => {
 
     // Remove device tokens for push notifications
     const { device_token } = req.body;
-    if (device_token && require('../../../../models').MobileDevice) {
+    if (device_token && user && user.id && require('../../../../models').MobileDevice) {
       const { MobileDevice } = require('../../../../models');
       await MobileDevice.destroy({ 
         where: { 
-          user_id: tokenInfo.id || tokenInfo.userId, 
+          user_id: user.id, 
           device_token 
         } 
       });

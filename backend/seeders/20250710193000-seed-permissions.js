@@ -33,7 +33,7 @@ module.exports = {
 
     // Get role IDs
     const roles = await queryInterface.sequelize.query(
-      `SELECT id, name FROM roles WHERE name IN ('super_admin', 'admin', 'salon', 'user')`,
+      `SELECT id, name FROM roles WHERE name IN ('super admin', 'admin', 'salon owner', 'customer')`,
       { type: Sequelize.QueryTypes.SELECT }
     );
     
@@ -46,12 +46,12 @@ module.exports = {
     const now = new Date();
     const permissions = [];
 
-    // super_admin: all permissions
+    // super admin: all permissions
     for (const resource of RESOURCES) {
       for (const action of ACTIONS) {
         permissions.push({
           id: uuidv4(),
-          role_id: roleMap["super_admin"],
+          role_id: roleMap["super admin"],
           resource,
           action,
           allowed: true,
@@ -82,7 +82,7 @@ module.exports = {
       }
     }
 
-    // salon: view/add/edit on most, no delete except reviews/appointments
+    // salon owner: view/add/edit on most, no delete except reviews/appointments
     for (const resource of RESOURCES) {
       for (const action of ACTIONS) {
         let allowed = false;
@@ -94,7 +94,7 @@ module.exports = {
           allowed = true;
         permissions.push({
           id: uuidv4(),
-          role_id: roleMap["salon"],
+          role_id: roleMap["salon owner"],
           resource,
           action,
           allowed,
@@ -104,7 +104,7 @@ module.exports = {
       }
     }
 
-    // user: view on most, add review/appointment, edit/delete own review/appointment
+    // customer: view on most, add review/appointment, edit/delete own review/appointment
     for (const resource of RESOURCES) {
       for (const action of ACTIONS) {
         let allowed = false;
@@ -118,7 +118,7 @@ module.exports = {
           allowed = true;
         permissions.push({
           id: uuidv4(),
-          role_id: roleMap["user"],
+          role_id: roleMap["customer"],
           resource,
           action,
           allowed,

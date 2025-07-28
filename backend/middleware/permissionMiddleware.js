@@ -7,13 +7,38 @@ function checkPermission(resource, action) {
     try {
       const user = req.user; // Assumes user is attached to req (e.g., by auth middleware)
       console.log("user", user);
-      if (!user || !user.role_id) {
-        return res.status(401).json({ error: "Unauthorized: No user or role" });
+      if (!user) {
+        return res.status(401).json({ error: "Unauthorized: No user" });
       }
+
+      // Handle both role_id (UUID) and role (string/object) from JWT
+      let roleId = user.role_id;
+      let roleName = user.role;
+
+      // If role is an object, extract the name and id
+      if (user.role && typeof user.role === 'object') {
+        roleName = user.role.name;
+        roleId = user.role.id;
+      }
+
+      // If we have role name but no role_id, try to find the role by name
+      if (!roleId && roleName) {
+        const role = await db.Role.findOne({
+          where: { name: roleName }
+        });
+        if (role) {
+          roleId = role.id;
+        }
+      }
+
+      if (!roleId) {
+        return res.status(401).json({ error: "Unauthorized: No valid role found" });
+      }
+
       // Find permission for this role/resource/action
       const permission = await db.Permission.findOne({
         where: {
-          role_id: user.role_id,
+          role_id: roleId,
           resource,
           action,
           allowed: true,

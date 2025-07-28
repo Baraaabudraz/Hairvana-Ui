@@ -88,15 +88,15 @@ export default function NewSalonPage() {
         console.log('Loading salon owners...');
         
         // Try different possible role names for salon owners - prioritize exact matches
-        const possibleRoleNames = ['Salon Owner', 'salon_owner', 'salon', 'Salon', 'salonowner'];
+        const possibleRoleNames = ['salon owner', 'Salon Owner', 'salon_owner', 'salon', 'Salon', 'salonowner'];
         let response = null;
         let usedRoleName = '';
         
-        // Try to fetch users by specific "Salon Owner" role for better performance
-        console.log('Attempting to fetch users with "Salon Owner" role...');
+        // Try to fetch users by specific "salon owner" role for better performance
+        console.log('Attempting to fetch users with "salon owner" role...');
         
         try {
-          const salonOwnersResponse = await fetchUsersByRole('Salon Owner');
+          const salonOwnersResponse = await fetchUsersByRole('salon owner');
           console.log('Salon owners API response:', salonOwnersResponse);
           
           if (salonOwnersResponse && salonOwnersResponse.users) {
@@ -121,10 +121,10 @@ export default function NewSalonPage() {
           console.log('All users fallback response:', allUsersResponse);
           
           if (allUsersResponse && allUsersResponse.users) {
-            const salonOwners = allUsersResponse.users.filter((user: any) => {
-              const roleName = typeof user.role === 'string' ? user.role : user.role?.name || '';
-              return roleName === 'Salon Owner';
-            });
+                         const salonOwners = allUsersResponse.users.filter((user: any) => {
+               const roleName = typeof user.role === 'string' ? user.role : user.role?.name || '';
+               return roleName === 'salon owner';
+             });
             
             console.log(`Filtered ${salonOwners.length} salon owners from ${allUsersResponse.users.length} total users (fallback)`);
             setOwners(salonOwners);

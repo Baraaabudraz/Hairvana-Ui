@@ -50,7 +50,7 @@ router.delete(
 // POST send a notification - admin only
 router.post(
   "/:id/send",
-  authorize("admin", "super_admin"),
+  authorize("admin", "super admin"),
   notificationController.sendNotification
 );
 

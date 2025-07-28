@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User, SalonOwner, Customer } = require('../models');
 const authService = require('../services/authService');
+const PermissionService = require("../services/permissionService");
 // Remove destructuring for validateLogin, validateRegister, validateChangePassword
 // const { validateLogin, validateRegister, validateChangePassword } = require('../validation/authValidation');
 // Placeholder for future Supabase client usage
@@ -58,5 +59,31 @@ exports.changePassword = async (req, res, next) => {
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
     next(error);
+  }
+};
+
+// Get user permissions
+exports.getUserPermissions = async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    
+    const permissions = await PermissionService.getUserPermissions(userId);
+    const accessibleResources = await PermissionService.getAccessibleResources(userId);
+    const userRole = await PermissionService.getUserRole(userId);
+
+    res.json({
+      success: true,
+      data: {
+        permissions,
+        accessibleResources,
+        role: userRole
+      }
+    });
+  } catch (error) {
+    console.error('Error getting user permissions:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to get user permissions' 
+    });
   }
 };

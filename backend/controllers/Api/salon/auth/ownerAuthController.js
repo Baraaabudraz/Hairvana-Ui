@@ -27,9 +27,9 @@ exports.register = async (req, res) => {
     }
     // Hash password
     const hash = await bcrypt.hash(password, 10);
-    // Create user with role 'salon'
+    // Create user with role 'salon owner'
     const salonRole = await User.sequelize.models.Role.findOne({
-      where: { name: "salon" },
+      where: { name: "salon owner" },
     });
     const user = await User.create({
       name: owner_name,
@@ -70,7 +70,7 @@ exports.login = async (req, res) => {
     }
     // Login
     const salonRole = await User.sequelize.models.Role.findOne({
-      where: { name: "salon" },
+      where: { name: "salon owner" },
     });
     const user = await User.findOne({
       where: { email, role_id: salonRole ? salonRole.id : null },

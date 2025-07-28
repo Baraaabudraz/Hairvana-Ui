@@ -16,8 +16,8 @@ module.exports = {
     const rolesToInsert = [
       {
         id: uuidv4(),
-        name: "super_admin",
-        description: "Super Administrator",
+        name: "super admin",
+        description: "Super Administrator with full system access",
         color: "#dc2626",
         created_at: now,
         updated_at: now,
@@ -25,31 +25,23 @@ module.exports = {
       {
         id: uuidv4(),
         name: "admin",
-        description: "Administrator",
+        description: "Administrator with management access",
         color: "#2563eb",
         created_at: now,
         updated_at: now,
       },
       {
         id: uuidv4(),
-        name: "salon",
-        description: "Salon Owner/Manager",
+        name: "salon owner",
+        description: "Salon Owner with business management access",
         color: "#16a34a",
         created_at: now,
         updated_at: now,
       },
       {
         id: uuidv4(),
-        name: "user",
-        description: "Regular User/Customer",
-        color: "#6B7280",
-        created_at: now,
-        updated_at: now,
-      },
-      {
-        id: uuidv4(),
         name: "customer",
-        description: "Customer/Regular User",
+        description: "Customer with limited access",
         color: "#6B7280",
         created_at: now,
         updated_at: now,
@@ -66,7 +58,7 @@ module.exports = {
 
   async down(queryInterface, Sequelize) {
     await queryInterface.bulkDelete("roles", {
-      name: ["super_admin", "admin", "salon", "user"],
+      name: ["super admin", "admin", "salon owner", "customer"],
     });
   },
 };

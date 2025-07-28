@@ -34,7 +34,7 @@ const authorize = (...roleNames) => {
 
 const authenticateCustomer = (req, res, next) => {
   protect(req, res, function() {
-    if(req.user && req.user.role === 'user') {
+    if(req.user && req.user.role === 'customer') {
       return next();
     }
     return res.status(403).json({ error: 'Only customers can access this endpoint.' });
@@ -44,9 +44,9 @@ const authenticateCustomer = (req, res, next) => {
 
 
 // Role helpers using role name from JWT
-const isSuperAdmin = (user) => user && user.role === "super_admin";
+const isSuperAdmin = (user) => user && user.role === "super admin";
 const isAdmin = (user) => user && user.role === "admin";
-const isUser = (user) => user && user.role === "user";
+const isUser = (user) => user && user.role === "customer";
 
 // Middleware: Block 'user' role from dashboard/admin
 const blockUserDashboard = () => {
@@ -62,7 +62,7 @@ const blockUserDashboard = () => {
 // Add authenticateOwner middleware
 const authenticateOwner = (req, res, next) => {
   protect(req, res, function() {
-    if (req.user && req.user.role === 'salon') {
+    if (req.user && req.user.role === 'salon owner') {
       return next();
     }
     return res.status(403).json({ error: 'Only salon owners can access this endpoint.' });

@@ -67,11 +67,11 @@ async function seedUsers() {
     const users = [
       {
         id: "00000000-0000-0000-0000-000000000001",
-        name: "Sarah Johnson",
+        name: "Super Admin",
         email: "superadmin@hairvana.com",
         password_hash: passwordHash,
         phone: "+1 (555) 234-5678",
-        role_id: roleMap["super_admin"],
+        role_id: roleMap["super admin"],
         status: "active",
         avatar:
           "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2",
@@ -82,7 +82,7 @@ async function seedUsers() {
       },
       {
         id: "00000000-0000-0000-0000-000000000002",
-        name: "John Smith",
+        name: "Admin User",
         email: "admin@hairvana.com",
         password_hash: passwordHash,
         phone: "+1 (555) 123-4567",
@@ -97,10 +97,10 @@ async function seedUsers() {
       },
       {
         id: "00000000-0000-0000-0000-000000000003",
-        email: "maria@luxehair.com",
-        name: "Maria Rodriguez",
+        email: "sarah@beautysalon.com",
+        name: "Sarah Johnson",
         phone: "+1 (555) 345-6789",
-        role_id: roleMap["salon"],
+        role_id: roleMap["salon owner"],
         status: "active",
         join_date: new Date("2024-01-15"),
         last_login: new Date(),
@@ -110,10 +110,10 @@ async function seedUsers() {
       },
       {
         id: "00000000-0000-0000-0000-000000000004",
-        email: "david@urbancuts.com",
-        name: "David Chen",
+        email: "michael@stylehub.com",
+        name: "Michael Chen",
         phone: "+1 (555) 456-7890",
-        role_id: roleMap["salon"],
+        role_id: roleMap["salon owner"],
         status: "active",
         join_date: new Date("2024-02-20"),
         last_login: new Date(),
@@ -123,11 +123,11 @@ async function seedUsers() {
       },
       {
         id: "00000000-0000-0000-0000-000000000005",
-        email: "lisa@styleandgrace.com",
-        name: "Lisa Thompson",
+        email: "emma@glamourcuts.com",
+        name: "Emma Rodriguez",
         phone: "+1 (555) 567-8901",
-        role_id: roleMap["salon"],
-        status: "pending",
+        role_id: roleMap["salon owner"],
+        status: "active",
         join_date: new Date("2024-03-10"),
         last_login: new Date(),
         avatar:
@@ -136,10 +136,10 @@ async function seedUsers() {
       },
       {
         id: "00000000-0000-0000-0000-000000000006",
-        email: "emily.davis@email.com",
-        name: "Emily Davis",
+        email: "john.smith@email.com",
+        name: "John Smith",
         phone: "+1 (555) 678-9012",
-        role_id: roleMap["user"],
+        role_id: roleMap["customer"],
         status: "active",
         join_date: new Date("2024-02-01"),
         last_login: new Date(),
@@ -149,10 +149,10 @@ async function seedUsers() {
       },
       {
         id: "00000000-0000-0000-0000-000000000007",
-        email: "michael.brown@email.com",
-        name: "Michael Brown",
+        email: "lisa.davis@email.com",
+        name: "Lisa Davis",
         phone: "+1 (555) 789-0123",
-        role_id: roleMap["user"],
+        role_id: roleMap["customer"],
         status: "active",
         join_date: new Date("2024-03-15"),
         last_login: new Date(),
@@ -167,7 +167,7 @@ async function seedUsers() {
 
     // Create salon owners records
     const salonOwners = users
-      .filter((user) => user.role_id === roleMap["salon"])
+      .filter((user) => user.role_id === roleMap["salon owner"])
       .map((user) => ({
         user_id: user.id,
         total_salons: 0,
@@ -181,7 +181,7 @@ async function seedUsers() {
 
     // Create customer records
     const customers = users
-      .filter((user) => user.role_id === roleMap["user"])
+      .filter((user) => user.role_id === roleMap["customer"])
       .map((user) => ({
         user_id: user.id,
         total_spent: 0,
@@ -499,15 +499,15 @@ async function seedOwnerDocuments() {
   try {
     await db.OwnerDocument.destroy({ where: {} });
     
-    // Get salon role ID first
-    const salonRole = await db.Role.findOne({ where: { name: 'salon' } });
-    if (!salonRole) {
-      console.log('Salon role not found, skipping owner documents seeding');
+    // Get salon owner role ID first
+    const salonOwnerRole = await db.Role.findOne({ where: { name: 'salon owner' } });
+    if (!salonOwnerRole) {
+      console.log('Salon owner role not found, skipping owner documents seeding');
       return;
     }
     
     const salonOwners = await db.User.findAll({
-      where: { role_id: salonRole.id },
+      where: { role_id: salonOwnerRole.id },
       attributes: ['id']
     });
 
@@ -602,15 +602,15 @@ async function seedBillingSettings() {
   try {
     await db.BillingSettings.destroy({ where: {} });
     
-    // Get salon role ID first
-    const salonRole = await db.Role.findOne({ where: { name: 'salon' } });
-    if (!salonRole) {
-      console.log('Salon role not found, skipping billing settings seeding');
+    // Get salon owner role ID first
+    const salonOwnerRole = await db.Role.findOne({ where: { name: 'salon owner' } });
+    if (!salonOwnerRole) {
+      console.log('Salon owner role not found, skipping billing settings seeding');
       return;
     }
     
     const users = await db.User.findAll({
-      where: { role_id: salonRole.id },
+      where: { role_id: salonOwnerRole.id },
       attributes: ['id']
     });
 

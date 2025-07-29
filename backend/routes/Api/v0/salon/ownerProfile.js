@@ -1,10 +1,16 @@
 const express = require("express");
 const router = express.Router();
-const checkPermission = require("../../../../middleware/permissionMiddleware");
 const ownerProfileController = require("../../../../controllers/Api/salon/ownerProfileController");
 const { createUploadMiddleware } = require("../../../../helpers/uploadHelper");
 const { authenticateOwner } = require('../../../../middleware/passportMiddleware');
 const { passwordChangeRateLimit } = require('../../../../middleware/rateLimitMiddleware');
+const { 
+  getProfileValidation, 
+  updateProfileValidation, 
+  uploadAvatarValidation, 
+  changePasswordValidation 
+} = require('../../../../validation/ownerProfileValidation');
+const validate = require('../../../../middleware/validate');
 
 const uploadAvatar = createUploadMiddleware({
   uploadDir: "backend/public/uploads/avatars",
@@ -15,23 +21,31 @@ const uploadAvatar = createUploadMiddleware({
 router.get(
   "/profile",
   authenticateOwner,
+  getProfileValidation,
+  validate,
   ownerProfileController.getProfile
 );
 router.put(
   "/profile",
   authenticateOwner,
+  updateProfileValidation,
+  validate,
   ownerProfileController.updateProfile
 );
 router.patch(
   "/profile/avatar",
   uploadAvatar.single("avatar"),
   authenticateOwner,
+  uploadAvatarValidation,
+  validate,
   ownerProfileController.uploadAvatar
 );
 router.patch(
   "/profile/password",
   passwordChangeRateLimit,
   authenticateOwner,
+  changePasswordValidation,
+  validate,
   ownerProfileController.changePassword
 );
 

@@ -29,6 +29,45 @@ const isStrongPassword = (password) => {
   return passwordRegex.test(password);
 };
 
+/**
+ * Validate password strength and return detailed feedback
+ * @param {string} password - Password to validate
+ * @returns {Object} Validation result with isValid flag and errors array
+ */
+exports.validatePassword = (password) => {
+  const errors = [];
+  
+  if (!password || typeof password !== 'string') {
+    errors.push('Password is required');
+    return { isValid: false, errors };
+  }
+  
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  
+  if (!/\d/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+  
+  if (!/[@$!%*?&]/.test(password)) {
+    errors.push('Password must contain at least one special character (@$!%*?&)');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
 // Secure JWT secret generation (use this once and store in environment)
 const generateSecureSecret = () => {
   return crypto.randomBytes(64).toString('hex');

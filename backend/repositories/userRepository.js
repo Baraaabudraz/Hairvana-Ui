@@ -53,3 +53,19 @@ exports.delete = async (id) => {
 exports.updateStatus = async (id, status) => {
   return User.update({ status }, { where: { id } });
 };
+
+exports.findOne = async (query = {}) => {
+  const { where = {} } = query;
+  return User.findOne({
+    where,
+    include: [
+      {
+        model: SalonOwner,
+        as: "salonOwner",
+        include: [{ model: Salon, as: "salons" }],
+      },
+      { model: Customer, as: "customer" },
+      { model: Role, as: "role" },
+    ],
+  });
+};

@@ -2,6 +2,15 @@
 
 function serializeSalon(salon, options = {}) {
   if (!salon) return null;
+  
+  // Debug: Log what data is available
+  console.log('Salon serializer - Available data:', {
+    hasAddress: !!salon.address,
+    hasServices: !!salon.services,
+    addressData: salon.address,
+    servicesData: salon.services
+  });
+  
   // Helper to build full URL with domain
   const buildUrl = (img) => {
     if (!img) return img;

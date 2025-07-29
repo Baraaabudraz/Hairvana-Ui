@@ -1,16 +1,34 @@
-const { User } = require('../../../models');
+const { User, Role } = require('../../../models');
 const bcrypt = require('bcryptjs');
 const { getFileInfo } = require('../../../helpers/uploadHelper');
 
 exports.getProfile = async (req, res) => {
   try {
+    console.log('Owner Profile - User object:', req.user);
+    console.log('Owner Profile - User ID:', req.user?.id);
+    
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+    
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'name', 'email', 'phone', 'avatar', 'status', 'role', 'createdAt', 'updatedAt']
+      attributes: { exclude: ['password_hash'] }
     });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    if (!user) {
+      console.log('Owner Profile - User not found in database');
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log('Owner Profile - Found user:', user.toJSON());
     return res.json({ success: true, user });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to fetch profile' });
+    console.error('Owner Profile - Error:', err);
+    console.error('Owner Profile - Error stack:', err.stack);
+    return res.status(500).json({ 
+      error: 'Failed to fetch profile',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
@@ -35,7 +53,7 @@ exports.uploadAvatar = async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No avatar file uploaded' });
     const user = await User.findByPk(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    const avatarInfo = getFileInfo(req.file, '/uploads/avatars');
+    const avatarInfo = getFileInfo(req.file, '/images/avatar');
     user.avatar = avatarInfo.storedName; // Store only the filename
     await user.save();
     // Return the full URL in the response

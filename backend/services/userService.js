@@ -142,7 +142,7 @@ exports.createUser = async (userData, req) => {
         favorite_services: []
       });
     }
-    return serializeUser(newUser, { req, avatarFilenameOnly: true });
+    return serializeUser(newUser, { req, avatarFilenameOnly: false });
   } catch (err) {
     if (err.name && err.name === 'SequelizeValidationError') {
       throw Object.assign(new Error('Validation error'), { errors: err.errors });
@@ -173,7 +173,7 @@ exports.updateUser = async (id, userData, req) => {
     }
     const [affectedRows, [updatedUser]] = await userRepository.update(id, userData);
     if (!updatedUser) return null;
-    return serializeUser(updatedUser, { req, avatarFilenameOnly: true });
+    return serializeUser(updatedUser, { req, avatarFilenameOnly: false });
   } catch (err) {
     if (err.name && err.name === 'SequelizeValidationError') {
       throw Object.assign(new Error('Validation error: ' + err.message), { errors: err.errors });
@@ -211,5 +211,105 @@ exports.updateUserStatus = async (id, status, req) => {
     return serializeUser(updatedUser, { req });
   } catch (err) {
     throw new Error('Failed to update user status: ' + err.message);
+  }
+};
+
+/**
+ * Check if email exists (excluding current user)
+ * @param {string} email - Email to check
+ * @param {string} excludeUserId - User ID to exclude from check
+ * @returns {Promise<boolean>} True if email exists
+ */
+exports.checkEmailExists = async (email, excludeUserId = null) => {
+  if (!email) throw new Error('Email is required');
+  try {
+    const where = { email: email.toLowerCase().trim() };
+    if (excludeUserId) {
+      where.id = { [require('sequelize').Op.ne]: excludeUserId };
+    }
+    const existingUser = await userRepository.findOne({ where });
+    return !!existingUser;
+  } catch (err) {
+    throw new Error('Failed to check email existence: ' + err.message);
+  }
+};
+
+/**
+ * Upload user avatar
+ * @param {string} userId - User ID
+ * @param {Object} file - Uploaded file object
+ * @param {Object} req - Request object for URL building
+ * @returns {Promise<Object>} Avatar data
+ */
+exports.uploadAvatar = async (userId, file, req) => {
+  if (!userId) throw new Error('User ID is required');
+  if (!file) throw new Error('File is required');
+  
+  try {
+    // Get user to check if exists
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Delete old avatar if exists
+    if (user.avatar) {
+      const oldAvatarPath = path.join(__dirname, '../public/uploads/avatars', user.avatar);
+      fs.unlink(oldAvatarPath, (err) => { /* ignore error if file doesn't exist */ });
+    }
+
+    // Process new avatar
+    const avatarInfo = getFileInfo(file, '/images/avatar');
+    
+    // Update user with new avatar
+    await userRepository.update(userId, { avatar: avatarInfo.storedName });
+    
+    // Build full URL
+    const baseUrl = req.protocol + '://' + req.get('host');
+    const fullUrl = baseUrl + avatarInfo.url;
+    
+    return {
+      avatar: avatarInfo.storedName,
+      url: fullUrl,
+      filename: avatarInfo.storedName
+    };
+  } catch (err) {
+    throw new Error('Failed to upload avatar: ' + err.message);
+  }
+};
+
+/**
+ * Change user password
+ * @param {string} userId - User ID
+ * @param {string} oldPassword - Current password
+ * @param {string} newPassword - New password
+ * @returns {Promise<void>}
+ */
+exports.changePassword = async (userId, oldPassword, newPassword) => {
+  if (!userId) throw new Error('User ID is required');
+  if (!oldPassword) throw new Error('Old password is required');
+  if (!newPassword) throw new Error('New password is required');
+  
+  try {
+    // Get user
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Verify old password
+    const isValidPassword = await bcrypt.compare(oldPassword, user.password_hash);
+    if (!isValidPassword) {
+      throw new Error('Old password is incorrect');
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password
+    await userRepository.update(userId, { password_hash: hashedPassword });
+  } catch (err) {
+    throw new Error('Failed to change password: ' + err.message);
   }
 }; 

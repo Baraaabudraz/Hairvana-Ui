@@ -43,7 +43,8 @@ exports.logout = async (req, res, next) => {
 // Get current user
 exports.getCurrentUser = async (req, res, next) => {
   try {
-    const user = await authService.getCurrentUser(req.user.userId);
+    const userId = req.user.id || req.user.userId; // Handle both id and userId for compatibility
+    const user = await authService.getCurrentUser(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (error) {
@@ -55,7 +56,8 @@ exports.getCurrentUser = async (req, res, next) => {
 exports.changePassword = async (req, res, next) => {
   try {
     // Validation handled by middleware
-    await authService.changePassword(req.user.userId, req.body);
+    const userId = req.user.id || req.user.userId; // Handle both id and userId for compatibility
+    await authService.changePassword(userId, req.body);
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
     next(error);
@@ -65,7 +67,7 @@ exports.changePassword = async (req, res, next) => {
 // Get user permissions
 exports.getUserPermissions = async (req, res) => {
   try {
-    const userId = req.user.userId || req.user.id;
+    const userId = req.user.id || req.user.userId; // Handle both id and userId for compatibility
     
     const permissions = await PermissionService.getUserPermissions(userId);
     const accessibleResources = await PermissionService.getAccessibleResources(userId);

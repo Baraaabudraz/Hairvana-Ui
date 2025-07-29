@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const appointmentController = require('../../../../controllers/Api/customer/appointmentController');
 const { authenticateCustomer } = require('../../../../middleware/passportMiddleware');
+
 const { 
   createAppointmentValidation, 
   bookAppointmentValidation,
@@ -10,9 +11,9 @@ const {
 } = require('../../../../validation/appointmentValidation');
 const validate = require('../../../../middleware/validate');
 
-router.get('/salons/:id/availability', checkAvailabilityValidation, appointmentController.getAvailability);
-router.get('/salons/:salon_id/services', appointmentController.getSalonServices);
-router.get('/services', appointmentController.getAllServices);
+router.get('/salons/:id/availability', authenticateCustomer, checkAvailabilityValidation, appointmentController.getAvailability);
+router.get('/salons/:salon_id/services', authenticateCustomer, appointmentController.getSalonServices);
+router.get('/services', authenticateCustomer, appointmentController.getAllServices);
 router.post('/appointments', authenticateCustomer, bookAppointmentValidation, validate, appointmentController.bookAppointment);
 router.get('/appointments', authenticateCustomer, appointmentController.getAppointments);
 router.get('/appointments/:id', authenticateCustomer, appointmentController.getAppointmentById);

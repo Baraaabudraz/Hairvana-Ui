@@ -4,7 +4,7 @@ const checkPermission = require("../../../../middleware/permissionMiddleware");
 const ownerProfileController = require("../../../../controllers/Api/salon/ownerProfileController");
 const { createUploadMiddleware } = require("../../../../helpers/uploadHelper");
 const { authenticateOwner } = require('../../../../middleware/passportMiddleware');
-
+const { passwordChangeRateLimit } = require('../../../../middleware/rateLimitMiddleware');
 
 const uploadAvatar = createUploadMiddleware({
   uploadDir: "backend/public/uploads/avatars",
@@ -31,6 +31,7 @@ router.patch(
 router.patch(
   "/profile/password",
   checkPermission("salon", "edit"),
+  passwordChangeRateLimit,
   ownerProfileController.changePassword
 );
 

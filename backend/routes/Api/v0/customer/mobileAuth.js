@@ -11,6 +11,8 @@ const {
   securityHeaders,
   auditLog 
 } = require('../../../../middleware/passportMiddleware');
+const { loginRateLimit, registerRateLimit, passwordChangeRateLimit } = require('../../../../middleware/rateLimitMiddleware');
+
 
 // Apply security headers to all routes
 router.use(securityHeaders);
@@ -18,6 +20,7 @@ router.use(securityHeaders);
 // Public routes (no authentication required)
 router.post('/register', 
   registerValidation, 
+  registerRateLimit,
   validate,
   auditLog('customer_register'),
   mobileAuthController.register
@@ -26,6 +29,7 @@ router.post('/register',
 router.post('/login', 
   loginValidation, 
   validate,
+  loginRateLimit,
   auditLog('customer_login'),
   authenticateCustomerLocal,
   mobileAuthController.login
@@ -67,6 +71,7 @@ router.put('/change-password',
       .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
       .withMessage('New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character')
   ],
+  passwordChangeRateLimit,
   validate,
   auditLog('password_change'),
   mobileAuthController.changePassword

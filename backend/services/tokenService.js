@@ -16,7 +16,7 @@ class TokenService {
    * @param {string} tokenType - Type of token ('access' or 'refresh')
    * @returns {Object} { token, jti, expiresAt }
    */
-  static generateToken(payload, expiresIn = '7d', tokenType = 'access') {
+  static generateToken(payload, expiresIn = '1d', tokenType = 'access') {
     try {
       const jti = uuidv4(); // Unique token identifier
       const issuedAt = Math.floor(Date.now() / 1000);
@@ -60,7 +60,7 @@ class TokenService {
    * @returns {Object} { accessToken, refreshToken, accessTokenInfo, refreshTokenInfo }
    */
   static generateTokenPair(payload) {
-    const accessTokenInfo = this.generateToken(payload, '15m', 'access');
+    const accessTokenInfo = this.generateToken(payload, '1d', 'access');
     const refreshTokenInfo = this.generateToken(payload, '7d', 'refresh');
     
     return {

@@ -164,7 +164,9 @@ passport.use('owner-jwt', new JwtStrategy(jwtOptions, async (payload, done) => {
     }
     
     // Verify salon owner role from token payload first
+    console.log(`Owner JWT Strategy - Token role: ${payload.role}, Expected: ${ROLES.SALON_OWNER}`);
     if (payload.role !== ROLES.SALON_OWNER) {
+      console.log(`Owner JWT Strategy - Role mismatch: ${payload.role} !== ${ROLES.SALON_OWNER}`);
       return done(null, false, { 
         message: 'Salon owner access required',
         code: 'INSUFFICIENT_ROLE'
@@ -172,6 +174,7 @@ passport.use('owner-jwt', new JwtStrategy(jwtOptions, async (payload, done) => {
     }
     
     // Get salon owner user with relations
+    console.log(`Owner JWT Strategy - Looking for user with ID: ${payload.id}`);
     const user = await User.findByPk(payload.id, {
       where: { status: 'active' },
       attributes: { exclude: ['password_hash'] },
@@ -186,6 +189,8 @@ passport.use('owner-jwt', new JwtStrategy(jwtOptions, async (payload, done) => {
         }
       ]
     });
+    
+    console.log(`Owner JWT Strategy - User found:`, user ? `ID: ${user.id}, Role: ${user.role?.name}` : 'No user found');
     
     if (user) {
       user.tokenInfo = {

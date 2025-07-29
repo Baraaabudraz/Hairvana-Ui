@@ -95,8 +95,15 @@ passport.use('customer-jwt', new JwtStrategy(jwtOptions, async (payload, done) =
     }
     
     // Verify customer role from token payload first (faster)
-    console.log(`Customer JWT Strategy - Token role: ${payload.role}, Expected: [${ROLES.CUSTOMER}, ${ROLES.USER}]`);
+    console.log(`Customer JWT Strategy - Token payload:`, {
+      id: payload.id,
+      role: payload.role,
+      expected: [ROLES.CUSTOMER, ROLES.USER],
+      includes: [ROLES.CUSTOMER, ROLES.USER].includes(payload.role)
+    });
+    
     if (![ROLES.CUSTOMER, ROLES.USER].includes(payload.role)) {
+      console.log(`Customer JWT Strategy - Role mismatch: ${payload.role} not in [${ROLES.CUSTOMER}, ${ROLES.USER}]`);
       return done(null, false, { 
         message: 'Customer access required',
         code: 'INSUFFICIENT_ROLE'
@@ -104,6 +111,7 @@ passport.use('customer-jwt', new JwtStrategy(jwtOptions, async (payload, done) =
     }
     
     // Get customer user with relations
+    console.log(`Customer JWT Strategy - Looking for user with ID: ${payload.id}`);
     const user = await User.findByPk(payload.id, {
       where: { status: 'active' },
       attributes: { exclude: ['password_hash'] },
@@ -125,6 +133,12 @@ passport.use('customer-jwt', new JwtStrategy(jwtOptions, async (payload, done) =
         }
       ]
     });
+    
+    console.log(`Customer JWT Strategy - User found:`, user ? {
+      id: user.id,
+      role: user.role?.name,
+      hasCustomer: !!user.customer
+    } : 'No user found');
     
     if (user) {
       user.tokenInfo = {

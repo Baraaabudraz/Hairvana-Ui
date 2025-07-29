@@ -19,7 +19,6 @@ const uploadHairstyle = createUploadMiddleware({
 router.post(
   "/hairstyles",
   authenticateOwner,
-  checkPermission("salon", "add"),
   uploadHairstyle.single("image"),
   createHairstyleValidation,
   hairstyleController.uploadHairstyle
@@ -34,7 +33,6 @@ router.get(
 router.put(
   "/hairstyles/:id",
   authenticateOwner,
-  checkPermission("salon", "edit"),
   uploadHairstyle.single("image"),
   updateHairstyleValidation,
   hairstyleController.updateHairstyle
@@ -43,7 +41,6 @@ router.put(
 router.delete(
   "/hairstyles/:id",
   authenticateOwner,
-  checkPermission("salon", "delete"),
   hairstyleController.deleteHairstyle
 );
 

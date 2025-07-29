@@ -37,6 +37,14 @@ exports.uploadHairstyle = async (req, res) => {
 // List all hairstyles for the salon
 exports.getHairstyles = async (req, res) => {
   try {
+    // Debug: Log the user object to see what's available
+    console.log('User object:', req.user);
+    console.log('User ID:', req.user?.id);
+    
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'User not authenticated or missing user ID' });
+    }
+    
     const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
     if (!salon) return res.status(404).json({ error: 'Salon not found' });
     const hairstyles = await hairstyleService.findAllBySalon(salon.id);

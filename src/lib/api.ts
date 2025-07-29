@@ -3,6 +3,21 @@ const VITE_BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 export async function apiFetch(url: string, options?: RequestInit) {
   const token = localStorage.getItem('token');
+  
+  // Check if token is valid before using it
+  if (token) {
+    try {
+      const { isTokenValid } = await import('@/lib/tokenUtils');
+      if (!isTokenValid(token)) {
+        localStorage.removeItem('token');
+        throw new Error('Token is invalid or expired');
+      }
+    } catch (error) {
+      localStorage.removeItem('token');
+      throw new Error('Token validation failed');
+    }
+  }
+  
   let headers: any = {
     ...(token && { 'Authorization': `Bearer ${token}` }),
     ...options?.headers,

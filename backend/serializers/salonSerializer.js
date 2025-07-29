@@ -41,7 +41,7 @@ function serializeSalon(salon, options = {}) {
     } : null,
     address_id: salon.address_id,
     // Legacy location field for backward compatibility
-    location: salon.address ? `${salon.address.city}, ${salon.address.state}` : salon.location,
+    location: salon.address ? `${salon.address.city}, ${salon.address.state}` : null,
     status: salon.status,
     join_date: salon.join_date,
     revenue: typeof salon.revenue !== 'undefined' ? salon.revenue : undefined,

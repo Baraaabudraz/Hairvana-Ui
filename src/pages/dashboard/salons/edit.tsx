@@ -181,18 +181,32 @@ export default function EditSalonPage() {
         console.log('Setting form data:', formData);
         reset(formData);
 
-        // Convert hours format
+        // Convert hours format and ensure all days are initialized
         const formattedHours: Record<string, { open: string; close: string; closed: boolean }> = {};
+        
+        // Define all possible days
+        const allDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        
+        // Initialize all days with default values
+        allDays.forEach(day => {
+          formattedHours[day] = {
+            open: '',
+            close: '',
+            closed: true
+          };
+        });
+        
+        // Override with existing data
         Object.entries(data.hours || {}).forEach(([day, timeRange]) => {
           if (typeof timeRange === 'string' && timeRange.toLowerCase() !== 'closed') {
             const [open, close] = timeRange.split(' - ');
-            formattedHours[day] = {
+            formattedHours[day.toLowerCase()] = {
               open: convertTo24Hour(open),
               close: convertTo24Hour(close),
               closed: false
             };
           } else {
-            formattedHours[day] = {
+            formattedHours[day.toLowerCase()] = {
               open: '',
               close: '',
               closed: true
@@ -229,22 +243,42 @@ export default function EditSalonPage() {
 
   const convertTo24Hour = (time12h: string) => {
     if (!time12h || typeof time12h !== 'string') return '';
+    
+    // Handle already 24-hour format
+    if (time12h.includes(':') && !time12h.includes('AM') && !time12h.includes('PM')) {
+      return time12h;
+    }
+    
     const [time, modifier] = time12h.split(' ');
     if (!time || !modifier) return '';
+    
     let [hours, minutes] = time.split(':');
     if (!hours || !minutes) return '';
-    if (hours === '12') {
-      hours = '00';
+    
+    let hour = parseInt(hours, 10);
+    
+    if (modifier === 'PM' && hour !== 12) {
+      hour += 12;
+    } else if (modifier === 'AM' && hour === 12) {
+      hour = 0;
     }
-    if (modifier === 'PM') {
-      hours = String(parseInt(hours, 10) + 12);
-    }
-    return `${hours.padStart(2, '0')}:${minutes}`;
+    
+    return `${hour.toString().padStart(2, '0')}:${minutes}`;
   };
 
   const convertTo12Hour = (time24h: string) => {
+    if (!time24h || typeof time24h !== 'string') return '';
+    
+    // Handle already 12-hour format
+    if (time24h.includes('AM') || time24h.includes('PM')) {
+      return time24h;
+    }
+    
     const [hours, minutes] = time24h.split(':');
+    if (!hours || !minutes) return '';
+    
     const hour = parseInt(hours, 10);
+    if (isNaN(hour)) return '';
     
     const period = hour >= 12 ? 'PM' : 'AM';
     const hour12 = hour % 12 || 12;
@@ -274,14 +308,20 @@ export default function EditSalonPage() {
   const handleHoursChange = (day: string, field: 'open' | 'close', value: string) => {
     setHours(prev => ({
       ...prev,
-      [day]: { ...prev[day], [field]: value }
+      [day]: { 
+        ...(prev[day] || { open: '', close: '', closed: false }), 
+        [field]: value 
+      }
     }));
   };
 
   const toggleDayClosed = (day: string) => {
     setHours(prev => ({
       ...prev,
-      [day]: { ...prev[day], closed: !prev[day].closed }
+      [day]: { 
+        ...(prev[day] || { open: '', close: '', closed: false }), 
+        closed: !(prev[day]?.closed || false) 
+      }
     }));
   };
 

@@ -27,10 +27,21 @@ exports.getSalonById = async (id, req) => {
 exports.getSalonByOwnerId = async (ownerId, req) => {
   const salon = await salonRepository.findByOwnerId(ownerId);
   if (!salon) return null;
+  
+  // Get additional stats
   const revenue = await salonRepository.getRevenue(salon.id);
   const bookings = await salonRepository.getBookings(salon.id);
   const rating = await salonRepository.getRating(salon.id);
-  return serializeSalon({ ...salon.toJSON(), revenue, bookings, rating }, { req });
+  
+  // Ensure salon data includes address and services from the repository query
+  const salonData = {
+    ...salon.toJSON(),
+    revenue,
+    bookings,
+    rating
+  };
+  
+  return serializeSalon(salonData, { req });
 };
 
 exports.getAllSalonsByOwnerId = async (ownerId, req) => {
@@ -173,6 +184,7 @@ exports.updateSalonProfile = async (id, data, req) => {
     gallery
   };
   
+  // Update the salon (now returns full salon with includes)
   const updatedSalon = await salonRepository.update(id, updateData);
   return updatedSalon ? serializeSalon(updatedSalon, { req }) : null;
 };

@@ -12,7 +12,16 @@ exports.findAll = async (query) => {
     where,
     order: [['date', 'DESC']],
     include: [
-      { model: Salon, as: 'salon', attributes: ['id', 'name', 'location', 'address', 'phone', 'email', 'images'] },
+      { 
+        model: Salon, 
+        as: 'salon', 
+        attributes: ['id', 'name', 'phone', 'email', 'avatar', 'website', 'description'],
+        include: [{
+          model: require('../models').Address,
+          as: 'address',
+          attributes: ['street_address', 'city', 'state', 'zip_code', 'country']
+        }]
+      },
       { model: Service, as: 'services', attributes: ['id', 'name', 'price', 'duration', 'description'] },
       { model: Staff, as: 'staff', attributes: ['id', 'name', 'avatar', 'bio'] },
       { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'avatar'] },
@@ -25,7 +34,16 @@ exports.findById = async (id) => {
   return Appointment.findOne({
     where: { id },
     include: [
-      { model: Salon, as: 'salon', attributes: ['id', 'name', 'location', 'address', 'phone', 'email', 'images'] },
+      { 
+        model: Salon, 
+        as: 'salon', 
+        attributes: ['id', 'name', 'phone', 'email', 'avatar', 'website', 'description'],
+        include: [{
+          model: require('../models').Address,
+          as: 'address',
+          attributes: ['street_address', 'city', 'state', 'zip_code', 'country']
+        }]
+      },
       { model: Service, as: 'services', attributes: ['id', 'name', 'price', 'duration', 'description'] },
       { model: Staff, as: 'staff', attributes: ['id', 'name', 'avatar', 'bio'] },
       { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'avatar'] },

@@ -79,11 +79,19 @@ exports.findAllByOwnerId = async (ownerId) => {
 exports.create = async (data) => Salon.create(data);
 
 exports.update = async (id, data) => {
-  const [affectedRows, [updatedSalon]] = await Salon.update(data, {
-    where: { id },
-    returning: true,
+  await Salon.update(data, {
+    where: { id }
   });
-  return updatedSalon;
+  
+  // Fetch the updated salon with includes
+  return Salon.findOne({
+    where: { id },
+    include: [
+      { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role_id'] },
+      { model: Address, as: 'address' },
+      { model: Service, as: 'services' }
+    ]
+  });
 };
 
 exports.delete = async (id) => {
@@ -91,11 +99,20 @@ exports.delete = async (id) => {
 };
 
 exports.updateStatus = async (id, status) => {
-  const [affectedRows, [updatedSalon]] = await Salon.update(
+  await Salon.update(
     { status },
-    { where: { id }, returning: true }
+    { where: { id } }
   );
-  return updatedSalon;
+  
+  // Fetch the updated salon with includes
+  return Salon.findOne({
+    where: { id },
+    include: [
+      { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role_id'] },
+      { model: Address, as: 'address' },
+      { model: Service, as: 'services' }
+    ]
+  });
 };
 
 exports.getRevenue = async (salonId) => {

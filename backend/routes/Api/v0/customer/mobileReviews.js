@@ -46,6 +46,7 @@ router.post('/',
 
 // GET /backend/api/mobile/reviews/salon/:salon_id - Get reviews for a specific salon
 router.get('/salon/:salon_id', 
+  authenticateCustomer,
   queryValidation, 
   validate, 
   reviewController.getSalonReviews.bind(reviewController)
@@ -53,6 +54,7 @@ router.get('/salon/:salon_id',
 
 // GET /backend/api/mobile/reviews/salon/:salon_id/stats - Get review statistics for a salon
 router.get('/salon/:salon_id/stats', 
+  authenticateCustomer,
   reviewController.getSalonReviewStats.bind(reviewController)
 );
 

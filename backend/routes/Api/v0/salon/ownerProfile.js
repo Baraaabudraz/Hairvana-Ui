@@ -14,24 +14,24 @@ const uploadAvatar = createUploadMiddleware({
 
 router.get(
   "/profile",
-  checkPermission("salon", "edit"),
+  authenticateOwner,
   ownerProfileController.getProfile
 );
 router.put(
   "/profile",
-  checkPermission("salon", "edit"),
+  authenticateOwner,
   ownerProfileController.updateProfile
 );
 router.patch(
   "/profile/avatar",
-  checkPermission("salon", "edit"),
   uploadAvatar.single("avatar"),
+  authenticateOwner,
   ownerProfileController.uploadAvatar
 );
 router.patch(
   "/profile/password",
-  checkPermission("salon", "edit"),
   passwordChangeRateLimit,
+  authenticateOwner,
   ownerProfileController.changePassword
 );
 

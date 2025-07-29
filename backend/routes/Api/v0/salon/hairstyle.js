@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { authenticateOwner } = require('../../../../middleware/passportMiddleware');
+const { authenticateOwner, authenticateJWT } = require('../../../../middleware/passportMiddleware');
 const checkPermission = require("../../../../middleware/permissionMiddleware");
 const hairstyleController = require("../../../../controllers/Api/salon/hairstyleController");
 const { createUploadMiddleware } = require("../../../../helpers/uploadHelper");
@@ -18,7 +18,8 @@ const uploadHairstyle = createUploadMiddleware({
 // Upload a new hairstyle
 router.post(
   "/hairstyles",
-  checkPermission("salon", "edit"),
+  authenticateOwner,
+  checkPermission("salon", "add"),
   uploadHairstyle.single("image"),
   createHairstyleValidation,
   hairstyleController.uploadHairstyle
@@ -26,12 +27,13 @@ router.post(
 // List all hairstyles
 router.get(
   "/hairstyles",
-  checkPermission("salon", "edit"),
+  authenticateOwner,
   hairstyleController.getHairstyles
 );
 // Update a hairstyle
 router.put(
   "/hairstyles/:id",
+  authenticateOwner,
   checkPermission("salon", "edit"),
   uploadHairstyle.single("image"),
   updateHairstyleValidation,
@@ -40,7 +42,8 @@ router.put(
 // Delete a hairstyle
 router.delete(
   "/hairstyles/:id",
-  checkPermission("salon", "edit"),
+  authenticateOwner,
+  checkPermission("salon", "delete"),
   hairstyleController.deleteHairstyle
 );
 

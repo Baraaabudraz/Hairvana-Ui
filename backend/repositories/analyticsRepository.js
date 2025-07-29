@@ -77,10 +77,16 @@ exports.getAnalyticsData = async (query) => {
   // Geographic Data
   let geographicData = [];
   try {
-    const salons = await safeFindAll(Salon);
+    const salons = await Salon.findAll({
+      include: [{
+        model: require('../models').Address,
+        as: 'address',
+        attributes: ['city', 'state']
+      }]
+    });
     const geoMap = {};
     salons.forEach(salon => {
-      const loc = salon.location || 'Unknown Location';
+      const loc = salon.address ? `${salon.address.city}, ${salon.address.state}` : 'Unknown Location';
       if (!geoMap[loc]) geoMap[loc] = { location: loc, salons: 0, users: 0, revenue: 0 };
       geoMap[loc].salons += 1;
       geoMap[loc].revenue += Number(salon.revenue || 0);

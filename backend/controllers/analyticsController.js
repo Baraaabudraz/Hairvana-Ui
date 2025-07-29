@@ -87,10 +87,16 @@ exports.generateReport = async (req, res, next) => {
           break;
         }
         case "Geographic Breakdown": {
-          const salons = await Salon.findAll();
+          const salons = await Salon.findAll({
+            include: [{
+              model: require('../models').Address,
+              as: 'address',
+              attributes: ['city', 'state']
+            }]
+          });
           const geoMap = {};
           for (const salon of salons) {
-            const loc = salon.location || "Unknown";
+            const loc = salon.address ? `${salon.address.city}, ${salon.address.state}` : "Unknown";
             if (!geoMap[loc])
               geoMap[loc] = { location: loc, salons: 0, revenue: 0 };
             geoMap[loc].salons += 1;

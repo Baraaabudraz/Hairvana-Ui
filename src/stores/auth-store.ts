@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { loginUser, logoutUser, getCurrentUser } from '@/api/auth';
+import { isTokenValid, clearInvalidToken } from '@/lib/tokenUtils';
 
 interface User {
   id: string;
@@ -33,6 +34,11 @@ export const useAuthStore = create<AuthState>()(
         try {
           const { user, token } = await loginUser(email, password);
           
+          // Ensure token is stored in localStorage
+          if (token) {
+            localStorage.setItem('token', token);
+          }
+          
           set({ 
             user, 
             token,
@@ -48,9 +54,14 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         try {
           await logoutUser();
+          // Ensure token is removed from localStorage
+          clearInvalidToken();
           set({ user: null, token: null });
         } catch (error) {
           console.error('Logout error:', error);
+          // Even if logout API fails, clear local state
+          clearInvalidToken();
+          set({ user: null, token: null });
         }
       },
 
@@ -72,9 +83,18 @@ export const useAuthStore = create<AuthState>()(
             return;
           }
           
+          // Check if token is valid before making API call
+          if (!isTokenValid(token)) {
+            clearInvalidToken();
+            set({ user: null, token: null, isLoading: false });
+            return;
+          }
+          
           const userData = await getCurrentUser();
           
           if (!userData) {
+            // Clear invalid token
+            clearInvalidToken();
             set({ user: null, token: null, isLoading: false });
             return;
           }
@@ -86,6 +106,8 @@ export const useAuthStore = create<AuthState>()(
           });
         } catch (error) {
           console.error('Session check error:', error);
+          // Clear invalid token on error
+          clearInvalidToken();
           set({ user: null, token: null, isLoading: false });
         }
       },

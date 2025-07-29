@@ -4,8 +4,7 @@ const { createUploadMiddleware } = require('../../../../helpers/uploadHelper');
 const ownerAuthController = require('../../../../controllers/Api/salon/auth/ownerAuthController');
 const ownerProfileController = require('../../../../controllers/Api/salon/ownerProfileController');
 const { authenticateOwner, authenticateForLogout } = require('../../../../middleware/passportMiddleware');
-const checkPermission = require("../../../../middleware/permissionMiddleware");
-
+const { loginRateLimit, registerRateLimit, passwordChangeRateLimit } = require('../../../../middleware/rateLimitMiddleware');
 // Multer setup for file uploads using uploadHelper
 const upload = createUploadMiddleware({
   uploadDir: "backend/public/uploads/owner_docs",
@@ -20,10 +19,10 @@ const uploadAvatar = createUploadMiddleware({
 });
 
 // Register
-router.post("/register", upload.none(), ownerAuthController.register);
+router.post("/register", upload.none(), registerRateLimit, ownerAuthController.register);
 
 // Login
-router.post("/login", ownerAuthController.login);
+router.post("/login", loginRateLimit, ownerAuthController.login);
 
 // Logout
 router.post(

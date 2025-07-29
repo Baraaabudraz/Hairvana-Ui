@@ -337,14 +337,7 @@ export default function UserDetailsPage() {
               <div className="relative">
                 <Avatar className="h-20 w-20">
                   <AvatarImage
-                    src={
-                      user.avatar
-                        ? `${
-                            import.meta.env.VITE_BACKEND_URL ||
-                            "http://localhost:5000"
-                          }/images/avatar/${user.avatar}`
-                        : undefined
-                    }
+                    src={user.avatar || undefined}
                     alt={user.name}
                   />
                   <AvatarFallback className="text-xl">

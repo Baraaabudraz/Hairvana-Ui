@@ -18,7 +18,7 @@ function serializeUser(user, options = {}) {
     fields = null,
     includeAssociations = true,
     currentUser = null,
-    avatarFilenameOnly = true
+    avatarFilenameOnly = false
   } = options;
 
   // Base user data
@@ -28,8 +28,8 @@ function serializeUser(user, options = {}) {
     email: user.email,
     phone: user.phone,
     avatar: avatarFilenameOnly ? user.avatar : (
-      user.avatar && !user.avatar.startsWith('http') && !user.avatar.startsWith('blob:') && !user.avatar.match(/^\w+\.[a-zA-Z0-9]+$/)
-        ? `${options.req?.protocol || 'http'}://${options.req?.get ? options.req.get('host') : 'localhost:5000'}${user.avatar}`
+      user.avatar && !user.avatar.startsWith('http') && !user.avatar.startsWith('blob:')
+        ? `${options.req?.protocol || 'http'}://${options.req?.get ? options.req.get('host') : 'localhost:5000'}/images/avatar/${user.avatar}`
         : user.avatar
     ),
     join_date:user.join_date,

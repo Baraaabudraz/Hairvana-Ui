@@ -27,7 +27,6 @@ import {
   Save
 } from 'lucide-react';
 import { fetchSalonById, updateSalon } from '@/api/salons';
-import { getSalonImageUrl } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 const salonSchema = z.object({
@@ -801,7 +800,7 @@ export default function EditSalonPage() {
                     : avatarFile
                       ? URL.createObjectURL(avatarFile)
                       : salonData?.avatar
-                        ? getSalonImageUrl(salonData.avatar)
+                        ? salonData.avatar
                         : '/default-salon.png'}
                   alt="Salon Avatar"
                 />
@@ -867,7 +866,7 @@ export default function EditSalonPage() {
                       src={
                         file instanceof File
                           ? URL.createObjectURL(file)
-                          : getSalonImageUrl(file)
+                          : file
                       }
                       alt="Preview"
                       style={{ width: 100, height: 100, objectFit: 'cover' }}

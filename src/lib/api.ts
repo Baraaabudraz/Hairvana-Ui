@@ -1,5 +1,5 @@
 const BASE_API_URL = import.meta.env.VITE_BASE_API_URL;
-const VITE_BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+const BACKEND_BASE_URL = import.meta.env.BACKEND_BASE_URL;
 
 export async function apiFetch(url: string, options?: RequestInit) {
   const token = localStorage.getItem('token');
@@ -57,11 +57,11 @@ export function getSalonImageUrl(imagePath: string | null | undefined): string {
   
   // If it's a relative path, construct the full URL
   if (imagePath.startsWith('/')) {
-    return `${VITE_BACKEND_URL}${imagePath}`;
+    return `${BACKEND_BASE_URL}${imagePath}`;
   }
   
   // If it's just a filename, construct the full path
-  return `${VITE_BACKEND_URL}/images/salon/${imagePath}`;
+  return `${BACKEND_BASE_URL}/images/salon/${imagePath}`;
 }
 
 /**

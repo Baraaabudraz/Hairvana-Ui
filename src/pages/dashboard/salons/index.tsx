@@ -322,7 +322,7 @@ export default function SalonsPage() {
                     {/* Salon Image */}
                     <Avatar className="h-12 w-12 mr-4">
                       <AvatarImage
-                        src={getSalonImageUrl(salon.avatar)}
+                        src={salon.avatar}
                         alt={salon.name}
                       />
                       <AvatarFallback>{salon.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>

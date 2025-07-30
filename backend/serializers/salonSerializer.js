@@ -1,4 +1,5 @@
 // Salon resource serializer
+const { buildAvatarUrl, buildSalonImageUrl, buildImageUrls } = require('../helpers/urlHelper');
 
 function serializeSalon(salon, options = {}) {
   if (!salon) return null;
@@ -10,16 +11,6 @@ function serializeSalon(salon, options = {}) {
     addressData: salon.address,
     servicesData: salon.services
   });
-  
-  // Helper to build full URL with domain
-  const buildUrl = (img) => {
-    if (!img) return img;
-    // If already absolute URL, return as is
-    if (img.startsWith('http')) return img;
-    // Build full URL with domain
-    const base = `${options.req?.protocol || 'http'}://${options.req?.get ? options.req.get('host') : 'localhost:5000'}`;
-    return img.startsWith('/') ? `${base}${img}` : `${base}/images/salon/${img}`;
-  };
 
   const salonData = {
     id: salon.id,
@@ -53,7 +44,7 @@ function serializeSalon(salon, options = {}) {
     owner_name: salon.owner?.name || salon.owner_name,
     owner_email: salon.owner?.email || salon.owner_email,
     owner_phone: salon.owner?.phone || salon.owner_phone,
-    owner_avatar: buildUrl(salon.owner?.avatar || salon.owner_avatar),
+    owner_avatar: buildAvatarUrl(salon.owner?.avatar || salon.owner_avatar, options),
     owner_role: salon.owner?.role || salon.owner_role,
     // Include services if available
     services: salon.services || [],
@@ -62,8 +53,8 @@ function serializeSalon(salon, options = {}) {
     description: salon.description,
     business_license: salon.business_license,
     tax_id: salon.tax_id,
-    avatar: buildUrl(salon.avatar),
-    gallery: Array.isArray(salon.gallery) ? salon.gallery.map(img => buildUrl(img)) : [],
+    avatar: buildSalonImageUrl(salon.avatar, options),
+    gallery: buildImageUrls(salon.gallery, 'salon', options),
     created_at: salon.created_at,
     updated_at: salon.updated_at
   };

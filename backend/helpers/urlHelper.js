@@ -26,25 +26,25 @@ const buildUrl = (path, type = 'avatar', options = {}) => {
   let imagePath;
   switch (type) {
     case 'avatar':
-      imagePath = '/images/avatar';
+      imagePath = '/backend/images/avatar';
       break;
     case 'salon':
-      imagePath = '/images/salon';
+      imagePath = '/backend/images/salon';
       break;
     case 'staff':
-      imagePath = '/images/staff';
+      imagePath = '/backend/images/staff';
       break;
     case 'service':
-      imagePath = '/images/services';
+      imagePath = '/backend/images/services';
       break;
     case 'hairstyle':
-      imagePath = '/images/hairstyles';
+      imagePath = '/backend/images/hairstyles';
       break;
     case 'gallery':
-      imagePath = '/images/gallery';
+      imagePath = '/backend/images/gallery';
       break;
     default:
-      imagePath = '/images';
+      imagePath = '/backend/images';
   }
   
   // If path already starts with /, use it directly

@@ -92,7 +92,7 @@ app.use(
   "/backend/api/mobile/devices",
   require("./routes/Api/v0/customer/mobileDevices")
 );
-app.use("/images", require("./routes/images"));
+app.use("/backend/images", require("./routes/images"));
 
 // Mobile API Routes for Salon Owner
 app.use(

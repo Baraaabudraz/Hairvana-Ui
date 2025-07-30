@@ -1,4 +1,5 @@
 // User resource serializer with flexible contexts and field selection
+const { buildAvatarUrl } = require('../helpers/urlHelper');
 
 /**
  * Serializes user data based on context and field selection
@@ -27,11 +28,7 @@ function serializeUser(user, options = {}) {
     name: user.name,
     email: user.email,
     phone: user.phone,
-    avatar: avatarFilenameOnly ? user.avatar : (
-      user.avatar && !user.avatar.startsWith('http') && !user.avatar.startsWith('blob:')
-        ? `${options.req?.protocol || 'http'}://${options.req?.get ? options.req.get('host') : 'localhost:5000'}/images/avatar/${user.avatar}`
-        : user.avatar
-    ),
+    avatar: avatarFilenameOnly ? user.avatar : buildAvatarUrl(user.avatar, options),
     join_date:user.join_date,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,

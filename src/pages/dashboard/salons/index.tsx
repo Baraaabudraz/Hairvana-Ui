@@ -26,7 +26,6 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Search, MoreHorizontal, Eye, Edit, Trash2, CheckCircle, XCircle, Plus } from 'lucide-react';
 import { fetchSalons, deleteSalon, updateSalonStatus } from '@/api/salons';
-import { getSalonImageUrl } from '@/lib/api';
 
 type SalonStatus = 'active' | 'pending' | 'suspended';
 type SubscriptionType = 'Basic' | 'Standard' | 'Premium';

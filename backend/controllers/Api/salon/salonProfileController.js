@@ -65,6 +65,19 @@ exports.updateSalonProfile = async (req, res, next) => {
 
     // Handle hours field - ensure it's properly formatted
     if (updateData.hours) {
+      console.log('Debug - Original hours data:', updateData.hours);
+      
+      // If hours is a JSON string, parse it
+      if (typeof updateData.hours === 'string') {
+        try {
+          updateData.hours = JSON.parse(updateData.hours);
+          console.log('Debug - Parsed hours from JSON string:', updateData.hours);
+        } catch (error) {
+          console.error('Debug - Failed to parse hours JSON:', error);
+          // If parsing fails, keep as string
+        }
+      }
+      
       // If hours is an array, convert it to a more structured format
       if (Array.isArray(updateData.hours)) {
         const hoursObject = {};
@@ -86,9 +99,9 @@ exports.updateSalonProfile = async (req, res, next) => {
           }
         });
         updateData.hours = hoursObject;
+        console.log('Debug - Processed hours object:', updateData.hours);
       }
       // If hours is already an object, keep it as is
-      // If hours is a string, keep it as is
     }
 
     // Handle image uploads

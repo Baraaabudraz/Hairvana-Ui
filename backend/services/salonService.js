@@ -119,6 +119,47 @@ exports.createSalon = async (req) => {
   cleanSalonData.gallery = gallery;
   cleanSalonData.address_id = addressId;
   
+  // Handle hours field - ensure it's properly formatted
+  if (cleanSalonData.hours) {
+    console.log('Debug - Original hours data (create):', cleanSalonData.hours);
+    
+    // If hours is a JSON string, parse it
+    if (typeof cleanSalonData.hours === 'string') {
+      try {
+        cleanSalonData.hours = JSON.parse(cleanSalonData.hours);
+        console.log('Debug - Parsed hours from JSON string:', cleanSalonData.hours);
+      } catch (error) {
+        console.error('Debug - Failed to parse hours JSON:', error);
+        // If parsing fails, keep as string
+      }
+    }
+    
+    // If hours is an array, convert it to a more structured format
+    if (Array.isArray(cleanSalonData.hours)) {
+      const hoursObject = {};
+      cleanSalonData.hours.forEach((hour, index) => {
+        if (typeof hour === 'string') {
+          // Try to parse "day: time" format (e.g., "friday: 9:00 AM - 9:00 PM")
+          const colonIndex = hour.indexOf(':');
+          if (colonIndex !== -1) {
+            const day = hour.substring(0, colonIndex).trim().toLowerCase();
+            const time = hour.substring(colonIndex + 1).trim();
+            hoursObject[day] = time;
+          } else {
+            // If no colon found, use index as key
+            hoursObject[`day_${index}`] = hour;
+          }
+        } else if (typeof hour === 'object' && hour !== null) {
+          // If it's already an object, merge it
+          Object.assign(hoursObject, hour);
+        }
+      });
+      cleanSalonData.hours = hoursObject;
+      console.log('Debug - Processed hours object (create):', cleanSalonData.hours);
+    }
+    // If hours is already an object, keep it as is
+  }
+  
   const newSalon = await salonRepository.create(cleanSalonData);
   return serializeSalon(newSalon, { req });
 };
@@ -157,6 +198,48 @@ exports.updateSalon = async (id, data, req) => {
   }
   data.avatar = avatar;
   data.gallery = gallery;
+  
+  // Handle hours field - ensure it's properly formatted
+  if (data.hours) {
+    console.log('Debug - Original hours data (update):', data.hours);
+    
+    // If hours is a JSON string, parse it
+    if (typeof data.hours === 'string') {
+      try {
+        data.hours = JSON.parse(data.hours);
+        console.log('Debug - Parsed hours from JSON string (update):', data.hours);
+      } catch (error) {
+        console.error('Debug - Failed to parse hours JSON (update):', error);
+        // If parsing fails, keep as string
+      }
+    }
+    
+    // If hours is an array, convert it to a more structured format
+    if (Array.isArray(data.hours)) {
+      const hoursObject = {};
+      data.hours.forEach((hour, index) => {
+        if (typeof hour === 'string') {
+          // Try to parse "day: time" format (e.g., "friday: 9:00 AM - 9:00 PM")
+          const colonIndex = hour.indexOf(':');
+          if (colonIndex !== -1) {
+            const day = hour.substring(0, colonIndex).trim().toLowerCase();
+            const time = hour.substring(colonIndex + 1).trim();
+            hoursObject[day] = time;
+          } else {
+            // If no colon found, use index as key
+            hoursObject[`day_${index}`] = hour;
+          }
+        } else if (typeof hour === 'object' && hour !== null) {
+          // If it's already an object, merge it
+          Object.assign(hoursObject, hour);
+        }
+      });
+      data.hours = hoursObject;
+      console.log('Debug - Processed hours object (update):', data.hours);
+    }
+    // If hours is already an object, keep it as is
+  }
+  
   const updatedSalon = await salonRepository.update(id, data);
   return updatedSalon ? serializeSalon(updatedSalon, { req }) : null;
 };

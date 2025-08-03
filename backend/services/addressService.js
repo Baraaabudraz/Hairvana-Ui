@@ -9,12 +9,30 @@ exports.createAddress = async (addressData) => {
   try {
     // Clean and validate address data
     const cleanedData = {
-      street_address: addressData.street_address?.trim(),
-      city: addressData.city?.trim(),
-      state: addressData.state?.trim(),
-      zip_code: addressData.zip_code?.trim(),
-      country: addressData.country?.trim() || 'US'
+      street_address: typeof addressData.street_address === 'string' ? addressData.street_address.trim() : '',
+      city: typeof addressData.city === 'string' ? addressData.city.trim() : '',
+      state: typeof addressData.state === 'string' ? addressData.state.trim() : '',
+      zip_code: typeof addressData.zip_code === 'string' ? addressData.zip_code.trim() : '',
+      country: typeof addressData.country === 'string' ? addressData.country.trim() : 'US'
     };
+
+    // Validate that we have the minimum required fields
+    if (!cleanedData.street_address || !cleanedData.city || !cleanedData.state) {
+      throw new Error('Missing required address fields: street_address, city, and state are required');
+    }
+
+    // Validate field lengths
+    if (cleanedData.street_address.length < 5 || cleanedData.street_address.length > 200) {
+      throw new Error('Street address must be between 5 and 200 characters');
+    }
+
+    if (cleanedData.city.length < 2 || cleanedData.city.length > 100) {
+      throw new Error('City must be between 2 and 100 characters');
+    }
+
+    if (cleanedData.state.length < 2 || cleanedData.state.length > 50) {
+      throw new Error('State must be between 2 and 50 characters');
+    }
 
     return await addressRepository.create(cleanedData);
   } catch (error) {
@@ -50,11 +68,11 @@ exports.updateAddress = async (id, updateData) => {
 
     // Clean update data
     const cleanedData = {};
-    if (updateData.street_address) cleanedData.street_address = updateData.street_address.trim();
-    if (updateData.city) cleanedData.city = updateData.city.trim();
-    if (updateData.state) cleanedData.state = updateData.state.trim();
-    if (updateData.zip_code) cleanedData.zip_code = updateData.zip_code.trim();
-    if (updateData.country) cleanedData.country = updateData.country.trim();
+    if (updateData.street_address && typeof updateData.street_address === 'string') cleanedData.street_address = updateData.street_address.trim();
+    if (updateData.city && typeof updateData.city === 'string') cleanedData.city = updateData.city.trim();
+    if (updateData.state && typeof updateData.state === 'string') cleanedData.state = updateData.state.trim();
+    if (updateData.zip_code && typeof updateData.zip_code === 'string') cleanedData.zip_code = updateData.zip_code.trim();
+    if (updateData.country && typeof updateData.country === 'string') cleanedData.country = updateData.country.trim();
 
     return await addressRepository.update(id, cleanedData);
   } catch (error) {

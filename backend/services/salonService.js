@@ -65,6 +65,14 @@ exports.createSalon = async (req) => {
   
   // Create address first if address data is provided
   let addressId = null;
+  console.log('Debug - Salon data for address creation:', {
+    street_address: salonData.street_address,
+    city: salonData.city,
+    state: salonData.state,
+    zip_code: salonData.zip_code,
+    country: salonData.country
+  });
+  
   if (salonData.street_address && salonData.city && salonData.state) {
     const addressData = {
       street_address: salonData.street_address,
@@ -74,8 +82,16 @@ exports.createSalon = async (req) => {
       country: salonData.country || 'US'
     };
     
-    const newAddress = await addressService.createAddress(addressData);
-    addressId = newAddress.id;
+    try {
+      const newAddress = await addressService.createAddress(addressData);
+      addressId = newAddress.id;
+      console.log('Debug - Address created successfully:', addressId);
+    } catch (error) {
+      console.error('Debug - Address creation failed:', error.message);
+      throw new Error(`Failed to create address: ${error.message}`);
+    }
+  } else {
+    console.log('Debug - Skipping address creation - missing required fields');
   }
   
   // Handle image uploads

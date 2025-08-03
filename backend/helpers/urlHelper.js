@@ -38,7 +38,7 @@ const buildUrl = (path, type = 'avatar', options = {}) => {
       imagePath = '/images/services';
       break;
     case 'hairstyle':
-      imagePath = '/images/hairstyles';
+      imagePath = '/images/hairstyles/original';
       break;
     case 'gallery':
       imagePath = '/images/gallery';

@@ -1,6 +1,7 @@
 const path = require('path');
 const aiService = require('./aiService');
 const hairstyleRepository = require('../repositories/hairstyleRepository');
+const { buildUrl } = require('../helpers/urlHelper');
 
 function parseTags(tags) {
   if (!tags) return [];
@@ -21,33 +22,27 @@ function parseTags(tags) {
   return [];
 }
 
-function getPublicUrl(req, folder, filename) {
-  if (!filename) return null;
-  const baseUrl = req.protocol + '://' + req.get('host');
-  return `${baseUrl}/images/${folder}/${filename}`;
-}
-
 function mapHairstyleResponse(req, h) {
   return {
     ...h.toJSON(),
-    image_url: getPublicUrl(req, 'hairstyles/original', h.image_url),
-    segmented_image_url: getPublicUrl(req, 'hairstyles/original', h.segmented_image_url),
-    ar_model_url: getPublicUrl(req, 'hairstyles/original', h.ar_model_url)
+    image_url: buildUrl(h.image_url, 'hairstyle'),
+    // segmented_image_url: buildUrl(h.segmented_image_url, 'hairstyle'),
+    // ar_model_url: buildUrl(h.ar_model_url, 'hairstyle')
   };
 }
 
-async function triggerAIJobIfNeeded(imageStoredName, hairstyleId) {
-  if (imageStoredName) {
-    await aiService.processHairstyleImage(
-      path.join('backend/public/uploads/hairstyles/original', imageStoredName),
-      hairstyleId
-    );
+function mapHairstylesResponse(req, hairstyles) {
+  if (!Array.isArray(hairstyles)) {
+    return hairstyles;
   }
+  return hairstyles.map(h => mapHairstyleResponse(req, h));
 }
+
 
 module.exports = {
   parseTags,
   mapHairstyleResponse,
-  triggerAIJobIfNeeded,
+  mapHairstylesResponse,
+  // triggerAIJobIfNeeded,
   ...hairstyleRepository,
 }; 

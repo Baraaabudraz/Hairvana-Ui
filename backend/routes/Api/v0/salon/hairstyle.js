@@ -17,29 +17,29 @@ const uploadHairstyle = createUploadMiddleware({
 
 // Upload a new hairstyle
 router.post(
-  "/hairstyles",
+  "/create",
   authenticateOwner,
   uploadHairstyle.single("image"),
   createHairstyleValidation,
   hairstyleController.uploadHairstyle
 );
-// List all hairstyles
+// List all hairstyles for a specific salon
 router.get(
-  "/hairstyles",
+  "/:salonId/hairstyles",
   authenticateOwner,
   hairstyleController.getHairstyles
 );
-// Update a hairstyle
+// Update a hairstyle for a specific salon
 router.put(
-  "/hairstyles/:id",
+  "/salon/:salonId/hairstyle/:id",
   authenticateOwner,
   uploadHairstyle.single("image"),
   updateHairstyleValidation,
   hairstyleController.updateHairstyle
 );
-// Delete a hairstyle
+// Delete a hairstyle for a specific salon
 router.delete(
-  "/hairstyles/:id",
+  "/salon/:salonId/hairstyle/:id",
   authenticateOwner,
   hairstyleController.deleteHairstyle
 );

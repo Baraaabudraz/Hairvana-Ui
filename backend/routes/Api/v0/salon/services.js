@@ -12,17 +12,22 @@ const {
   updateServiceValidation,
   addServiceToSalonValidation,
   serviceIdValidation,
+  salonIdValidation,
 } = require('../../../../validation/serviceValidation');
 
 // All routes require authentication
 router.use(authenticateOwner);
 
 /**
- * @route   GET /backend/api/v0/salon/services/my-services
- * @desc    Get all services for the authenticated salon owner's salon
+ * @route   GET /backend/api/v0/salon/services/:salonId/services
+ * @desc    Get all services for a specific salon
  * @access  Private (Salon Owner)
  */
-router.get('/my-services', salonServicesController.getSalonServices);
+router.get('/:salonId/services',
+  salonIdValidation,
+  validate,
+  salonServicesController.getSalonServices
+);
 
 /**
  * @route   GET /backend/api/v0/salon/services/all
@@ -32,11 +37,12 @@ router.get('/my-services', salonServicesController.getSalonServices);
 router.get('/all', salonServicesController.getAllServices);
 
 /**
- * @route   POST /backend/api/v0/salon/services/create
- * @desc    Create a new service and add to salon
+ * @route   POST /backend/api/v0/salon/services/:salonId/create
+ * @desc    Create a new service and add to specific salon
  * @access  Private (Salon Owner)
  */
-router.post('/create',
+router.post('/:salonId/create',
+  salonIdValidation,
   createServiceValidation,
   validate,
   salonServicesController.createService

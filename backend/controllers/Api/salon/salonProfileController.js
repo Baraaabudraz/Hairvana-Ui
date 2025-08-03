@@ -8,12 +8,42 @@ const salonService = require('../../../services/salonService');
  */
 exports.getSalonProfile = async (req, res, next) => {
   try {
-    const salon = await salonService.getSalonByOwnerId(req.user.id, req);
+    const salonId = req.params.id;
     
+    // Get salon by ID
+    const salon = await salonService.getSalonById(salonId, req);
     if (!salon) {
       return res.status(404).json({ 
         success: false, 
-        message: 'Salon not found for this owner' 
+        message: 'Salon not found' 
+      });
+    }
+    
+    // Verify that the authenticated user owns this salon
+    const userSalon = await salonService.getSalonByOwnerId(req.user.id, req);
+    console.log('Debug - Salon ID from URL (GET):', salonId);
+    console.log('Debug - User salon ID (GET):', userSalon?.id);
+    console.log('Debug - User ID (GET):', req.user.id);
+    console.log('Debug - User salon owner_id (GET):', userSalon?.owner_id);
+    console.log('Debug - Requested salon owner_id (GET):', salon?.owner_id);
+    
+    if (!userSalon) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You do not own any salon.' 
+      });
+    }
+    
+    // Check if the requested salon belongs to the authenticated user
+    if (salon.owner_id !== req.user.id) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only view your own salon.',
+        debug: {
+          requestedSalonId: salonId,
+          requestedSalonOwnerId: salon.owner_id,
+          userId: req.user.id
+        }
       });
     }
 
@@ -34,12 +64,41 @@ exports.getSalonProfile = async (req, res, next) => {
  */
 exports.updateSalonProfile = async (req, res, next) => {
   try {
-    // Get existing salon to verify ownership
-    const existingSalon = await salonService.getSalonByOwnerId(req.user.id, req);
+    const salonId = req.params.id;
+    
+    // Get existing salon by ID and verify ownership
+    const existingSalon = await salonService.getSalonById(salonId, req);
     if (!existingSalon) {
       return res.status(404).json({ 
         success: false, 
-        message: 'Salon not found for this owner' 
+        message: 'Salon not found' 
+      });
+    }
+    
+    // Verify that the authenticated user owns this salon
+    const userSalon = await salonService.getSalonByOwnerId(req.user.id, req);
+    console.log('Debug - Salon ID from URL:', salonId);
+    console.log('Debug - User salon ID:', userSalon?.id);
+    console.log('Debug - User ID:', req.user.id);
+    console.log('Debug - User salon owner_id:', userSalon?.owner_id);
+    
+    if (!userSalon) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You do not own any salon.' 
+      });
+    }
+    
+    // Check if the requested salon belongs to the authenticated user
+    if (existingSalon.owner_id !== req.user.id) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only update your own salon.',
+        debug: {
+          requestedSalonId: salonId,
+          requestedSalonOwnerId: existingSalon.owner_id,
+          userId: req.user.id
+        }
       });
     }
 

@@ -16,10 +16,21 @@ const createServiceValidation = [
         throw new Error('Authentication required');
       }
       
-      // Find the salon for the authenticated owner
-      const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
+      const salonId = req.params.salonId;
+      if (!salonId) {
+        throw new Error('Salon ID is required');
+      }
+      
+      // Verify that the authenticated user owns this salon
+      const salon = await Salon.findOne({ 
+        where: { 
+          id: salonId,
+          owner_id: req.user.id 
+        } 
+      });
+      
       if (!salon) {
-        throw new Error('Salon not found for this owner');
+        throw new Error('Salon not found or access denied');
       }
       
       // Check if service name already exists for this salon
@@ -27,14 +38,14 @@ const createServiceValidation = [
         include: [{
           model: Salon,
           as: 'salons',
-          where: { id: salon.id },
+          where: { id: salonId },
           required: true
         }],
         where: { name: value }
       });
       
       if (existingService) {
-        throw new Error('A service with this name already exists in your salon');
+        throw new Error('A service with this name already exists in this salon');
       }
       
       return true;
@@ -209,9 +220,19 @@ const serviceIdValidation = [
     .withMessage('Service ID must be a valid UUID'),
 ];
 
+/**
+ * Validation schema for salon ID parameter
+ */
+const salonIdValidation = [
+  param('salonId')
+    .isUUID()
+    .withMessage('Salon ID must be a valid UUID'),
+];
+
 module.exports = {
   createServiceValidation,
   updateServiceValidation,
   addServiceToSalonValidation,
   serviceIdValidation,
+  salonIdValidation,
 };

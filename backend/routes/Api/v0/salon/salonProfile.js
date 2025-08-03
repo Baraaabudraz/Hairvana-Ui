@@ -13,10 +13,10 @@ const uploadSalonFiles = createUploadMiddleware({
 });
 
 // Get salon profile for the authenticated owner
-router.get('/salon-profile', authenticateOwner, salonProfileController.getSalonProfile);
+router.get('/:id/salon-profile', authenticateOwner, salonProfileController.getSalonProfile);
 
 // Update salon profile for the authenticated owner
-router.put('/salon-profile', 
+router.put('/:id/salon-profile', 
   authenticateOwner, 
   uploadSalonFiles.fields([
     { name: 'avatar', maxCount: 1 },

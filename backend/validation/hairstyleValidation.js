@@ -6,11 +6,29 @@ const createHairstyleValidation = [
   body('name')
     .notEmpty().withMessage('Name is required')
     .custom(async (value, { req }) => {
-      const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
-      if (!salon) throw new Error('Salon not found');
-      const existing = await hairstyleService.findAllBySalon(salon.id);
+      // Get the salon ID from the request body or params
+      const salonId = req.body.salon_id || req.params.salonId;
+      
+      if (!salonId) {
+        throw new Error('Salon ID is required');
+      }
+      
+      // Verify that the authenticated user owns this salon
+      const salon = await Salon.findOne({ 
+        where: { 
+          id: salonId,
+          owner_id: req.user.id 
+        } 
+      });
+      
+      if (!salon) {
+        throw new Error('Salon not found or access denied');
+      }
+      
+      // Check for duplicate name within this specific salon
+      const existing = await hairstyleService.findAllBySalon(salonId);
       if (existing.some(h => h.name && h.name.toLowerCase() === value.toLowerCase())) {
-        throw new Error('A hairstyle with this name already exists.');
+        throw new Error('A hairstyle with this name already exists in this salon.');
       }
       return true;
     }),
@@ -25,16 +43,34 @@ const updateHairstyleValidation = [
   body('name')
     .notEmpty().withMessage('Name is required')
     .custom(async (value, { req }) => {
-      const salon = await Salon.findOne({ where: { owner_id: req.user.id } });
-      if (!salon) throw new Error('Salon not found');
-      const existing = await hairstyleService.findAllBySalon(salon.id);
+      const salonId = req.params.salonId;
+      
+      if (!salonId) {
+        throw new Error('Salon ID is required');
+      }
+      
+      // Verify that the authenticated user owns this salon
+      const salon = await Salon.findOne({ 
+        where: { 
+          id: salonId,
+          owner_id: req.user.id 
+        } 
+      });
+      
+      if (!salon) {
+        throw new Error('Salon not found or access denied');
+      }
+      
+      const existing = await hairstyleService.findAllBySalon(salonId);
+      
       // On update, allow the same name if it's the same record
       if (req.method === 'PUT' && req.params.id) {
         const current = existing.find(h => h.id == req.params.id);
         if (current && current.name.toLowerCase() === value.toLowerCase()) return true;
       }
+      
       if (existing.some(h => h.name && h.name.toLowerCase() === value.toLowerCase())) {
-        throw new Error('A hairstyle with this name already exists.');
+        throw new Error('A hairstyle with this name already exists in this salon.');
       }
       return true;
     }),

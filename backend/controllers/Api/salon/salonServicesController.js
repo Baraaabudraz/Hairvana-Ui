@@ -2,27 +2,36 @@ const serviceRepository = require('../../../repositories/serviceRepository');
 const salonRepository = require('../../../repositories/salonRepository');
 
 /**
- * Get all services for the authenticated salon owner's salon
+ * Get all services for a specific salon
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Function} next - Express next function
  */
 exports.getSalonServices = async (req, res, next) => {
   try {
-    // Get salon by owner ID to ensure ownership
-    const salon = await salonRepository.findByOwnerId(req.user.id);
+    const salonId = req.params.salonId;
     
+    // Verify that the authenticated user owns this salon
+    const salon = await salonRepository.findById(salonId);
     if (!salon) {
       return res.status(404).json({
         success: false,
-        message: 'Salon not found for this owner'
+        message: 'Salon not found'
       });
     }
     
-    const services = await serviceRepository.findBySalonId(salon.id);
+    if (salon.owner_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view services for your own salon.'
+      });
+    }
+    
+    const services = await serviceRepository.findBySalonId(salonId);
     
     return res.status(200).json({
       success: true,
+      message: `Found ${services.length} service(s) for this salon`,
       data: services,
       total: services.length
     });
@@ -52,13 +61,14 @@ exports.getAllServices = async (req, res, next) => {
 };
 
 /**
- * Create a new service for the salon
+ * Create a new service for a specific salon
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Function} next - Express next function
  */
 exports.createService = async (req, res, next) => {
   try {
+    const salonId = req.params.salonId;
     const serviceData = req.body;
     
     // Transform special_offers if it's an array
@@ -83,22 +93,28 @@ exports.createService = async (req, res, next) => {
       serviceData.special_offers = offersObject;
     }
     
-    // Get salon by owner ID to ensure ownership
-    const salon = await salonRepository.findByOwnerId(req.user.id);
-    
+    // Verify that the authenticated user owns this salon
+    const salon = await salonRepository.findById(salonId);
     if (!salon) {
       return res.status(404).json({
         success: false,
-        message: 'Salon not found for this owner'
+        message: 'Salon not found'
+      });
+    }
+    
+    if (salon.owner_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only create services for your own salon.'
       });
     }
     
     // Additional check for unique name in salon (double validation)
-    const nameExists = await serviceRepository.nameExistsForSalon(serviceData.name, salon.id);
+    const nameExists = await serviceRepository.nameExistsForSalon(serviceData.name, salonId);
     if (nameExists) {
       return res.status(400).json({
         success: false,
-        message: 'A service with this name already exists in your salon'
+        message: 'A service with this name already exists in this salon'
       });
     }
     
@@ -106,7 +122,7 @@ exports.createService = async (req, res, next) => {
     const newService = await serviceRepository.create(serviceData);
     
     // Automatically add the service to the salon
-    await serviceRepository.addServiceToSalon(salon.id, newService.id);
+    await serviceRepository.addServiceToSalon(salonId, newService.id);
     
     // Return the created service with salon information
     const serviceWithSalon = await serviceRepository.findById(newService.id);

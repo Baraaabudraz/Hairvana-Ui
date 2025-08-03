@@ -220,4 +220,77 @@ exports.getSalonStaff = async (id) => {
 
 exports.getSalonAppointments = async (id, query) => {
   return salonRepository.getAppointments(id, query);
+};
+
+/**
+ * Get monthly revenue for a specific salon
+ * @param {string} salonId - Salon ID
+ * @param {string} year - Year (optional, defaults to current year)
+ * @param {string} month - Month (optional, defaults to current month)
+ * @returns {Object} Monthly revenue data
+ */
+exports.getMonthlyRevenue = async (salonId, year, month) => {
+  const currentDate = new Date();
+  const targetYear = year || currentDate.getFullYear();
+  const targetMonth = month || (currentDate.getMonth() + 1);
+  
+  const monthlyRevenue = await salonRepository.getMonthlyRevenue(salonId, targetYear, targetMonth);
+  
+  return {
+    salonId,
+    year: parseInt(targetYear),
+    month: parseInt(targetMonth),
+    totalRevenue: monthlyRevenue.totalRevenue || 0,
+    totalTransactions: monthlyRevenue.totalTransactions || 0,
+    averageTransactionValue: monthlyRevenue.averageTransactionValue || 0,
+    revenueBreakdown: monthlyRevenue.revenueBreakdown || []
+  };
+};
+
+/**
+ * Get transaction history for a specific salon
+ * @param {string} salonId - Salon ID
+ * @param {Object} options - Query options
+ * @param {number} options.page - Page number
+ * @param {number} options.limit - Items per page
+ * @param {string} options.status - Payment status filter
+ * @param {string} options.from - Start date filter
+ * @param {string} options.to - End date filter
+ * @returns {Object} Transaction history data
+ */
+exports.getTransactionHistory = async (salonId, options) => {
+  const transactionHistory = await salonRepository.getTransactionHistory(salonId, options);
+  
+  // Get services for each appointment
+  const transactionsWithServices = await Promise.all(
+    transactionHistory.transactions.map(async (transaction) => {
+      if (transaction.appointment) {
+        const services = await salonRepository.getAppointmentServices(transaction.appointment.id);
+        return {
+          ...transaction.toJSON ? transaction.toJSON() : transaction,
+          appointment: {
+            ...transaction.appointment.toJSON ? transaction.appointment.toJSON() : transaction.appointment,
+            services: services || []
+          }
+        };
+      }
+      return transaction.toJSON ? transaction.toJSON() : transaction;
+    })
+  );
+  
+  return {
+    salonId,
+    transactions: transactionsWithServices || [],
+    pagination: {
+      page: options.page,
+      limit: options.limit,
+      total: transactionHistory.total || 0,
+      totalPages: Math.ceil((transactionHistory.total || 0) / options.limit)
+    },
+    summary: {
+      totalAmount: transactionHistory.totalAmount || 0,
+      totalTransactions: transactionHistory.total || 0,
+      averageAmount: transactionHistory.averageAmount || 0
+    }
+  };
 }; 

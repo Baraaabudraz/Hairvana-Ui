@@ -121,3 +121,85 @@ exports.deleteSalon = async (req, res, next) => {
     next(error);
   }
 }; 
+
+/**
+ * Get monthly revenue for a specific salon
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+exports.getMonthlyRevenue = async (req, res, next) => {
+  try {
+    const { salonId } = req.params;
+    const { year, month } = req.query;
+    
+    // Verify salon ownership
+    const salon = await salonService.getSalonById(salonId, req);
+    if (!salon) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Salon not found' 
+      });
+    }
+
+    if (salon.owner_id !== req.user.id) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only view revenue for your own salons.' 
+      });
+    }
+
+    const monthlyRevenue = await salonService.getMonthlyRevenue(salonId, year, month);
+    
+    return res.status(200).json({ 
+      success: true, 
+      data: monthlyRevenue 
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get transaction history for a specific salon
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+exports.getTransactionHistory = async (req, res, next) => {
+  try {
+    const { salonId } = req.params;
+    const { page = 1, limit = 10, status, from, to } = req.query;
+    
+    // Verify salon ownership
+    const salon = await salonService.getSalonById(salonId, req);
+    if (!salon) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Salon not found' 
+      });
+    }
+
+    if (salon.owner_id !== req.user.id) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only view transaction history for your own salons.' 
+      });
+    }
+
+    const transactionHistory = await salonService.getTransactionHistory(salonId, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      status,
+      from,
+      to
+    });
+    
+    return res.status(200).json({ 
+      success: true, 
+      data: transactionHistory 
+    });
+  } catch (error) {
+    next(error);
+  }
+}; 

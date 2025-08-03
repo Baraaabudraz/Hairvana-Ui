@@ -542,6 +542,63 @@ const searchSalonsValidation = [
     .withMessage('Offset must be a non-negative integer'),
 ];
 
+/**
+ * Validation schema for getting monthly revenue
+ */
+const getMonthlyRevenueValidation = [
+  param('salonId')
+    .notEmpty()
+    .withMessage('Salon ID is required')
+    .isUUID()
+    .withMessage('Salon ID must be a valid UUID'),
+  
+  query('year')
+    .optional()
+    .isInt({ min: 2020, max: 2030 })
+    .withMessage('Year must be between 2020 and 2030'),
+  
+  query('month')
+    .optional()
+    .isInt({ min: 1, max: 12 })
+    .withMessage('Month must be between 1 and 12'),
+];
+
+/**
+ * Validation schema for getting transaction history
+ */
+const getTransactionHistoryValidation = [
+  param('salonId')
+    .notEmpty()
+    .withMessage('Salon ID is required')
+    .isUUID()
+    .withMessage('Salon ID must be a valid UUID'),
+  
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer'),
+  
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Limit must be between 1 and 100'),
+  
+  query('status')
+    .optional()
+    .isIn(['pending', 'paid', 'failed', 'cancelled', 'all'])
+    .withMessage('Status must be one of: pending, paid, failed, cancelled, all'),
+  
+  query('from')
+    .optional()
+    .isISO8601()
+    .withMessage('From date must be a valid ISO 8601 date'),
+  
+  query('to')
+    .optional()
+    .isISO8601()
+    .withMessage('To date must be a valid ISO 8601 date'),
+];
+
 module.exports = {
   createSalonValidation,
   updateSalonValidation,
@@ -549,4 +606,6 @@ module.exports = {
   getSalonsValidation,
   getSalonByIdValidation,
   searchSalonsValidation,
+  getMonthlyRevenueValidation,
+  getTransactionHistoryValidation,
 };

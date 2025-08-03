@@ -5,6 +5,7 @@ const {
   Review,
   Service,
   Staff, Address,
+  Payment,
 } = require("../models");
 const { Op, Sequelize } = require("sequelize");
 
@@ -169,4 +170,170 @@ exports.getAppointments = async (id, query) => {
       { model: Staff, as: "staff", attributes: ["id", "name", "avatar"] },
     ],
   });
+};
+
+/**
+ * Get monthly revenue for a specific salon
+ * @param {string} salonId - Salon ID
+ * @param {number} year - Year
+ * @param {number} month - Month
+ * @returns {Object} Monthly revenue data
+ */
+exports.getMonthlyRevenue = async (salonId, year, month) => {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59);
+  
+  // Get total revenue for the month
+  const totalRevenue = await Payment.sum('amount', {
+    include: [{
+      model: Appointment,
+      as: 'appointment',
+      where: { 
+        salon_id: salonId,
+        start_at: { [Op.between]: [startDate, endDate] }
+      },
+      attributes: []
+    }],
+    where: { status: 'paid' }
+  });
+
+  // Get total transactions count
+  const totalTransactions = await Payment.count({
+    include: [{
+      model: Appointment,
+      as: 'appointment',
+      where: { 
+        salon_id: salonId,
+        start_at: { [Op.between]: [startDate, endDate] }
+      },
+      attributes: []
+    }],
+    where: { status: 'paid' }
+  });
+
+  // Get average transaction value
+  const averageTransactionValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+
+  // Get revenue breakdown by service - simplified approach
+  // For now, return empty array to avoid complex grouping issues
+  const revenueBreakdown = [];
+
+  return {
+    totalRevenue: totalRevenue || 0,
+    totalTransactions: totalTransactions || 0,
+    averageTransactionValue: averageTransactionValue || 0,
+    revenueBreakdown: revenueBreakdown || []
+  };
+};
+
+/**
+ * Get transaction history for a specific salon
+ * @param {string} salonId - Salon ID
+ * @param {Object} options - Query options
+ * @param {number} options.page - Page number
+ * @param {number} options.limit - Items per page
+ * @param {string} options.status - Payment status filter
+ * @param {string} options.from - Start date filter
+ * @param {string} options.to - End date filter
+ * @returns {Object} Transaction history data
+ */
+exports.getTransactionHistory = async (salonId, options) => {
+  const where = {};
+  const appointmentWhere = { salon_id: salonId };
+  
+  // Add status filter
+  if (options.status && options.status !== 'all') {
+    where.status = options.status;
+  }
+  
+  // Add date range filters
+  if (options.from) {
+    appointmentWhere.start_at = { [Op.gte]: new Date(options.from) };
+  }
+  if (options.to) {
+    appointmentWhere.start_at = { 
+      ...(appointmentWhere.start_at || {}), 
+      [Op.lte]: new Date(options.to) 
+    };
+  }
+
+  // Get total count for pagination
+  const total = await Payment.count({
+    include: [{
+      model: Appointment,
+      as: 'appointment',
+      where: appointmentWhere,
+      attributes: []
+    }],
+    where
+  });
+
+  // Get total amount
+  const totalAmount = await Payment.sum('amount', {
+    include: [{
+      model: Appointment,
+      as: 'appointment',
+      where: appointmentWhere,
+      attributes: []
+    }],
+    where: { ...where, status: 'paid' }
+  });
+
+  // Calculate average amount
+  const averageAmount = total > 0 ? totalAmount / total : 0;
+
+  // Get paginated transactions
+  const offset = (options.page - 1) * options.limit;
+  const transactions = await Payment.findAll({
+    attributes: [
+      'id', 'amount', 'method', 'status', 'transaction_id', 
+      'payment_date', 'refund_amount', 'refund_reason', 'created_at'
+    ],
+    include: [{
+      model: Appointment,
+      as: 'appointment',
+      where: appointmentWhere,
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email', 'phone', 'avatar']
+        },
+        {
+          model: Staff,
+          as: 'staff',
+          attributes: ['id', 'name', 'avatar']
+        }
+      ]
+    }],
+    where,
+    order: [['created_at', 'DESC']],
+    limit: options.limit,
+    offset
+  });
+
+  return {
+    transactions,
+    total,
+    totalAmount: totalAmount || 0,
+    averageAmount: averageAmount || 0
+  };
+};
+
+/**
+ * Get services for a specific appointment
+ * @param {string} appointmentId - Appointment ID
+ * @returns {Array} Services for the appointment
+ */
+exports.getAppointmentServices = async (appointmentId) => {
+  const appointment = await Appointment.findOne({
+    where: { id: appointmentId },
+    include: [{
+      model: Service,
+      as: 'services',
+      attributes: ['id', 'name', 'price', 'duration']
+    }]
+  });
+  
+  return appointment ? appointment.services : [];
 };

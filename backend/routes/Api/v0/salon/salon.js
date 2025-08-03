@@ -6,6 +6,9 @@ const { createUploadMiddleware } = require('../../../../helpers/uploadHelper');
 const { createSalonValidation } = require('../../../../validation/salonValidation');
 const validate = require('../../../../middleware/validate');
 
+// Import revenue routes
+const revenueRoutes = require('./revenue');
+
 const uploadSalonFiles = createUploadMiddleware({
   uploadDir: 'backend/public/uploads/salons',
   allowedTypes: ['image/jpeg', 'image/png'],
@@ -32,5 +35,8 @@ router.post('/create',
 
 // Delete a salon for the authenticated owner
 router.delete('/:id', authenticateOwner, salonController.deleteSalon);
+
+// Use revenue routes
+router.use('/', revenueRoutes);
 
 module.exports = router; 

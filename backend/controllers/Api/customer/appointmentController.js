@@ -373,13 +373,31 @@ exports.getAppointmentById = async (req, res) => {
 // Cancel appointment (serialized)
 exports.cancelAppointment = async (req, res) => {
   try {
+    const { cancellation_reason } = req.body;
     const appointment = await Appointment.findOne({ where: { id: req.params.id, user_id: req.user.id } });
     if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
+    
+    // Check if appointment is already cancelled
+    if (appointment.status === 'cancelled') {
+      return res.status(400).json({ 
+        error: 'Appointment is already cancelled',
+        message: 'This appointment has already been cancelled and cannot be cancelled again.'
+      });
+    }
+    
+    // Check if appointment is completed
+    if (appointment.status === 'completed') {
+      return res.status(400).json({ 
+        error: 'Cannot cancel completed appointment',
+        message: 'This appointment has already been completed and cannot be cancelled.'
+      });
+    }
     
     // Set cancellation details
     appointment.status = 'cancelled';
     appointment.cancelled_at = new Date();
     appointment.cancelled_by = req.user.id;
+    appointment.cancellation_reason = cancellation_reason || 'Cancelled by user';
     
     await appointment.save();
     
@@ -390,7 +408,8 @@ exports.cancelAppointment = async (req, res) => {
     { 
       appointmentId: appointment.id,
       salonId: appointment.salon_id,
-      status: appointment.status
+      status: appointment.status,
+      cancellation_reason: appointment.cancellation_reason
     });
     
     return res.json({ success: true, appointment: serializeAppointment(appointment) });

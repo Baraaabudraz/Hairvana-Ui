@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const appointmentController = require("../controllers/appointmentController");
 const {
-  createAppointmentValidation,
+  bookAppointmentValidation,
   updateAppointmentValidation,
 } = require("../validation/appointmentValidation");
 const validate = require("../middleware/validate");
@@ -25,7 +25,7 @@ router.get("/:id", appointmentController.getAppointmentById);
 // POST a new appointment with validation
 router.post(
   "/",
-  createAppointmentValidation,
+  bookAppointmentValidation,
   validate,
   checkPermission("appointments", "add"),
   appointmentController.createAppointment

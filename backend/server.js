@@ -60,11 +60,11 @@ app.use("/backend/api/roles", require("./routes/roles"));
 // Mobile API Routes for Customer
 app.use(
   "/backend/api/mobile/auth",
-  require("./routes/Api/v0/customer/mobileAuth")
+  require("./routes/Api/v0/customer/auth")
 );
 app.use(
   "/backend/api/mobile/user",
-  require("./routes/Api/v0/customer/mobileUser")
+  require("./routes/Api/v0/customer/user")
 );
 app.use(
   "/backend/api/mobile/salons",
@@ -86,11 +86,11 @@ app.use(
 app.use("/backend/api/mobile/staff", require("./routes/Api/v0/customer/staff"));
 app.use(
   "/backend/api/mobile/reviews",
-  require("./routes/Api/v0/customer/mobileReviews")
+  require("./routes/Api/v0/customer/reviews")
 );
 app.use(
   "/backend/api/mobile/devices",
-  require("./routes/Api/v0/customer/mobileDevices")
+  require("./routes/Api/v0/customer/devices")
 );
 app.use("/backend/images", require("./routes/images"));
 

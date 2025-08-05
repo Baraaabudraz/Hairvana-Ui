@@ -1,5 +1,5 @@
 'use strict';
-const { Appointment, Salon, Staff, Service, AppointmentService, sequelize } = require('../../../models');
+const { Appointment, Salon, Staff, Service, AppointmentService, Payment, Address, sequelize } = require('../../../models');
 const { Op } = require('sequelize');
 const { serializeAppointment } = require('../../../serializers/appointmentSerializer');
 const notificationService = require('../../../services/notificationService');
@@ -225,18 +225,106 @@ exports.cancelPendingAppointment = async (req, res) => {
 // Get all appointments for the current user (serialized)
 exports.getAppointments = async (req, res) => {
   try {
+    const { 
+      status, 
+      page = 1, 
+      limit = 20, 
+      sort = 'start_at', 
+      order = 'DESC',
+      salon_id,
+      staff_id,
+      date_from,
+      date_to
+    } = req.query;
+
+    // Build where clause
+    const whereClause = { user_id: req.user.id };
+    
+    if (status) {
+      whereClause.status = status;
+    }
+    
+    if (salon_id) {
+      whereClause.salon_id = salon_id;
+    }
+    
+    if (staff_id) {
+      whereClause.staff_id = staff_id;
+    }
+    
+    if (date_from || date_to) {
+      whereClause.start_at = {};
+      if (date_from) {
+        whereClause.start_at[Op.gte] = new Date(date_from);
+      }
+      if (date_to) {
+        whereClause.start_at[Op.lte] = new Date(date_to);
+      }
+    }
+
+    // Calculate pagination
+    const offset = (page - 1) * limit;
+    
+    // Build include array
+    const include = [
+      {
+        model: Service,
+        as: 'services',
+        through: { attributes: [] }
+      },
+      {
+        model: Salon,
+        as: 'salon',
+        attributes: ['id', 'name', 'phone', 'email', 'description', 'hours', 'avatar', 'website'],
+        include: [{
+          model: Address,
+          as: 'address',
+          attributes: ['id', 'street_address', 'city', 'state', 'zip_code', 'country']
+        }]
+      },
+      {
+        model: Staff,
+        as: 'staff',
+        attributes: ['id', 'name', 'avatar', 'specializations', 'experience_years', 'bio', 'role', 'status', 'hourly_rate']
+      },
+      {
+        model: Payment,
+        as: 'payment',
+        attributes: ['id', 'amount', 'method', 'status', 'transaction_id', 'created_at', 'updated_at']
+      }
+    ];
+
+    // Get total count for pagination
+    const totalCount = await Appointment.count({ where: whereClause });
+    
+    // Get appointments with pagination
     const appointments = await Appointment.findAll({
-      where: { user_id: req.user.id },
-      include: [
-        {
-          model: Service,
-          as: 'services',
-          through: { attributes: [] }
-        }
-      ]
+      where: whereClause,
+      include: include,
+      order: [[sort, order]],
+      limit: parseInt(limit),
+      offset: offset
     });
-    return res.json({ success: true, appointments: appointments.map(serializeAppointment) });
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalCount / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    return res.json({ 
+      success: true, 
+      appointments: appointments.map(serializeAppointment),
+      pagination: {
+        current_page: parseInt(page),
+        total_pages: totalPages,
+        total_count: totalCount,
+        limit: parseInt(limit),
+        has_next_page: hasNextPage,
+        has_prev_page: hasPrevPage
+      }
+    });
   } catch (err) {
+    console.error('getAppointments error:', err);
     return res.status(500).json({ error: 'Failed to fetch appointments' });
   }
 };
@@ -244,10 +332,40 @@ exports.getAppointments = async (req, res) => {
 // Get appointment by ID (serialized)
 exports.getAppointmentById = async (req, res) => {
   try {
-    const appointment = await Appointment.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    const appointment = await Appointment.findOne({ 
+      where: { id: req.params.id, user_id: req.user.id },
+      include: [
+        {
+          model: Service,
+          as: 'services',
+          through: { attributes: [] }
+        },
+        {
+          model: Salon,
+          as: 'salon',
+          attributes: ['id', 'name', 'phone', 'email', 'description', 'hours', 'avatar', 'website'],
+          include: [{
+            model: Address,
+            as: 'address',
+            attributes: ['id', 'street_address', 'city', 'state', 'zip_code', 'country']
+          }]
+        },
+        {
+          model: Staff,
+          as: 'staff',
+          attributes: ['id', 'name', 'avatar', 'specializations', 'experience_years', 'bio', 'role', 'status', 'hourly_rate']
+        },
+        {
+          model: Payment,
+          as: 'payment',
+          attributes: ['id', 'amount', 'method', 'status', 'transaction_id', 'created_at', 'updated_at']
+        }
+      ]
+    });
     if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
     return res.json({ success: true, appointment: serializeAppointment(appointment) });
   } catch (err) {
+    console.error('getAppointmentById error:', err);
     return res.status(500).json({ error: 'Failed to fetch appointment' });
   }
 };
@@ -257,10 +375,27 @@ exports.cancelAppointment = async (req, res) => {
   try {
     const appointment = await Appointment.findOne({ where: { id: req.params.id, user_id: req.user.id } });
     if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
+    
+    // Set cancellation details
     appointment.status = 'cancelled';
+    appointment.cancelled_at = new Date();
+    appointment.cancelled_by = req.user.id;
+    
     await appointment.save();
+    
+    // Send notification to user about cancellation
+    await notificationService.sendToUsers([
+      req.user.id
+    ], 'Appointment Cancelled', 'Your appointment has been cancelled successfully.', 
+    { 
+      appointmentId: appointment.id,
+      salonId: appointment.salon_id,
+      status: appointment.status
+    });
+    
     return res.json({ success: true, appointment: serializeAppointment(appointment) });
   } catch (err) {
+    console.error('cancelAppointment error:', err);
     return res.status(500).json({ error: 'Failed to cancel appointment' });
   }
 }; 
@@ -285,6 +420,46 @@ exports.completeAppointment = async (req, res) => {
     return res.json({ success: true, appointment: serializeAppointment(appointment) });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to complete appointment' });
+  }
+};
+
+// Get appointment statistics for the current user
+exports.getAppointmentStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const stats = await Appointment.findAll({
+      where: { user_id: userId },
+      attributes: [
+        'status',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: ['status']
+    });
+
+    const totalAppointments = await Appointment.count({ where: { user_id: userId } });
+    const upcomingAppointments = await Appointment.count({ 
+      where: { 
+        user_id: userId, 
+        status: 'booked',
+        start_at: { [Op.gt]: new Date() }
+      } 
+    });
+
+    const statsObject = {
+      total: totalAppointments,
+      upcoming: upcomingAppointments,
+      by_status: {}
+    };
+
+    stats.forEach(stat => {
+      statsObject.by_status[stat.status] = parseInt(stat.dataValues.count);
+    });
+
+    return res.json({ success: true, stats: statsObject });
+  } catch (err) {
+    console.error('getAppointmentStats error:', err);
+    return res.status(500).json({ error: 'Failed to fetch appointment statistics' });
   }
 };
 

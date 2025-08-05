@@ -13,7 +13,7 @@ const {
 const validate = require('../../../../middleware/validate');
 
 const uploadAvatar = createUploadMiddleware({
-  uploadDir: "/public/uploads/avatars",
+  uploadDir: "../backend/public/uploads/avatars",
   allowedTypes: ["image/jpeg", "image/png"],
   maxSize: 5 * 1024 * 1024, // 5MB
 });

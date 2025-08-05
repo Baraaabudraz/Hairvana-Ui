@@ -927,10 +927,13 @@ Hairvana Team`;
     }
     
     setGeneratingInvoice(true);
+    
+    // Generate invoice number outside try block so it's available for retry
+    const invoice_number = `INV-${new Date().getFullYear()}-${Math.floor(
+      Math.random() * 10000
+    )}`;
+    
     try {
-      const invoice_number = `INV-${new Date().getFullYear()}-${Math.floor(
-        Math.random() * 10000
-      )}`;
       const created = await createBillingHistory({
         subscription_id: subscription.id,
         date: newInvoice.date ? new Date(newInvoice.date).toISOString() : new Date().toISOString(),
@@ -1005,13 +1008,18 @@ Hairvana Team`;
           } else {
             // If session was refreshed, try the request again
             try {
+              // Regenerate invoice number for retry to ensure it's unique
+              const retryInvoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(
+                Math.random() * 10000
+              )}`;
+              
               const created = await createBillingHistory({
                 subscription_id: subscription.id,
                 date: newInvoice.date ? new Date(newInvoice.date).toISOString() : new Date().toISOString(),
                 amount: Number(newInvoice.amount),
                 status: newInvoice.status,
                 description: newInvoice.description,
-                invoice_number: invoice_number,
+                invoice_number: retryInvoiceNumber,
                 tax_amount: newInvoice.taxAmount ? Number(newInvoice.taxAmount) : undefined,
                 notes: newInvoice.notes || undefined,
               });

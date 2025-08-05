@@ -564,6 +564,17 @@ const getMonthlyRevenueValidation = [
 ];
 
 /**
+ * Validation schema for salon ID parameter
+ */
+const salonIdValidation = [
+  param('salonId')
+    .notEmpty()
+    .withMessage('Salon ID is required')
+    .isUUID()
+    .withMessage('Salon ID must be a valid UUID'),
+];
+
+/**
  * Validation schema for getting transaction history
  */
 const getTransactionHistoryValidation = [
@@ -608,4 +619,5 @@ module.exports = {
   searchSalonsValidation,
   getMonthlyRevenueValidation,
   getTransactionHistoryValidation,
+  salonIdValidation,
 };

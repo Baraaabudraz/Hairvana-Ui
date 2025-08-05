@@ -124,6 +124,10 @@ app.use(
   "/backend/api/v0/salon/staff",
   require("./routes/Api/v0/salon/staff")
 );
+app.use(
+  "/backend/api/v0/salon/address",
+  require("./routes/Api/v0/salon/address")
+);
 // Mount general salon routes last (has /:id parameter that could conflict)
 app.use(
   "/backend/api/v0/salon",

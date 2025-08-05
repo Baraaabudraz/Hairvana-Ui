@@ -24,7 +24,7 @@ const FILE_TYPE_MAP = {
 function createUploadMiddleware({ uploadDir, maxSize = 10 * 1024 * 1024, allowedTypes = Object.keys(FILE_TYPE_MAP) }) {
   // Ensure upload directory exists
 
-  const path = path.join( '..', 'backend', 'public', 'uploads', uploadDir);
+  const path = path.join( '../', '/backend', '/public', '/uploads', uploadDir);
 
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(path, { recursive: true });
   const storage = multer.diskStorage({

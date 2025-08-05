@@ -20,6 +20,7 @@ interface AuthState {
   setUser: (user: User) => void;
   setToken: (token: string) => void;
   checkSession: () => Promise<void>;
+  refreshSession: () => Promise<boolean>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -109,6 +110,43 @@ export const useAuthStore = create<AuthState>()(
           // Clear invalid token on error
           clearInvalidToken();
           set({ user: null, token: null, isLoading: false });
+        }
+      },
+
+      refreshSession: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          
+          if (!token) {
+            return false;
+          }
+          
+          // Check if token is valid
+          if (!isTokenValid(token)) {
+            clearInvalidToken();
+            set({ user: null, token: null });
+            return false;
+          }
+          
+          const userData = await getCurrentUser();
+          
+          if (!userData) {
+            clearInvalidToken();
+            set({ user: null, token: null });
+            return false;
+          }
+          
+          set({ 
+            user: userData,
+            token
+          });
+          
+          return true;
+        } catch (error) {
+          console.error('Session refresh error:', error);
+          clearInvalidToken();
+          set({ user: null, token: null });
+          return false;
         }
       },
     }),

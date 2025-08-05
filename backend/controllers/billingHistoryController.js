@@ -30,7 +30,6 @@ exports.getBillingHistoriesBySubscription = async (req, res, next) => {
 
 exports.createBillingHistory = async (req, res, next) => {
   try {
-    validateBillingHistory(req.body);
     const history = await billingHistoryService.createBillingHistory(req.body);
     res.status(201).json(history);
   } catch (error) {
@@ -40,7 +39,6 @@ exports.createBillingHistory = async (req, res, next) => {
 
 exports.updateBillingHistory = async (req, res, next) => {
   try {
-    validateBillingHistory(req.body, true);
     const updated = await billingHistoryService.updateBillingHistory(req.params.id, req.body);
     if (!updated) return res.status(404).json({ error: 'Billing history not found' });
     res.json(updated);

@@ -66,9 +66,11 @@ import {
   fetchSubscriptionPlans,
   updatePaymentMethod,
 } from "@/api/subscriptions";
+import { createBillingHistory } from "@/api/billing-histories";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuthStore } from "@/stores/auth-store";
 
 interface PaymentMethod {
   type: string;
@@ -196,6 +198,7 @@ export default function SubscriptionDetailsPage() {
   const params = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { refreshSession } = useAuthStore();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -898,27 +901,46 @@ Hairvana Team`;
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
     if (!subscription) return;
+    
+    // Check authentication before making API call
+    const token = localStorage.getItem('token');
+    console.log('Token exists:', !!token);
+    
+    if (!token) {
+      toast({
+        title: "Authentication Error",
+        description: "No authentication token found. Please log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Try to refresh session if needed
+    const sessionRefreshed = await refreshSession();
+    if (!sessionRefreshed) {
+      toast({
+        title: "Authentication Error",
+        description: "Your session has expired. Please log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setGeneratingInvoice(true);
     try {
       const invoice_number = `INV-${new Date().getFullYear()}-${Math.floor(
         Math.random() * 10000
       )}`;
-      const res = await fetch("/api/billing-histories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subscription_id: subscription.id,
-          date: newInvoice.date ? new Date(newInvoice.date) : new Date(),
-          amount: newInvoice.amount,
-          status: newInvoice.status,
-          description: newInvoice.description,
-          invoice_number,
-          tax_amount: newInvoice.taxAmount,
-          notes: newInvoice.notes,
-        }),
+      const created = await createBillingHistory({
+        subscription_id: subscription.id,
+        date: newInvoice.date ? new Date(newInvoice.date).toISOString() : new Date().toISOString(),
+        amount: Number(newInvoice.amount),
+        status: newInvoice.status,
+        description: newInvoice.description,
+        invoice_number: invoice_number,
+        tax_amount: newInvoice.taxAmount ? Number(newInvoice.taxAmount) : undefined,
+        notes: newInvoice.notes || undefined,
       });
-      if (!res.ok) throw new Error("Failed to create invoice");
-      const created = await res.json();
       // Map backend snake_case fields to camelCase for frontend use
       const mappedInvoice = {
         ...created,
@@ -970,10 +992,99 @@ Hairvana Team`;
           date: "",
         });
       }, 1200);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Invoice generation error:', error);
+      let errorMessage = "Failed to generate invoice. Please try again.";
+      
+      if (error.message) {
+        if (error.message.includes("Unauthorized") || error.message.includes("No user")) {
+          // Try to refresh session one more time
+          const sessionRefreshed = await refreshSession();
+          if (!sessionRefreshed) {
+            errorMessage = "Your session has expired. Please log in again.";
+          } else {
+            // If session was refreshed, try the request again
+            try {
+              const created = await createBillingHistory({
+                subscription_id: subscription.id,
+                date: newInvoice.date ? new Date(newInvoice.date).toISOString() : new Date().toISOString(),
+                amount: Number(newInvoice.amount),
+                status: newInvoice.status,
+                description: newInvoice.description,
+                invoice_number: invoice_number,
+                tax_amount: newInvoice.taxAmount ? Number(newInvoice.taxAmount) : undefined,
+                notes: newInvoice.notes || undefined,
+              });
+              
+              // Map backend snake_case fields to camelCase for frontend use
+              const mappedInvoice = {
+                ...created,
+                amount: Number(created.amount),
+                taxAmount:
+                  created.taxAmount !== undefined
+                    ? created.taxAmount
+                    : created.tax_amount,
+                subtotal: created.subtotal,
+                total:
+                  created.total !== undefined
+                    ? created.total
+                    : created.total_amount !== undefined
+                    ? created.total_amount
+                    : Number(created.amount) +
+                      Number(
+                        created.taxAmount !== undefined
+                          ? created.taxAmount
+                          : created.tax_amount || 0
+                      ),
+                invoiceNumber:
+                  created.invoiceNumber !== undefined
+                    ? created.invoiceNumber
+                    : created.invoice_number,
+              };
+              
+              setSubscription((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      billingHistory: [mappedInvoice, ...prev.billingHistory],
+                    }
+                  : prev
+              );
+              
+              toast({
+                title: "Invoice generated!",
+                description: `Invoice for $${Number(newInvoice.amount).toFixed(
+                  2
+                )} created successfully.`,
+                variant: "default",
+              });
+              
+              setTimeout(() => {
+                setGenerateInvoiceDialogOpen(false);
+                setNewInvoice({
+                  amount: "",
+                  description: "",
+                  taxAmount: "",
+                  status: "paid",
+                  notes: "",
+                  date: "",
+                });
+              }, 1200);
+              
+              return; // Success, exit early
+            } catch (retryError: any) {
+              console.error('Retry invoice generation error:', retryError);
+              errorMessage = "Authentication failed. Please log in again.";
+            }
+          }
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to generate invoice. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

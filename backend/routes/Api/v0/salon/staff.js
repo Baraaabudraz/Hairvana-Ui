@@ -15,7 +15,7 @@ const validate = require('../../../../middleware/validate');
 
 // Configure upload middleware for staff avatars
 const uploadStaffFiles = createUploadMiddleware({
-  uploadDir: 'backend/public/uploads/staff',
+  uploadDir: '../public/uploads/staff',
   allowedTypes: ['image/jpeg', 'image/png'],
   maxSize: 5 * 1024 * 1024 // 5MB per image
 });

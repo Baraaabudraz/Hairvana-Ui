@@ -10,7 +10,7 @@ const validate = require('../../../../middleware/validate');
 const revenueRoutes = require('./revenue');
 
 const uploadSalonFiles = createUploadMiddleware({
-  uploadDir: 'backend/public/uploads/salons',
+  uploadDir: '../public/uploads/salons',
   allowedTypes: ['image/jpeg', 'image/png'],
   maxSize: 5 * 1024 * 1024 // 5MB per image
 });

@@ -105,6 +105,16 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
       },
+      reset_token: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Hashed password reset token'
+      },
+      reset_token_expires: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Expiration date for password reset token'
+      },
       preferences: {
         type: DataTypes.JSONB,
         allowNull: true,

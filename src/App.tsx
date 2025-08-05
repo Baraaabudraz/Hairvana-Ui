@@ -12,6 +12,8 @@ import { ProtectedRoute } from "./components/protected-route";
 
 // Auth Pages - Keep login as static import since it's needed immediately
 import LoginPage from "./pages/auth/login";
+import ResetPasswordPage from "./pages/auth/reset-password";
+import ForgotPasswordPage from "./pages/auth/forgot-password";
 
 // Dashboard Layout - Keep as static since it's the main layout
 import DashboardLayout from "./layouts/dashboard-layout";
@@ -69,8 +71,8 @@ function App() {
 
   useEffect(() => {
     if (!isLoading && isInitialized) {
-      // If user is not logged in and not on login page, redirect to login
-      if (!user && !location.pathname.includes("/auth/login")) {
+      // If user is not logged in and not on auth pages, redirect to login
+      if (!user && !location.pathname.includes("/auth/login") && !location.pathname.includes("/reset-password") && !location.pathname.includes("/salon/reset-password") && !location.pathname.includes("/auth/forgot-password")) {
         navigate("/auth/login");
       }
 
@@ -94,6 +96,9 @@ function App() {
     <Routes>
       {/* Auth Routes */}
       <Route path="/auth/login" element={<LoginPage />} />
+      <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/salon/reset-password" element={<ResetPasswordPage />} />
 
       {/* Dashboard Routes */}
       <Route path="/dashboard" element={<DashboardLayout />}>

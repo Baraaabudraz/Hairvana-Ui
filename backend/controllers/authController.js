@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { User, SalonOwner, Customer } = require('../models');
 const authService = require('../services/authService');
 const PermissionService = require("../services/permissionService");
+const passwordResetService = require('../services/passwordResetService');
 // Remove destructuring for validateLogin, validateRegister, validateChangePassword
 // const { validateLogin, validateRegister, validateChangePassword } = require('../validation/authValidation');
 // Placeholder for future Supabase client usage
@@ -87,5 +88,94 @@ exports.getUserPermissions = async (req, res) => {
       success: false, 
       error: 'Failed to get user permissions' 
     });
+  }
+};
+
+// Forget password for customer
+exports.forgetPasswordCustomer = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email is required' 
+      });
+    }
+
+    const result = await passwordResetService.requestCustomerPasswordReset(email);
+    
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Forget password for salon owner
+exports.forgetPasswordSalon = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email is required' 
+      });
+    }
+
+    const result = await passwordResetService.requestSalonPasswordReset(email);
+    
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Reset password
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const { token, password, confirmPassword } = req.body;
+    
+    if (!token || !password || !confirmPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Token, password, and confirm password are required' 
+      });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Passwords do not match' 
+      });
+    }
+
+    // Validate password strength
+    const passwordValidation = passwordResetService.validatePasswordStrength(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password does not meet requirements',
+        errors: passwordValidation.errors
+      });
+    }
+
+    const result = await passwordResetService.resetPassword(token, password);
+    
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    next(error);
   }
 };

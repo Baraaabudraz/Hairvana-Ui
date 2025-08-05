@@ -37,6 +37,13 @@ export async function apiFetch(url: string, options?: RequestInit) {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred' }));
+    
+    // If it's a validation error with errors array, pass through the full error data
+    if (errorData.errors && Array.isArray(errorData.errors)) {
+      throw new Error(JSON.stringify(errorData));
+    }
+    
+    // Otherwise, throw with just the message
     throw new Error(errorData.message || 'Failed to fetch data from API');
   }
 

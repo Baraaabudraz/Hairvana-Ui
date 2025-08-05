@@ -59,40 +59,42 @@ app.use("/backend/api/roles", require("./routes/roles"));
 
 // Mobile API Routes for Customer
 app.use(
-  "/backend/api/mobile/auth",
+  "/backend/api/v0/customer/auth",
   require("./routes/Api/v0/customer/auth")
 );
 app.use(
-  "/backend/api/mobile/user",
+  "/backend/api/v0/customer/user",
   require("./routes/Api/v0/customer/user")
 );
 app.use(
-  "/backend/api/mobile/salons",
+  "/backend/api/v0/customer/salons",
   require("./routes/Api/v0/customer/salon")
 );
 app.use(
-  "/backend/api/mobile/hairstyles",
+  "/backend/api/v0/customer/hairstyles",
   require("./routes/Api/v0/customer/hairstyle")
 );
-app.use("/backend/api/mobile", require("./routes/Api/v0/customer/appointment"));
+app.use("/backend/api/v0/customer/", require("./routes/Api/v0/customer/appointment"));
 app.use(
-  "/backend/api/mobile/payments",
+  "/backend/api/v0/customer/payments",
   require("./routes/Api/v0/customer/payment")
 );
 app.use(
-  "/backend/api/mobile/notifications",
+  "/backend/api/v0/customer/notifications",
   require("./routes/Api/v0/customer/notifications")
 );
-app.use("/backend/api/mobile/staff", require("./routes/Api/v0/customer/staff"));
+app.use("/backend/api/v0/customer/staff", require("./routes/Api/v0/customer/staff"));
 app.use(
-  "/backend/api/mobile/reviews",
+  "/backend/api/v0/customer/reviews",
   require("./routes/Api/v0/customer/reviews")
 );
 app.use(
-  "/backend/api/mobile/devices",
+  "/backend/api/v0/customer/devices",
   require("./routes/Api/v0/customer/devices")
 );
 app.use("/backend/images", require("./routes/images"));
+
+
 
 // Mobile API Routes for Salon Owner
 app.use(

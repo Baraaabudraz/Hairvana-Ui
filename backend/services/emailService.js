@@ -1,0 +1,189 @@
+const nodemailer = require('nodemailer');
+
+/**
+ * Email Service - Handles sending emails for password reset and notifications
+ */
+class EmailService {
+  constructor() {
+    this.transporter = null;
+    this.initializeTransporter();
+  }
+
+        initializeTransporter() {
+        try {
+          this.transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+        port: process.env.EMAIL_PORT || 587,
+        secure: process.env.EMAIL_SECURE === 'true',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        }
+      });
+
+      this.transporter.verify((error, success) => {
+        if (error) {
+          console.error('Email service configuration error:', error);
+        } else {
+          console.log('Email service is ready to send messages');
+        }
+      });
+    } catch (error) {
+      console.error('Failed to initialize email transporter:', error);
+    }
+  }
+
+  async sendPasswordResetEmail(email, resetToken, resetUrl, userName = 'User') {
+    try {
+      if (!this.transporter) {
+        console.error('Email transporter not initialized');
+        return false;
+      }
+
+      const mailOptions = {
+        from: process.env.EMAIL_FROM || 'noreply@hairvana.com',
+        to: email,
+        subject: 'Password Reset Request - Hairvana',
+        html: this.generatePasswordResetEmailHTML(userName, resetUrl, resetToken),
+        text: this.generatePasswordResetEmailText(userName, resetUrl, resetToken)
+      };
+
+      await this.transporter.sendMail(mailOptions);
+      console.log('Password reset email sent successfully to:', email);
+      return true;
+    } catch (error) {
+      console.error('Failed to send password reset email:', error);
+      return false;
+    }
+  }
+
+  generatePasswordResetEmailHTML(userName, resetUrl, resetToken) {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Password Reset - Hairvana</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        </style>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; line-height: 1.6; color: #1f2937;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+          
+                     <!-- Header -->
+           <div style="background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%); padding: 40px 20px; text-align: center;">
+             <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); border-radius: 16px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: white;">
+                 <circle cx="6" cy="6" r="3" stroke="white" stroke-width="2"/>
+                 <path d="M8.12 8.12 12 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                 <path d="M20 4 8.12 15.88" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                 <circle cx="6" cy="18" r="3" stroke="white" stroke-width="2"/>
+                 <path d="M14.8 14.8 20 20" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+               </svg>
+             </div>
+            <h1 style="margin: 0; color: white; font-size: 32px; font-weight: 700; letter-spacing: -0.025em;">Hairvana</h1>
+            <p style="margin: 8px 0 0; color: rgba(255, 255, 255, 0.9); font-size: 16px; font-weight: 400;">Password Reset Request</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 40px 30px;">
+            <h2 style="margin: 0 0 20px; color: #111827; font-size: 24px; font-weight: 600;">Hello ${userName},</h2>
+            
+            <p style="margin: 0 0 16px; color: #6b7280; font-size: 16px;">
+              We received a request to reset your password for your Hairvana account. To ensure your account security, please click the button below to create a new password.
+            </p>
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${resetUrl}?token=${resetToken}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.3); transition: all 0.2s;">
+                Reset Your Password
+              </a>
+            </div>
+
+            <!-- Security Notice -->
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 24px 0;">
+              <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 8px;">
+                  <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#d97706" stroke-width="2"/>
+                  <path d="M12 8V12" stroke="#d97706" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 16H12.01" stroke="#d97706" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <strong style="color: #92400e; font-size: 16px;">Security Information</strong>
+              </div>
+              <ul style="margin: 0; padding-left: 20px; color: #92400e; font-size: 14px;">
+                <li style="margin-bottom: 4px;">This link will expire in 1 hour for your security</li>
+                <li style="margin-bottom: 4px;">If you didn't request this password reset, please ignore this email</li>
+                <li style="margin-bottom: 4px;">This link can only be used once for security purposes</li>
+                <li style="margin-bottom: 0;">Never share this link with anyone</li>
+              </ul>
+            </div>
+
+            <!-- Manual Link -->
+            <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin: 24px 0;">
+              <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px; font-weight: 500;">If the button doesn't work, copy and paste this link into your browser:</p>
+              <p style="margin: 0; word-break: break-all; color: #8b5cf6; font-size: 12px; font-family: 'Courier New', monospace; background: #f3f4f6; padding: 8px; border-radius: 4px;">${resetUrl}?token=${resetToken}</p>
+            </div>
+
+            <!-- Support Info -->
+            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0; color: #6b7280; font-size: 14px;">
+                If you have any questions or need assistance, please don't hesitate to contact our support team.
+              </p>
+            </div>
+          </div>
+
+                     <!-- Footer -->
+           <div style="background: #f9fafb; padding: 24px 30px; text-align: center;">
+             <div style="margin-bottom: 16px;">
+               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                 <circle cx="6" cy="6" r="3" stroke="#8b5cf6" stroke-width="2"/>
+                 <path d="M8.12 8.12 12 12" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                 <path d="M20 4 8.12 15.88" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                 <circle cx="6" cy="18" r="3" stroke="#8b5cf6" stroke-width="2"/>
+                 <path d="M14.8 14.8 20 20" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+               </svg>
+             </div>
+            <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px; font-weight: 500;">Hairvana</p>
+            <p style="margin: 0 0 8px; color: #9ca3af; font-size: 12px;">This email was sent from Hairvana. Please do not reply to this email.</p>
+            <p style="margin: 0; color: #9ca3af; font-size: 12px;">&copy; ${new Date().getFullYear()} Hairvana. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  generatePasswordResetEmailText(userName, resetUrl, resetToken) {
+    return `
+🔐 PASSWORD RESET REQUEST - HAIRVANA
+═══════════════════════════════════════════════════════════════
+
+Hello ${userName},
+
+We received a request to reset your password for your Hairvana account. 
+To ensure your account security, please use the link below to create a new password.
+
+🔗 RESET YOUR PASSWORD:
+${resetUrl}?token=${resetToken}
+
+⚠️  SECURITY INFORMATION:
+• This link will expire in 1 hour for your security
+• If you didn't request this password reset, please ignore this email
+• This link can only be used once for security purposes
+• Never share this link with anyone
+
+📧 Need help? Contact our support team if you have any questions.
+
+Best regards,
+The Hairvana Team
+
+═══════════════════════════════════════════════════════════════
+This email was sent from Hairvana. Please do not reply to this email.
+© ${new Date().getFullYear()} Hairvana. All rights reserved.
+    `;
+  }
+}
+
+module.exports = new EmailService(); 

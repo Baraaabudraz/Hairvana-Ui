@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
-const { loginValidation, registerValidation, changePasswordValidation } = require('../validation/authValidation');
+const { loginValidation, registerValidation, changePasswordValidation, forgotPasswordValidation, resetPasswordValidation } = require('../validation/authValidation');
 const validate = require('../middleware/validate');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const { loginRateLimit, registerRateLimit, passwordChangeRateLimit } = require('../middleware/rateLimitMiddleware');
@@ -10,6 +10,11 @@ const { loginRateLimit, registerRateLimit, passwordChangeRateLimit } = require('
 router.post('/login', loginRateLimit, loginValidation, validate, authController.login);
 router.post('/register', registerRateLimit, registerValidation, validate, authController.register);
 router.post('/logout', authController.logout);
+
+// Password reset routes
+router.post('/forget-password-customer', forgotPasswordValidation, validate, authController.forgetPasswordCustomer);
+router.post('/forget-password-salon', forgotPasswordValidation, validate, authController.forgetPasswordSalon);
+router.post('/reset-password', resetPasswordValidation, validate, authController.resetPassword);
 
 // Protected routes
 router.get('/me', authenticateToken, authController.getCurrentUser);

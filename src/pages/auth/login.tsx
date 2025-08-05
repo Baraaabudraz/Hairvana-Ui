@@ -110,6 +110,18 @@ export default function LoginPage() {
               {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
+          
+          <div className="mt-4 text-center">
+            <Button
+              type="button"
+              variant="link"
+              onClick={() => navigate('/auth/forgot-password')}
+              className="text-sm text-gray-600 hover:text-gray-800"
+            >
+              Forgot your password?
+            </Button>
+          </div>
+          
           <div className="mt-6 text-center text-sm text-gray-500">
             Demo credentials: admin@hairvana.com / admin123
           </div>

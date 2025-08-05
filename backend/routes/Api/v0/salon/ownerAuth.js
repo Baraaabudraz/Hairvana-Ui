@@ -42,4 +42,37 @@ router.post(
   ownerAuthController.uploadDocuments
 );
 
+// Password reset routes (public)
+router.post("/forget-password",
+  [
+    require('express-validator').body('email')
+      .isEmail()
+      .withMessage('Valid email is required')
+  ],
+  require('../../../../middleware/validate'),
+  ownerAuthController.forgetPassword
+);
+
+router.post("/reset-password",
+  [
+    require('express-validator').body('token')
+      .notEmpty()
+      .withMessage('Reset token is required'),
+    require('express-validator').body('password')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters long')
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+      .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+    require('express-validator').body('confirmPassword')
+      .custom((value, { req }) => {
+        if (value !== req.body.password) {
+          throw new Error('Passwords do not match');
+        }
+        return true;
+      })
+  ],
+  require('../../../../middleware/validate'),
+  ownerAuthController.resetPassword
+);
+
 module.exports = router;

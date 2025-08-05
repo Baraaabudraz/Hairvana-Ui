@@ -230,3 +230,101 @@ exports.uploadDocuments = async (req, res) => {
     return res.status(500).json({ error: "Document upload failed." });
   }
 };
+
+/**
+ * Forget password for salon owner (mobile)
+ */
+exports.forgetPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Email is required.',
+        code: 'EMAIL_REQUIRED'
+      });
+    }
+
+    const passwordResetService = require('../../../../services/passwordResetService');
+    const result = await passwordResetService.requestSalonPasswordReset(email);
+    
+    if (result.success) {
+      return res.json({
+        success: true,
+        message: result.message
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: result.message,
+        code: 'PASSWORD_RESET_FAILED'
+      });
+    }
+  } catch (err) {
+    console.error('Forget password error:', err);
+    return res.status(500).json({ 
+      error: 'Failed to process password reset request.',
+      code: 'PASSWORD_RESET_ERROR'
+    });
+  }
+};
+
+/**
+ * Reset password for salon owner (mobile)
+ */
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, password, confirmPassword } = req.body;
+    
+    if (!token || !password || !confirmPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Token, password, and confirm password are required.',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Passwords do not match.',
+        code: 'PASSWORD_MISMATCH'
+      });
+    }
+
+    const passwordResetService = require('../../../../services/passwordResetService');
+    
+    // Validate password strength
+    const passwordValidation = passwordResetService.validatePasswordStrength(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Password does not meet requirements.',
+        code: 'WEAK_PASSWORD',
+        errors: passwordValidation.errors
+      });
+    }
+
+    const result = await passwordResetService.resetPassword(token, password);
+    
+    if (result.success) {
+      return res.json({
+        success: true,
+        message: result.message
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: result.message,
+        code: 'PASSWORD_RESET_FAILED'
+      });
+    }
+  } catch (err) {
+    console.error('Reset password error:', err);
+    return res.status(500).json({ 
+      error: 'Failed to reset password.',
+      code: 'PASSWORD_RESET_ERROR'
+    });
+  }
+};

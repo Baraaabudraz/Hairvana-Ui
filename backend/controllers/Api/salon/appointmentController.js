@@ -3,7 +3,7 @@ const salonRepository = require('../../../repositories/salonRepository');
 const { validationResult } = require('express-validator');
 
 /**
- * Get all appointment requests (pending status) for salon owner's salons
+ * Get all appointment requests (pending status) for a specific salon
  */
 exports.getAppointmentRequests = async (req, res, next) => {
   try {
@@ -17,20 +17,26 @@ exports.getAppointmentRequests = async (req, res, next) => {
     }
 
     const ownerId = req.user.id;
+    const salonId = req.params.salonId;
 
-    // Get all salons for this owner
-    const salons = await salonRepository.findAllByOwnerId(ownerId);
-    if (!salons || salons.length === 0) {
+    // Verify that the authenticated user owns this salon
+    const salon = await salonRepository.findById(salonId);
+    if (!salon) {
       return res.status(404).json({
         success: false,
-        message: 'No salons found for this owner'
+        message: 'Salon not found'
       });
     }
 
-    const salonIds = salons.map(salon => salon.id);
+    if (salon.owner_id !== ownerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view appointments for your own salon.'
+      });
+    }
 
-    // Get pending appointments for all owner's salons
-    const appointments = await appointmentService.getAppointmentsBySalonIds(salonIds, {
+    // Get pending appointments for the specific salon
+    const appointments = await appointmentService.getAppointmentsBySalonIds([salonId], {
       status: 'pending',
       ...req.query
     });
@@ -45,7 +51,10 @@ exports.getAppointmentRequests = async (req, res, next) => {
       data: {
         appointments,
         count: appointments.length,
-        salons: salons.length
+        salon: {
+          id: salon.id,
+          name: salon.name
+        }
       }
     });
 
@@ -56,7 +65,7 @@ exports.getAppointmentRequests = async (req, res, next) => {
 };
 
 /**
- * Get all upcoming appointments (booked status) for salon owner's salons
+ * Get all upcoming appointments (booked status) for a specific salon
  */
 exports.getUpcomingAppointments = async (req, res, next) => {
   try {
@@ -70,20 +79,26 @@ exports.getUpcomingAppointments = async (req, res, next) => {
     }
 
     const ownerId = req.user.id;
+    const salonId = req.params.salonId;
 
-    // Get all salons for this owner
-    const salons = await salonRepository.findAllByOwnerId(ownerId);
-    if (!salons || salons.length === 0) {
+    // Verify that the authenticated user owns this salon
+    const salon = await salonRepository.findById(salonId);
+    if (!salon) {
       return res.status(404).json({
         success: false,
-        message: 'No salons found for this owner'
+        message: 'Salon not found'
       });
     }
 
-    const salonIds = salons.map(salon => salon.id);
+    if (salon.owner_id !== ownerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view appointments for your own salon.'
+      });
+    }
 
-    // Get upcoming appointments for all owner's salons
-    const appointments = await appointmentService.getAppointmentsBySalonIds(salonIds, {
+    // Get upcoming appointments for the specific salon
+    const appointments = await appointmentService.getAppointmentsBySalonIds([salonId], {
       status: 'booked',
       upcoming: true,
       ...req.query
@@ -99,7 +114,10 @@ exports.getUpcomingAppointments = async (req, res, next) => {
       data: {
         appointments,
         count: appointments.length,
-        salons: salons.length
+        salon: {
+          id: salon.id,
+          name: salon.name
+        }
       }
     });
 
@@ -110,7 +128,7 @@ exports.getUpcomingAppointments = async (req, res, next) => {
 };
 
 /**
- * Get all past appointments (completed/cancelled) for salon owner's salons
+ * Get all past appointments (completed/cancelled) for a specific salon
  */
 exports.getPastAppointments = async (req, res, next) => {
   try {
@@ -124,20 +142,26 @@ exports.getPastAppointments = async (req, res, next) => {
     }
 
     const ownerId = req.user.id;
+    const salonId = req.params.salonId;
 
-    // Get all salons for this owner
-    const salons = await salonRepository.findAllByOwnerId(ownerId);
-    if (!salons || salons.length === 0) {
+    // Verify that the authenticated user owns this salon
+    const salon = await salonRepository.findById(salonId);
+    if (!salon) {
       return res.status(404).json({
         success: false,
-        message: 'No salons found for this owner'
+        message: 'Salon not found'
       });
     }
 
-    const salonIds = salons.map(salon => salon.id);
+    if (salon.owner_id !== ownerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view appointments for your own salon.'
+      });
+    }
 
-    // Get past appointments for all owner's salons
-    const appointments = await appointmentService.getAppointmentsBySalonIds(salonIds, {
+    // Get past appointments for the specific salon
+    const appointments = await appointmentService.getAppointmentsBySalonIds([salonId], {
       status: ['completed', 'cancelled'],
       past: true,
       ...req.query
@@ -153,7 +177,10 @@ exports.getPastAppointments = async (req, res, next) => {
       data: {
         appointments,
         count: appointments.length,
-        salons: salons.length
+        salon: {
+          id: salon.id,
+          name: salon.name
+        }
       }
     });
 
@@ -164,7 +191,7 @@ exports.getPastAppointments = async (req, res, next) => {
 };
 
 /**
- * Get appointment details by ID (only if it belongs to owner's salon)
+ * Get appointment details by ID (only if it belongs to the specified salon)
  */
 exports.getAppointmentById = async (req, res, next) => {
   try {
@@ -178,21 +205,27 @@ exports.getAppointmentById = async (req, res, next) => {
     }
 
     const ownerId = req.user.id;
+    const salonId = req.params.salonId;
     const appointmentId = req.params.appointmentId;
 
-    // Get all salons for this owner
-    const salons = await salonRepository.findAllByOwnerId(ownerId);
-    if (!salons || salons.length === 0) {
+    // Verify that the authenticated user owns this salon
+    const salon = await salonRepository.findById(salonId);
+    if (!salon) {
       return res.status(404).json({
         success: false,
-        message: 'No salons found for this owner'
+        message: 'Salon not found'
       });
     }
 
-    const salonIds = salons.map(salon => salon.id);
+    if (salon.owner_id !== ownerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view appointments for your own salon.'
+      });
+    }
 
-    // Get appointment by ID if it belongs to owner's salon
-    const appointment = await appointmentService.getAppointmentByIdForSalons(appointmentId, salonIds);
+    // Get appointment by ID if it belongs to the specified salon
+    const appointment = await appointmentService.getAppointmentByIdForSalons(appointmentId, [salonId]);
     
     if (!appointment) {
       return res.status(404).json({
@@ -204,7 +237,13 @@ exports.getAppointmentById = async (req, res, next) => {
     res.json({
       success: true,
       message: 'Appointment details retrieved successfully',
-      data: appointment
+      data: {
+        appointment,
+        salon: {
+          id: salon.id,
+          name: salon.name
+        }
+      }
     });
 
   } catch (error) {
@@ -214,7 +253,7 @@ exports.getAppointmentById = async (req, res, next) => {
 };
 
 /**
- * Update appointment status (approve, reject, complete)
+ * Update appointment status (approve, reject, complete) for a specific salon
  */
 exports.updateAppointmentStatus = async (req, res, next) => {
   try {
@@ -228,22 +267,28 @@ exports.updateAppointmentStatus = async (req, res, next) => {
     }
 
     const ownerId = req.user.id;
+    const salonId = req.params.salonId;
     const appointmentId = req.params.appointmentId;
     const { status, notes } = req.body;
 
-    // Get all salons for this owner
-    const salons = await salonRepository.findAllByOwnerId(ownerId);
-    if (!salons || salons.length === 0) {
+    // Verify that the authenticated user owns this salon
+    const salon = await salonRepository.findById(salonId);
+    if (!salon) {
       return res.status(404).json({
         success: false,
-        message: 'No salons found for this owner'
+        message: 'Salon not found'
       });
     }
 
-    const salonIds = salons.map(salon => salon.id);
+    if (salon.owner_id !== ownerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only update appointments for your own salon.'
+      });
+    }
 
-    // Verify appointment belongs to owner's salon
-    const existingAppointment = await appointmentService.getAppointmentByIdForSalons(appointmentId, salonIds);
+    // Verify appointment belongs to the specified salon
+    const existingAppointment = await appointmentService.getAppointmentByIdForSalons(appointmentId, [salonId]);
     if (!existingAppointment) {
       return res.status(404).json({
         success: false,
@@ -264,7 +309,13 @@ exports.updateAppointmentStatus = async (req, res, next) => {
     res.json({
       success: true,
       message: `Appointment ${status} successfully`,
-      data: updatedAppointment
+      data: {
+        appointment: updatedAppointment,
+        salon: {
+          id: salon.id,
+          name: salon.name
+        }
+      }
     });
 
   } catch (error) {
@@ -274,30 +325,42 @@ exports.updateAppointmentStatus = async (req, res, next) => {
 };
 
 /**
- * Get appointment statistics for salon owner
+ * Get appointment statistics for a specific salon
  */
 exports.getAppointmentStats = async (req, res, next) => {
   try {
     const ownerId = req.user.id;
+    const salonId = req.params.salonId;
 
-    // Get all salons for this owner
-    const salons = await salonRepository.findAllByOwnerId(ownerId);
-    if (!salons || salons.length === 0) {
+    // Verify that the authenticated user owns this salon
+    const salon = await salonRepository.findById(salonId);
+    if (!salon) {
       return res.status(404).json({
         success: false,
-        message: 'No salons found for this owner'
+        message: 'Salon not found'
       });
     }
 
-    const salonIds = salons.map(salon => salon.id);
+    if (salon.owner_id !== ownerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view statistics for your own salon.'
+      });
+    }
 
-    // Get appointment statistics
-    const stats = await appointmentService.getAppointmentStatsBySalonIds(salonIds, req.query);
+    // Get appointment statistics for the specific salon
+    const stats = await appointmentService.getAppointmentStatsBySalonIds([salonId], req.query);
 
     res.json({
       success: true,
       message: 'Appointment statistics retrieved successfully',
-      data: stats
+      data: {
+        stats,
+        salon: {
+          id: salon.id,
+          name: salon.name
+        }
+      }
     });
 
   } catch (error) {

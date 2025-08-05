@@ -7,7 +7,7 @@ const { updateSalonProfileValidation } = require('../../../../validation/salonVa
 const validate = require('../../../../middleware/validate');
 
 const uploadSalonFiles = createUploadMiddleware({
-  uploadDir: '../public/uploads/salons',
+  uploadDir: '/public/uploads/salons',
   allowedTypes: ['image/jpeg', 'image/png'],
   maxSize: 5 * 1024 * 1024 // 5MB per image
 });

@@ -1,5 +1,4 @@
 const multer = require('multer');
-const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
@@ -23,6 +22,8 @@ const FILE_TYPE_MAP = {
  */
 function createUploadMiddleware({ uploadDir, maxSize = 10 * 1024 * 1024, allowedTypes = Object.keys(FILE_TYPE_MAP) }) {
   // Ensure upload directory exists
+  
+  const path = require('path');
 
   const path = path.join( '../', '/backend', '/public', '/uploads', uploadDir);
 

@@ -7,13 +7,13 @@ const { authenticateOwner, authenticateForLogout } = require('../../../../middle
 const { loginRateLimit, registerRateLimit, passwordChangeRateLimit } = require('../../../../middleware/rateLimitMiddleware');
 // Multer setup for file uploads using uploadHelper
 const upload = createUploadMiddleware({
-  uploadDir: "../public/uploads/owner_docs",
+  uploadDir: "/owner_docs",
   allowedTypes: ["image/jpeg", "image/png", "application/pdf"],
   maxSize: 10 * 1024 * 1024, // 10MB
 });
 
 const uploadAvatar = createUploadMiddleware({
-  uploadDir: "../public/uploads/avatars",
+  uploadDir: "/avatars",
   allowedTypes: ["image/jpeg", "image/png"],
   maxSize: 5 * 1024 * 1024, // 5MB
 });

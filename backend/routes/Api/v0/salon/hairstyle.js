@@ -10,7 +10,7 @@ const {
 } = require("../../../../validation/hairstyleValidation");
 
 const uploadHairstyle = createUploadMiddleware({
-  uploadDir: "../public/uploads/hairstyles/original",
+  uploadDir: "/hairstyles/original",
   allowedTypes: ["image/jpeg", "image/png"],
   maxSize: 5 * 1024 * 1024, // 5MB
 });

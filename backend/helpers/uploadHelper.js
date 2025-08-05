@@ -23,10 +23,12 @@ const FILE_TYPE_MAP = {
  */
 function createUploadMiddleware({ uploadDir, maxSize = 10 * 1024 * 1024, allowedTypes = Object.keys(FILE_TYPE_MAP) }) {
   // Ensure upload directory exists
-  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
+  const path = path.join( '..', 'backend', 'public', 'uploads', uploadDir);
+
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(path, { recursive: true });
   const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
+    destination: (req, file, cb) => cb(null, path),
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname) || `.${FILE_TYPE_MAP[file.mimetype] || 'bin'}`;
       const name = `${uuidv4()}${ext}`;

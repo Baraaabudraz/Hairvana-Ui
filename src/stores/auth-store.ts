@@ -7,7 +7,7 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'super_admin' | 'salon' | 'user';
+  role: 'admin' | 'super_admin' | 'salon' | 'customer';
   avatar?: string;
 }
 

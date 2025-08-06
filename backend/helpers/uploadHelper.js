@@ -25,7 +25,7 @@ function createUploadMiddleware({ uploadDir, maxSize = 10 * 1024 * 1024, allowed
   
   const path = require('path');
 
-  const uploadPath = path.join( '../', '/backend', '/public', '/uploads', uploadDir);
+  const uploadPath = path.join('backend', 'public', 'uploads', uploadDir);
 
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadPath, { recursive: true });
   const storage = multer.diskStorage({

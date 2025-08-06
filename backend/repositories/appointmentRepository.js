@@ -85,7 +85,13 @@ exports.findBySalonIds = async (salonIds, filters = {}) => {
   if (filters.upcoming === true) {
     where.start_at = { [Op.gte]: now };
   } else if (filters.past === true) {
-    where.start_at = { [Op.lt]: now };
+    // For past appointments, include completed/cancelled regardless of date
+    // and also appointments that are in the past
+    const pastConditions = [
+      { start_at: { [Op.lt]: now } },
+      { status: { [Op.in]: ['completed', 'cancelled'] } }
+    ];
+    where[Op.or] = pastConditions;
   }
   
   // Custom date range

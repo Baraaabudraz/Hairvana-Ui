@@ -1,3 +1,4 @@
+const { buildUrl } = require('../helpers/urlHelper');
 // Appointment resource serializer
 
 function serializeAppointment(appointment) {
@@ -116,7 +117,7 @@ function serializeAppointment(appointment) {
       description: service.description,
       price: service.price,
       duration: service.duration,
-      image_url: service.image_url,
+      image_url: service.image_url ? buildUrl(service.image_url, 'service') : service.image_url,
     })) : [],
     
     // Payment details

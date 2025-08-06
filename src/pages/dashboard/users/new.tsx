@@ -39,7 +39,7 @@ const baseUserSchema = z.object({
   phone: z.string().min(10, "Phone number must be at least 10 characters"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
-  role: z.enum(["admin", "super_admin", "salon", "user"]),
+  role: z.enum(["admin", "super_admin", "salon", "customer"]),
 });
 
 const adminUserSchema = baseUserSchema.extend({
@@ -60,7 +60,7 @@ const userSchema = z
     adminUserSchema.extend({ role: z.literal("admin") }),
     adminUserSchema.extend({ role: z.literal("super_admin") }),
     salonUserSchema.extend({ role: z.literal("salon") }),
-    baseUserSchema.extend({ role: z.literal("user") }),
+    baseUserSchema.extend({ role: z.literal("customer") }),
   ])
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -112,7 +112,7 @@ export default function NewUserPage() {
   } = useForm<UserForm>({
     resolver: zodResolver(userSchema),
     defaultValues: {
-      role: "user",
+      role: "customer",
     },
   });
 

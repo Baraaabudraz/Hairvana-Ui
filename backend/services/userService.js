@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const userRepository = require('../repositories/userRepository');
 const { serializeUser } = require('../serializers/userSerializer');
 const { getFileInfo } = require('../helpers/uploadHelper');
+const { buildAvatarUrl } = require('../helpers/urlHelper');
 const fs = require('fs');
 const path = require('path');
 
@@ -259,13 +260,13 @@ exports.uploadAvatar = async (userId, file, req) => {
     }
 
     // Process new avatar
-    const avatarInfo = getFileInfo(file, '/images/avatar');
+    const avatarInfo = getFileInfo(file, '/images/avatars');
     
     // Update user with new avatar
     await userRepository.update(userId, { avatar: avatarInfo.storedName });
     
     // Build full URL using urlHelper
-    const fullUrl = urlHelper.getFullUrl(req, avatarInfo.url);
+    const fullUrl = buildAvatarUrl(avatarInfo.storedName, { req });
     
     return {
       avatar: avatarInfo.storedName,

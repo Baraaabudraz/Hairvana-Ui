@@ -13,8 +13,8 @@ exports.findUserById = async (id) => {
   return User.findOne({
     where: { id },
     include: [
-      { model: SalonOwner, as: 'salonOwner' },
-      { model: Customer, as: 'customer' },
+      // { model: SalonOwner, as: 'salonOwner' },
+      // { model: Customer, as: 'customer' },
       { model: Role, as: 'role' }
     ]
   });

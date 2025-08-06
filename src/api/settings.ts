@@ -48,10 +48,15 @@ export async function fetchUserSettings() {
 
 export async function updateProfileSettings(profileData: any) {
   try {
-    return await apiFetch('/settings/profile', {
+    // Check if profileData is FormData (for file uploads)
+    const isFormData = profileData instanceof FormData;
+    
+    const response = await apiFetch('/settings/profile', {
       method: 'PUT',
-      body: JSON.stringify(profileData),
+      body: isFormData ? profileData : JSON.stringify(profileData),
     });
+    
+    return response;
   } catch (error) {
     console.error('Error updating profile settings:', error);
     throw error;

@@ -37,7 +37,7 @@ export function Header() {
           />
         </div>
         {/* Hide dashboard/admin features for 'user' role */}
-        {user?.role !== "user" && (
+        {user?.role !== "customer" && (
           <div className="flex items-center gap-x-4 lg:gap-x-6">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

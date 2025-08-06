@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { Role, User } = require("../models");
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { serializeUser } = require('../serializers/userSerializer');
 
 // JWT token blacklist (in production, use Redis or database)
 const tokenBlacklist = new Set();
@@ -269,9 +270,13 @@ exports.getCurrentUser = async (userId) => {
       throw Object.assign(new Error('User not found'), { status: 404 });
     }
 
-    // Remove sensitive data
-    const { password_hash, ...userWithoutPassword } = user.toJSON();
-    return userWithoutPassword;
+    // Use serializer to format user data with proper avatar URL
+    const serializedUser = serializeUser(user, { 
+      context: 'dashboard',
+      avatarFilenameOnly: false // This will use buildAvatarUrl to create full URL
+    });
+    
+    return serializedUser;
     
   } catch (error) {
     console.error('Get current user error:', error.message);

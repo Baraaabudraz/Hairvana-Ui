@@ -259,14 +259,13 @@ exports.uploadAvatar = async (userId, file, req) => {
     }
 
     // Process new avatar
-    const avatarInfo = getFileInfo(file, '/images/avatar');
+    const avatarInfo = getFileInfo(file, urlHelper.buildUrl('', 'avatar'));
     
     // Update user with new avatar
     await userRepository.update(userId, { avatar: avatarInfo.storedName });
     
-    // Build full URL
-    const baseUrl = req.protocol + '://' + req.get('host');
-    const fullUrl = baseUrl + avatarInfo.url;
+    // Build full URL using urlHelper
+    const fullUrl = urlHelper.getFullUrl(req, avatarInfo.url);
     
     return {
       avatar: avatarInfo.storedName,

@@ -465,15 +465,45 @@ export default function SettingsPage() {
       switch (section) {
         case 'Profile':
           if (userSettings) {
-            await updateProfileSettings({
-              name: userSettings.name,
-              email: userSettings.email,
-              phone: userSettings.phone,
-              department: userSettings.department,
-              timezone: userSettings.timezone,
-              language: userSettings.language,
-              avatar: uploadedAvatar || userSettings.avatar
-            });
+            // Create FormData for file upload
+            const formData = new FormData();
+            
+            // Add form fields
+            formData.append('name', userSettings.name);
+            formData.append('email', userSettings.email);
+            formData.append('phone', userSettings.phone);
+            formData.append('department', userSettings.department);
+            formData.append('timezone', userSettings.timezone);
+            formData.append('language', userSettings.language);
+            
+            // Add avatar file if selected
+            const avatarFile = document.querySelector('input[type="file"]') as HTMLInputElement;
+            if (avatarFile?.files?.[0]) {
+              formData.append('avatar', avatarFile.files[0]);
+            }
+
+            const response = await updateProfileSettings(formData);
+            
+            // Update user in auth store with new avatar
+            if (user && response.settings?.profile) {
+              // Update the user store with new data
+              const updatedUser = {
+                ...user,
+                name: response.settings.profile.name,
+                email: response.settings.profile.email,
+                avatar: response.settings.profile.avatar, // This will be the full URL from backend
+              };
+              
+              // Update the auth store
+              const { setUser } = useAuthStore.getState();
+              setUser(updatedUser);
+            }
+            
+            // Reload settings to get the updated avatar
+            await loadSettings();
+            
+            // Clear the uploaded avatar preview
+            setUploadedAvatar('');
           }
           break;
         case 'Security':
@@ -591,8 +621,9 @@ export default function SettingsPage() {
   const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // In a real app, you would upload this to a storage service
-      setUploadedAvatar('https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2');
+      // Create a preview URL for the selected file
+      const previewUrl = URL.createObjectURL(file);
+      setUploadedAvatar(previewUrl);
     }
   };
 
@@ -685,7 +716,10 @@ export default function SettingsPage() {
         <CardContent className="space-y-6">
           <div className="flex items-center gap-6">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={uploadedAvatar || userSettings?.avatar} alt={userSettings?.name} />
+              <AvatarImage 
+                src={uploadedAvatar || (userSettings?.avatar || user?.avatar)} 
+                alt={userSettings?.name} 
+              />
               <AvatarFallback className="text-lg">
                 {userSettings?.name?.split(' ').map(n => n[0]).join('') || 'A'}
               </AvatarFallback>

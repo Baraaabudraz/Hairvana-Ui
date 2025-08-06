@@ -259,7 +259,7 @@ exports.uploadAvatar = async (userId, file, req) => {
     }
 
     // Process new avatar
-    const avatarInfo = getFileInfo(file, urlHelper.buildUrl('', 'avatar'));
+    const avatarInfo = getFileInfo(file, '/images/avatar');
     
     // Update user with new avatar
     await userRepository.update(userId, { avatar: avatarInfo.storedName });

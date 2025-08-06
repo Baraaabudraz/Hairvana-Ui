@@ -23,6 +23,16 @@ router.get('/salon/:uuid', (req, res) => {
   }
 });
 
+// Serve service image by UUID
+router.get('/services/:uuid', (req, res) => {
+  const filePath = path.join(__dirname, '../public/uploads/services', req.params.uuid);
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send('Not found');
+  }
+});
+
 // Serve hairstyle images
 router.get('/hairstyles/original/:filename', (req, res) => {
   const filePath = path.join(__dirname, '../public/uploads/hairstyles/original', req.params.filename);

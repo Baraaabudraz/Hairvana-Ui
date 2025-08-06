@@ -153,6 +153,11 @@ app.use(
   "/images/staff",
   express.static(path.join(__dirname, "../public/uploads/staff"))
 );
+// Serve service images from /images/services/ path
+app.use(
+  "/images/services",
+  express.static(path.join(__dirname, "../public/uploads/services"))
+);
 // Salon image upload route
 app.use("/backend/api/salons", require("./routes/salonImages"));
 

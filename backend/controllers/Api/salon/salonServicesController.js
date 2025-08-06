@@ -1,5 +1,7 @@
 const serviceRepository = require('../../../repositories/serviceRepository');
 const salonRepository = require('../../../repositories/salonRepository');
+const { getFileInfo } = require('../../../helpers/uploadHelper');
+const { buildUrl } = require('../../../helpers/urlHelper');
 
 /**
  * Get all services for a specific salon
@@ -29,11 +31,19 @@ exports.getSalonServices = async (req, res, next) => {
     
     const services = await serviceRepository.findBySalonId(salonId);
     
+    // Build full image URLs for all services
+    const servicesWithFullUrls = services.map(service => {
+      if (service.image_url) {
+        service.image_url = buildUrl(service.image_url, 'service', { req });
+      }
+      return service;
+    });
+    
     return res.status(200).json({
       success: true,
-      message: `Found ${services.length} service(s) for this salon`,
-      data: services,
-      total: services.length
+      message: `Found ${servicesWithFullUrls.length} service(s) for this salon`,
+      data: servicesWithFullUrls,
+      total: servicesWithFullUrls.length
     });
   } catch (error) {
     next(error);
@@ -50,9 +60,17 @@ exports.getAllServices = async (req, res, next) => {
   try {
     const { rows: services, count } = await serviceRepository.findAll(req.query);
     
+    // Build full image URLs for all services
+    const servicesWithFullUrls = services.map(service => {
+      if (service.image_url) {
+        service.image_url = buildUrl(service.image_url, 'service', { req });
+      }
+      return service;
+    });
+    
     return res.status(200).json({
       success: true,
-      data: services,
+      data: servicesWithFullUrls,
       total: count
     });
   } catch (error) {
@@ -70,6 +88,14 @@ exports.createService = async (req, res, next) => {
   try {
     const salonId = req.params.salonId;
     const serviceData = req.body;
+    
+    // Handle image upload if file is present
+    if (req.file) {
+      const fileInfo = getFileInfo(req.file, '/images/services');
+      serviceData.image_url = fileInfo.storedName; // Store only filename
+      serviceData.image_filename = fileInfo.storedName;
+      serviceData.image_original_name = fileInfo.originalName;
+    }
     
     // Transform special_offers if it's an array
     if (serviceData.special_offers && Array.isArray(serviceData.special_offers)) {
@@ -126,6 +152,11 @@ exports.createService = async (req, res, next) => {
     
     // Return the created service with salon information
     const serviceWithSalon = await serviceRepository.findById(newService.id);
+    
+    // Build full image URL if image exists
+    if (serviceWithSalon.image_url) {
+      serviceWithSalon.image_url = buildUrl(serviceWithSalon.image_url, 'service', { req });
+    }
     
     return res.status(201).json({
       success: true,
@@ -239,6 +270,14 @@ exports.updateService = async (req, res, next) => {
     const { serviceId } = req.params;
     const updateData = req.body;
     
+    // Handle image upload if file is present
+    if (req.file) {
+      const fileInfo = getFileInfo(req.file, '/images/services');
+      updateData.image_url = fileInfo.storedName; // Store only filename
+      updateData.image_filename = fileInfo.storedName;
+      updateData.image_original_name = fileInfo.originalName;
+    }
+    
     // Get salon by owner ID to ensure ownership
     const salon = await salonRepository.findByOwnerId(req.user.id);
     
@@ -273,7 +312,7 @@ exports.updateService = async (req, res, next) => {
     const cleanedUpdateData = {};
     
     // Only include valid fields for update
-    const allowedFields = ['name', 'description', 'price', 'duration', 'status', 'is_popular', 'image_url', 'special_offers'];
+    const allowedFields = ['name', 'description', 'price', 'duration', 'status', 'is_popular', 'image_url', 'image_filename', 'image_original_name', 'special_offers'];
     
     for (const field of allowedFields) {
       if (updateData[field] !== undefined) {
@@ -330,6 +369,11 @@ exports.updateService = async (req, res, next) => {
             existingService: existingService
           }
         });
+      }
+      
+      // Build full image URL if image exists
+      if (updatedService.image_url) {
+        updatedService.image_url = buildUrl(updatedService.image_url, 'service', { req });
       }
       
       return res.status(200).json({
@@ -393,6 +437,11 @@ exports.getServiceById = async (req, res, next) => {
           globalServiceSalons: globalService ? globalService.salons : null
         }
       });
+    }
+    
+    // Build full image URL if image exists
+    if (service.image_url) {
+      service.image_url = buildUrl(service.image_url, 'service', { req });
     }
     
     return res.status(200).json({

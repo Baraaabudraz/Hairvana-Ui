@@ -5,6 +5,7 @@ const router = express.Router();
 const salonServicesController = require('../../../../controllers/Api/salon/salonServicesController');
 const { authenticateOwner } = require('../../../../middleware/passportMiddleware');
 const validate = require('../../../../middleware/validate');
+const { createUploadMiddleware } = require('../../../../helpers/uploadHelper');
 
 // Import validation schemas
 const {
@@ -17,6 +18,13 @@ const {
 
 // All routes require authentication
 router.use(authenticateOwner);
+
+// Create upload middleware for service images
+const uploadServiceImage = createUploadMiddleware({
+  uploadDir: 'services',
+  maxSize: 5 * 1024 * 1024, // 5MB
+  allowedTypes: ['image/jpeg', 'image/png', 'image/gif']
+});
 
 /**
  * @route   GET /backend/api/v0/salon/services/:salonId/services
@@ -43,6 +51,7 @@ router.get('/all', salonServicesController.getAllServices);
  */
 router.post('/:salonId/create',
   salonIdValidation,
+  uploadServiceImage.single('image'), // Handle single image upload
   createServiceValidation,
   validate,
   salonServicesController.createService
@@ -77,6 +86,7 @@ router.get('/:serviceId',
  */
 router.put('/:serviceId',
   serviceIdValidation,
+  uploadServiceImage.single('image'), // Handle single image upload
   updateServiceValidation,
   validate,
   salonServicesController.updateService

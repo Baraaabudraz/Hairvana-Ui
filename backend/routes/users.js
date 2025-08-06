@@ -19,16 +19,23 @@ const {
   FILE_TYPE_MAP,
 } = require("../helpers/uploadHelper");
 
-// Directory for user avatars
-const uploadDir = path.join(__dirname, "../public/uploads/avatars");
-const allowedTypes = Object.keys(FILE_TYPE_MAP).filter((type) =>
-  type.startsWith("image/")
-);
-const upload = createUploadMiddleware({
-  uploadDir,
-  maxSize: 5 * 1024 * 1024,
-  allowedTypes,
+// Configure upload middleware for user avatars
+const uploadUserFiles = createUploadMiddleware({
+  uploadDir: '/avatars',
+  allowedTypes: ['image/jpeg', 'image/png'],
+  maxSize: 5 * 1024 * 1024 // 5MB per image
 });
+
+// // Directory for user avatars
+// const uploadDir = path.join(__dirname, "../public/uploads/avatars");
+// const allowedTypes = Object.keys(FILE_TYPE_MAP).filter((type) =>
+//   type.startsWith("image/")
+// );
+// const upload = createUploadMiddleware({
+//   uploadDir,
+//   maxSize: 5 * 1024 * 1024,
+//   allowedTypes,
+// });
 
 // Protect all routes
 router.use(authenticateToken);
@@ -44,7 +51,7 @@ router.get("/:id", userController.getUserById);
 router.post(
   "/",
   authorize("admin", "super admin"),
-  upload.single("avatar"), // Accept avatar upload
+  uploadUserFiles.single("avatar"), // Accept avatar upload
   createUserValidation,
   validate,
   userController.createUser
@@ -53,7 +60,7 @@ router.post(
 // PUT (update) a user by ID with validation
 router.put(
   "/:id",
-  upload.single("avatar"), // Accept avatar upload
+  uploadUserFiles.single("avatar"), // Accept avatar upload
   updateUserValidation,
   validate,
   userController.updateUser
@@ -74,7 +81,7 @@ router.patch(
 );
 
 // POST /users/:id/avatar - upload or update user avatar
-router.post("/:id/avatar", upload.single("avatar"), async (req, res) => {
+router.post("/:id/avatar", uploadUserFiles.single("avatar"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
   // Optionally, update the user's avatar field in the database here
   // await userController.updateUserAvatar(req, res); // or similar logic

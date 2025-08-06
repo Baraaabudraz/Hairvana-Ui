@@ -158,25 +158,41 @@ export default function ProfilePage() {
   const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // In a real app, you would upload this to a storage service
-      setUploadedAvatar(
-        "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2"
-      );
+      // Create a preview URL for the selected file
+      const previewUrl = URL.createObjectURL(file);
+      setUploadedAvatar(previewUrl);
     }
   };
 
   const onSubmitProfile = async (data: ProfileForm) => {
     setIsSubmitting(true);
     try {
-      await updateProfileSettings(data);
+      // Create FormData for file upload
+      const formData = new FormData();
+      
+      // Add form fields
+      Object.keys(data).forEach(key => {
+        const value = data[key as keyof ProfileForm];
+        if (value !== undefined && value !== null) {
+          formData.append(key, value.toString());
+        }
+      });
+      
+      // Add avatar file if selected
+      const avatarFile = document.querySelector('input[type="file"]') as HTMLInputElement;
+      if (avatarFile?.files?.[0]) {
+        formData.append('avatar', avatarFile.files[0]);
+      }
 
-      // Update user in store
-      if (user) {
+      const response = await updateProfileSettings(formData);
+
+      // Update user in store with the response data
+      if (user && response.settings?.profile) {
         setUser({
           ...user,
-          name: data.name,
-          email: data.email,
-          avatar: uploadedAvatar || user.avatar,
+          name: response.settings.profile.name,
+          email: response.settings.profile.email,
+          avatar: response.settings.profile.avatar, // This will be the full URL from urlHelper
         });
       }
 
@@ -285,12 +301,7 @@ export default function ProfilePage() {
                 <AvatarImage
                   src={
                     uploadedAvatar ||
-                    (user?.avatar
-                      ? `${
-                          import.meta.env.VITE_BACKEND_URL ||
-                          "http://localhost:5000"
-                        }/images/avatar/${user.avatar}`
-                      : undefined)
+                   user?.avatar
                   }
                   alt={user?.name}
                 />
@@ -418,12 +429,7 @@ export default function ProfilePage() {
                   <AvatarImage
                     src={
                       uploadedAvatar ||
-                      (user?.avatar
-                        ? `${
-                            import.meta.env.VITE_BACKEND_URL ||
-                            "http://localhost:5000"
-                          }/images/avatar/${user.avatar}`
-                        : undefined)
+                      user?.avatar
                     }
                     alt={user?.name}
                   />

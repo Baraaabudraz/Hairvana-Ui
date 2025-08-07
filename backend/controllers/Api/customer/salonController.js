@@ -9,8 +9,8 @@ const { buildSalonImageUrl } = require('../../../helpers/urlHelper');
  */
 const createApiResponse = (success, message, data = null, statusCode = 200) => {
   const response = {
-    message,
     success,
+    message,
     ...(data && { data })
   };
   return { response, statusCode };
@@ -23,7 +23,6 @@ const createErrorResponse = (message, statusCode = 500, details = null) => {
   const response = {
     success: false,
     message,
-    timestamp: new Date().toISOString(),
     ...(details && { details })
   };
   return { response, statusCode };
@@ -211,8 +210,8 @@ exports.getSalons = async (req, res) => {
     }
 
     const { response, statusCode } = createApiResponse(
+      true,
       message,
-      200,
       {
         salons: filteredSalons,
         pagination: {
@@ -339,8 +338,8 @@ exports.getSalonById = async (req, res) => {
     }
 
     const { response, statusCode } = createApiResponse(
+      true,
       'Salon details retrieved successfully',
-      200,
       {
         salon: salonData
       }
@@ -453,8 +452,8 @@ exports.searchSalons = async (req, res) => {
     }
 
     const { response, statusCode } = createApiResponse(
+      true,
       message,
-      200,
       {
         salons: filteredSalons,
         pagination: {

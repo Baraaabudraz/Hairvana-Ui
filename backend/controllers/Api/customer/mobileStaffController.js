@@ -9,8 +9,8 @@ const { buildUrl } = require('../../../helpers/urlHelper');
  */
 const createApiResponse = (success, message, data = null, statusCode = 200) => {
   const response = {
-    message,
     success,
+    message,
     ...(data && { data })
   };
   return { response, statusCode };
@@ -181,8 +181,8 @@ exports.getStaffForSalon = async (req, res) => {
     }
 
     const { response, statusCode } = createApiResponse(
+      true,
       message,
-      200,
       {
         staff: serializedStaff,
         pagination: {
@@ -297,8 +297,8 @@ exports.getStaffById = async (req, res) => {
     };
 
     const { response, statusCode } = createApiResponse(
+      true,
       'Staff details retrieved successfully',
-      200,
       {
         staff: staffData
       }
@@ -415,8 +415,8 @@ exports.searchStaff = async (req, res) => {
     }
 
     const { response, statusCode } = createApiResponse(
+      true,
       message,
-      200,
       {
         staff: serializedStaff,
         pagination: {
@@ -533,8 +533,8 @@ exports.getStaffByRole = async (req, res) => {
     }
 
     const { response, statusCode } = createApiResponse(
+      true,
       message,
-      200,
       {
         staff: serializedStaff,
         pagination: {

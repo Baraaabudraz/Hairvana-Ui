@@ -9,8 +9,8 @@ const { buildUrl } = require('../../../helpers/urlHelper');
  */
 const createApiResponse = (success, message, data = null, statusCode = 200) => {
   const response = {
-    message,
     success,
+    message,
     ...(data && { data })
   };
   return { response, statusCode };
@@ -23,7 +23,6 @@ const createErrorResponse = (message, statusCode = 500, details = null) => {
   const response = {
     success: false,
     message,
-    timestamp: new Date().toISOString(),
     ...(details && { details })
   };
   return { response, statusCode };
@@ -130,8 +129,8 @@ exports.getHairstyles = async (req, res) => {
     }
 
     const { response, statusCode } = createApiResponse(
+      true,
       message,
-      200,
       {
         hairstyles: serializedHairstyles,
         pagination: {
@@ -228,8 +227,8 @@ exports.getHairstyleById = async (req, res) => {
     const relatedData = relatedHairstyles.map(serializeHairstyle);
 
     const { response, statusCode } = createApiResponse(
+      true,
       'Hairstyle details retrieved successfully',
-      200,
       {
         hairstyle: hairstyleData,
         related_hairstyles: relatedData,
@@ -324,8 +323,8 @@ exports.searchHairstyles = async (req, res) => {
     }
 
     const { response, statusCode } = createApiResponse(
+      true,
       message,
-      200,
       {
         hairstyles: serializedHairstyles,
         pagination: {
@@ -419,8 +418,8 @@ exports.getHairstylesByCategory = async (req, res) => {
     }
 
     const { response, statusCode } = createApiResponse(
+      true,
       message,
-      200,
       {
         hairstyles: serializedHairstyles,
         pagination: {
@@ -526,8 +525,8 @@ exports.getHairstyleCategories = async (req, res) => {
     const totalHairstyles = await Hairstyle.count();
 
     const { response, statusCode } = createApiResponse(
+      true,
       'Hairstyle categories retrieved successfully',
-      200,
       {
         categories,
         summary: {

@@ -228,20 +228,26 @@ exports.addServiceToSalon = async (req, res, next) => {
  */
 exports.removeServiceFromSalon = async (req, res, next) => {
   try {
-    const { serviceId } = req.params;
+    const { serviceId, salonId } = req.params;
     
-    // Get salon by owner ID to ensure ownership
-    const salon = await salonRepository.findByOwnerId(req.user.id);
-    
+    // Verify that the authenticated user owns this salon
+    const salon = await salonRepository.findById(salonId);
     if (!salon) {
       return res.status(404).json({
         success: false,
-        message: 'Salon not found for this owner'
+        message: 'Salon not found'
+      });
+    }
+    
+    if (salon.owner_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only remove services from your own salon.'
       });
     }
     
     // Remove service from salon
-    const result = await serviceRepository.removeServiceFromSalon(salon.id, serviceId);
+    const result = await serviceRepository.removeServiceFromSalon(salonId, serviceId);
     
     if (result === 0) {
       return res.status(404).json({
@@ -267,7 +273,7 @@ exports.removeServiceFromSalon = async (req, res, next) => {
  */
 exports.updateService = async (req, res, next) => {
   try {
-    const { serviceId } = req.params;
+    const { serviceId, salonId } = req.params;
     const updateData = req.body;
     
     // Handle image upload if file is present
@@ -278,18 +284,24 @@ exports.updateService = async (req, res, next) => {
       updateData.image_original_name = fileInfo.originalName;
     }
     
-    // Get salon by owner ID to ensure ownership
-    const salon = await salonRepository.findByOwnerId(req.user.id);
-    
+    // Verify that the authenticated user owns this salon
+    const salon = await salonRepository.findById(salonId);
     if (!salon) {
       return res.status(404).json({
         success: false,
-        message: 'Salon not found for this owner'
+        message: 'Salon not found'
+      });
+    }
+    
+    if (salon.owner_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only update services for your own salon.'
       });
     }
     
     // Check if the service belongs to the salon before updating
-    const existingService = await serviceRepository.findByIdForSalon(serviceId, salon.id);
+    const existingService = await serviceRepository.findByIdForSalon(serviceId, salonId);
     
     if (!existingService) {
       // Debug: Check if service exists globally for troubleshooting
@@ -300,7 +312,7 @@ exports.updateService = async (req, res, next) => {
         message: 'Service not found in your salon',
         debug: {
           serviceId: serviceId,
-          salonId: salon.id,
+          salonId: salonId,
           salonName: salon.name,
           serviceExistsGlobally: !!globalService,
           globalServiceSalons: globalService ? globalService.salons : null
@@ -346,7 +358,7 @@ exports.updateService = async (req, res, next) => {
     
     // Additional check for unique name in salon if name is being updated
     if (cleanedUpdateData.name) {
-      const nameExists = await serviceRepository.nameExistsForSalon(cleanedUpdateData.name, salon.id, serviceId);
+      const nameExists = await serviceRepository.nameExistsForSalon(cleanedUpdateData.name, salonId, serviceId);
       if (nameExists) {
         return res.status(400).json({
           success: false,
@@ -407,15 +419,21 @@ exports.updateService = async (req, res, next) => {
  */
 exports.getServiceById = async (req, res, next) => {
   try {
-    const { serviceId } = req.params;
+    const { serviceId, salonId } = req.params;
     
-    // Get salon by owner ID to ensure ownership
-    const salon = await salonRepository.findByOwnerId(req.user.id);
-    
+    // Verify that the authenticated user owns this salon
+    const salon = await salonRepository.findById(salonId);
     if (!salon) {
       return res.status(404).json({
         success: false,
-        message: 'Salon not found for this owner'
+        message: 'Salon not found'
+      });
+    }
+    
+    if (salon.owner_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view services for your own salon.'
       });
     }
     
@@ -423,7 +441,7 @@ exports.getServiceById = async (req, res, next) => {
     const globalService = await serviceRepository.findById(serviceId);
     
     // Find service only if it belongs to the salon
-    const service = await serviceRepository.findByIdForSalon(serviceId, salon.id);
+    const service = await serviceRepository.findByIdForSalon(serviceId, salonId);
     
     if (!service) {
       return res.status(404).json({
@@ -431,7 +449,7 @@ exports.getServiceById = async (req, res, next) => {
         message: 'Service not found in your salon',
         debug: {
           serviceId: serviceId,
-          salonId: salon.id,
+          salonId: salonId,
           salonName: salon.name,
           serviceExistsGlobally: !!globalService,
           globalServiceSalons: globalService ? globalService.salons : null

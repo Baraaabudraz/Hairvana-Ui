@@ -229,10 +229,23 @@ const salonIdValidation = [
     .withMessage('Salon ID must be a valid UUID'),
 ];
 
+/**
+ * Validation schema for salon-specific service operations (GET, PUT, DELETE)
+ */
+const salonServiceValidation = [
+  param('salonId')
+    .isUUID()
+    .withMessage('Salon ID must be a valid UUID'),
+  param('serviceId')
+    .isUUID()
+    .withMessage('Service ID must be a valid UUID'),
+];
+
 module.exports = {
   createServiceValidation,
   updateServiceValidation,
   addServiceToSalonValidation,
   serviceIdValidation,
   salonIdValidation,
+  salonServiceValidation,
 };

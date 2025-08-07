@@ -14,6 +14,7 @@ const {
   addServiceToSalonValidation,
   serviceIdValidation,
   salonIdValidation,
+  salonServiceValidation,
 } = require('../../../../validation/serviceValidation');
 
 // All routes require authentication
@@ -31,7 +32,7 @@ const uploadServiceImage = createUploadMiddleware({
  * @desc    Get all services for a specific salon
  * @access  Private (Salon Owner)
  */
-router.get('/:salonId/services',
+router.get('/salon/:salonId/services',
   salonIdValidation,
   validate,
   salonServicesController.getSalonServices
@@ -49,7 +50,7 @@ router.get('/all', salonServicesController.getAllServices);
  * @desc    Create a new service and add to specific salon
  * @access  Private (Salon Owner)
  */
-router.post('/:salonId/create',
+router.post('/salon/:salonId/service/create',
   salonIdValidation,
   uploadServiceImage.single('image'), // Handle single image upload
   createServiceValidation,
@@ -69,23 +70,23 @@ router.post('/add-to-salon',
 );
 
 /**
- * @route   GET /backend/api/v0/salon/services/:serviceId
- * @desc    Get a specific service by ID
+ * @route   GET /backend/api/v0/salon/services/:salonId/:serviceId
+ * @desc    Get a specific service by ID for a salon
  * @access  Private (Salon Owner)
  */
-router.get('/:serviceId', 
-  serviceIdValidation,
+router.get('/salon/:salonId/service/:serviceId', 
+  salonServiceValidation,
   validate,
   salonServicesController.getServiceById
 );
 
 /**
- * @route   PUT /backend/api/v0/salon/services/:serviceId
- * @desc    Update a service
+ * @route   PUT /backend/api/v0/salon/services/:salonId/:serviceId
+ * @desc    Update a service for a specific salon
  * @access  Private (Salon Owner)
  */
-router.put('/:serviceId',
-  serviceIdValidation,
+router.put('/salon/:salonId/service/:serviceId',
+  salonServiceValidation,
   uploadServiceImage.single('image'), // Handle single image upload
   updateServiceValidation,
   validate,
@@ -93,12 +94,12 @@ router.put('/:serviceId',
 );
 
 /**
- * @route   DELETE /backend/api/v0/salon/services/:serviceId/remove
+ * @route   DELETE /backend/api/v0/salon/services/:salonId/:serviceId
  * @desc    Remove a service from the salon
  * @access  Private (Salon Owner)
  */
-router.delete('/:serviceId/remove',
-  serviceIdValidation,
+router.delete('/salon/:salonId/service/:serviceId',
+  salonServiceValidation,
   validate,
   salonServicesController.removeServiceFromSalon
 );

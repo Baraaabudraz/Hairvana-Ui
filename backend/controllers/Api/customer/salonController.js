@@ -9,8 +9,8 @@ const { buildSalonImageUrl } = require('../../../helpers/urlHelper');
  */
 const createApiResponse = (success, message, data = null, statusCode = 200) => {
   const response = {
-    success,
     message,
+    success,
     ...(data && { data })
   };
   return { response, statusCode };

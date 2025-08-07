@@ -1,6 +1,7 @@
 const staffService = require('../../../services/staffService');
 const salonRepository = require('../../../repositories/salonRepository');
 const { validationResult } = require('express-validator');
+const { buildUrl } = require('../../../helpers/urlHelper');
 
 /**
  * Get all staff members for salon owner's salons
@@ -32,7 +33,15 @@ exports.getAllStaff = async (req, res, next) => {
     // Get staff for all owner's salons
     const staff = await staffService.getStaffBySalonIds(salonIds, req.query);
 
-    const message = staff.length > 0 
+    // Build full avatar URLs for all staff members
+    const staffWithFullUrls = staff.map(staffMember => {
+      if (staffMember.avatar) {
+        staffMember.avatar = buildUrl(staffMember.avatar, 'staff', { req });
+      }
+      return staffMember;
+    });
+
+    const message = staffWithFullUrls.length > 0 
       ? 'Staff members retrieved successfully'
       : 'No staff members found';
 
@@ -40,8 +49,8 @@ exports.getAllStaff = async (req, res, next) => {
       success: true,
       message,
       data: {
-        staff,
-        count: staff.length,
+        staff: staffWithFullUrls,
+        count: staffWithFullUrls.length,
         salons: salons.length
       }
     });
@@ -81,7 +90,15 @@ exports.getStaffBySalon = async (req, res, next) => {
     // Get staff for the specific salon
     const staff = await staffService.getStaffBySalonId(salonId, req.query);
 
-    const message = staff.length > 0 
+    // Build full avatar URLs for all staff members
+    const staffWithFullUrls = staff.map(staffMember => {
+      if (staffMember.avatar) {
+        staffMember.avatar = buildUrl(staffMember.avatar, 'staff', { req });
+      }
+      return staffMember;
+    });
+
+    const message = staffWithFullUrls.length > 0 
       ? 'Staff members retrieved successfully'
       : 'No staff members found for this salon';
 
@@ -89,8 +106,8 @@ exports.getStaffBySalon = async (req, res, next) => {
       success: true,
       message,
       data: {
-        staff,
-        count: staff.length,
+        staff: staffWithFullUrls,
+        count: staffWithFullUrls.length,
         salon: {
           id: salon.id,
           name: salon.name
@@ -140,6 +157,11 @@ exports.getStaffById = async (req, res, next) => {
         success: false,
         message: 'Staff member not found or not accessible'
       });
+    }
+
+    // Build full avatar URL if avatar exists
+    if (staff.avatar) {
+      staff.avatar = buildUrl(staff.avatar, 'staff', { req });
     }
 
     res.json({
@@ -207,11 +229,16 @@ exports.createStaff = async (req, res, next) => {
 
     // Handle avatar upload if provided
     if (req.file) {
-      staffData.avatar = `/images/staff/${req.file.filename}`;
+      staffData.avatar = req.file.filename; // Store only filename
     }
 
     // Create staff member
     const newStaff = await staffService.createStaff(staffData);
+
+    // Build full avatar URL if avatar exists
+    if (newStaff.avatar) {
+      newStaff.avatar = buildUrl(newStaff.avatar, 'staff', { req });
+    }
 
     res.status(201).json({
       success: true,
@@ -285,11 +312,16 @@ exports.updateStaff = async (req, res, next) => {
 
     // Handle avatar upload if provided
     if (req.file) {
-      updateData.avatar = `/images/staff/${req.file.filename}`;
+      updateData.avatar = req.file.filename; // Store only filename
     }
 
     // Update staff member
     const updatedStaff = await staffService.updateStaff(staffId, updateData);
+
+    // Build full avatar URL if avatar exists
+    if (updatedStaff.avatar) {
+      updatedStaff.avatar = buildUrl(updatedStaff.avatar, 'staff', { req });
+    }
 
     res.json({
       success: true,

@@ -189,4 +189,12 @@ router.put(
   appointmentController.cancelAppointment
 );
 
+router.put(
+  '/appointments/:id/complete', 
+  authenticateCustomer, 
+  cancelAppointmentValidation, 
+  validate, 
+  appointmentController.completeAppointment
+);
+
 module.exports = router; 

@@ -29,7 +29,7 @@ function serializeUser(user, options = {}) {
     email: user.email,
     phone: user.phone,
     avatar: avatarFilenameOnly ? user.avatar : buildAvatarUrl(user.avatar, options),
-    join_date:user.join_date,
+    join_date: user.join_date,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
     role_id: user.role_id,
@@ -94,7 +94,7 @@ function getContextSpecificData(user, context, currentUser) {
       return {
         id: user.id,
         name: user.name,
-        avatar: user.avatar
+        avatar: buildAvatarUrl(user.avatar, { context: 'public' })
       };
 
     case 'minimal':
@@ -103,7 +103,7 @@ function getContextSpecificData(user, context, currentUser) {
         id: user.id,
         name: user.name,
         email: user.email,
-        avatar: user.avatar
+        avatar: buildAvatarUrl(user.avatar, { context: 'minimal' })
       };
 
     default:

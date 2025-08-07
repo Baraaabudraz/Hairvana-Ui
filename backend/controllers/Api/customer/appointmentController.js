@@ -1,100 +1,204 @@
 'use strict';
+
 const { Appointment, Salon, Staff, Service, AppointmentService, Payment, Address, sequelize } = require('../../../models');
 const { Op } = require('sequelize');
 const { serializeAppointment } = require('../../../serializers/appointmentSerializer');
 const notificationService = require('../../../services/notificationService');
 
-// Get availability for a salon (using start_at/end_at fields)
+/**
+ * Standard API Response Helper
+ */
+const createApiResponse = (success, message, data = null, statusCode = 200) => {
+  const response = {
+    success,
+    message,
+    ...(data && { data })
+  };
+  return { response, statusCode };
+};
+
+/**
+ * Error Response Helper
+ */
+const createErrorResponse = (message, statusCode = 500, details = null) => {
+  const response = {
+    success: false,
+    message,
+    timestamp: new Date().toISOString(),
+    ...(details && { details })
+  };
+  return { response, statusCode };
+};
+
+/**
+ * Get availability for a salon
+ * @route GET /api/mobile/salons/:id/availability
+ */
 exports.getAvailability = async (req, res) => {
   try {
     const salonId = req.params.id;
+    
+    // Find salon
     const salon = await Salon.findByPk(salonId);
-    if (!salon) return res.status(404).json({ error: 'Salon not found' });
+    if (!salon) {
+      const { response, statusCode } = createErrorResponse(
+        'Salon not found',
+        404
+      );
+      return res.status(statusCode).json(response);
+    }
+
     const hours = salon.hours || {};
-    // Next 7 days
+    
+    // Generate next 7 days
     const days = Array.from({ length: 7 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() + i);
       return date;
     });
-    // Fetch all booked appointments for this salon in the next 7 days
+
+    // Fetch booked appointments for the next 7 days
     const startDate = days[0].toISOString().split('T')[0];
     const endDate = days[days.length - 1].toISOString().split('T')[0];
+    
     const appointments = await Appointment.findAll({
       where: {
         salon_id: salonId,
-        start_at: { [Op.between]: [startDate + 'T00:00:00.000Z', endDate + 'T23:59:59.999Z'] },
+        start_at: { 
+          [Op.between]: [
+            startDate + 'T00:00:00.000Z', 
+            endDate + 'T23:59:59.999Z'
+          ] 
+        },
         status: 'booked'
       }
     });
-    // Helper to generate time slots
-    function generateSlots(start, end) {
+
+    // Helper function to generate time slots
+    const generateSlots = (start, end) => {
       const slots = [];
-      let [startHour, startMin, startPeriod] = start.match(/(\d+):(\d+) (AM|PM)/).slice(1);
-      let [endHour, endMin, endPeriod] = end.match(/(\d+):(\d+) (AM|PM)/).slice(1);
-      startHour = parseInt(startHour, 10);
-      endHour = parseInt(endHour, 10);
-      if (startPeriod === 'PM' && startHour !== 12) startHour += 12;
-      if (endPeriod === 'PM' && endHour !== 12) endHour += 12;
-      if (startPeriod === 'AM' && startHour === 12) startHour = 0;
-      if (endPeriod === 'AM' && endHour === 12) endHour = 0;
-      for (let h = startHour; h < endHour; h++) {
+      const [startHour, startMin, startPeriod] = start.match(/(\d+):(\d+) (AM|PM)/).slice(1);
+      const [endHour, endMin, endPeriod] = end.match(/(\d+):(\d+) (AM|PM)/).slice(1);
+      
+      let startHourNum = parseInt(startHour, 10);
+      let endHourNum = parseInt(endHour, 10);
+      
+      if (startPeriod === 'PM' && startHourNum !== 12) startHourNum += 12;
+      if (endPeriod === 'PM' && endHourNum !== 12) endHourNum += 12;
+      if (startPeriod === 'AM' && startHourNum === 12) startHourNum = 0;
+      if (endPeriod === 'AM' && endHourNum === 12) endHourNum = 0;
+      
+      for (let h = startHourNum; h < endHourNum; h++) {
         slots.push((h < 10 ? '0' : '') + h + ':00');
       }
       return slots;
-    }
-    // Build availability
-    const slots = days.map(dateObj => {
+    };
+
+    // Build availability for each day
+    const availability = days.map(dateObj => {
       const dateStr = dateObj.toISOString().split('T')[0];
       const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
       const dayHours = hours[weekday];
+      
       if (!dayHours || dayHours.toLowerCase() === 'closed') {
-        return { date: dateStr, times: [] };
+        return { 
+          date: dateStr, 
+          times: [],
+          status: 'closed',
+          message: 'Salon is closed on this day'
+        };
       }
+
       const [start, end] = dayHours.split(' - ');
       const possibleSlots = generateSlots(start, end);
-      // For each slot, check if it overlaps with any appointment
+
+      // Filter out booked slots
       const availableTimes = possibleSlots.filter(slotTime => {
-        // Build slot's start and end datetime
         const [slotHour, slotMin] = slotTime.split(':');
         const slotStart = new Date(dateStr + 'T' + slotHour + ':00:00.000Z');
-        // Assume slot is 1 hour (or use your business logic for slot duration)
-        const slotEnd = new Date(slotStart.getTime() + 60 * 60000);
-        // Check for overlap with any appointment
-        return !appointments.some(a => {
-          const aStart = new Date(a.start_at);
-          const aEnd = new Date(a.end_at);
-          // Overlap if slotStart < aEnd && slotEnd > aStart
+        const slotEnd = new Date(slotStart.getTime() + 60 * 60000); // 1 hour slot
+        
+        return !appointments.some(appointment => {
+          const aStart = new Date(appointment.start_at);
+          const aEnd = new Date(appointment.end_at);
           return slotStart < aEnd && slotEnd > aStart;
         });
       });
+
       return {
         date: dateStr,
-        times: availableTimes
+        times: availableTimes,
+        status: availableTimes.length > 0 ? 'available' : 'fully_booked',
+        message: availableTimes.length > 0 
+          ? `${availableTimes.length} time slots available` 
+          : 'No available time slots for this day'
       };
     });
-    return res.json({ success: true, availability: slots });
-  } catch (err) {
-    console.error('getAvailability error:', err);
-    return res.status(500).json({ error: 'Failed to fetch availability', details: err.message });
+
+    const { response, statusCode } = createApiResponse(
+      true,
+      'Salon availability retrieved successfully',
+      {
+        salon: {
+          id: salon.id,
+          name: salon.name,
+          hours: salon.hours
+        },
+        availability,
+        total_days: availability.length,
+        available_days: availability.filter(day => day.times.length > 0).length
+      }
+    );
+
+    return res.status(statusCode).json(response);
+
+  } catch (error) {
+    console.error('getAvailability error:', error);
+    const { response, statusCode } = createErrorResponse(
+      'Failed to fetch salon availability',
+      500,
+      process.env.NODE_ENV === 'development' ? error.message : null
+    );
+    return res.status(statusCode).json(response);
   }
 };
 
-// Book an appointment (best practice: create as 'pending', confirm after payment)
+/**
+ * Book a new appointment
+ * @route POST /api/mobile/appointments
+ */
 exports.bookAppointment = async (req, res) => {
-  const t = await sequelize.transaction();
+  const transaction = await sequelize.transaction();
+  
   try {
     const { salonId: salon_id, staffId: staff_id, start_at, notes, service_ids } = req.body;
+    
+    // Validate required fields
     if (!salon_id || !staff_id || !start_at || !Array.isArray(service_ids) || service_ids.length === 0) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      await transaction.rollback();
+      const { response, statusCode } = createErrorResponse(
+        'Missing required fields. Please provide salonId, staffId, start_at, and at least one service.',
+        400
+      );
+      return res.status(statusCode).json(response);
     }
-    // Validate staff and salon
-    const staff = await Staff.findOne({ where: { id: staff_id, salon_id }, transaction: t });
+
+    // Validate staff and salon relationship
+    const staff = await Staff.findOne({ 
+      where: { id: staff_id, salon_id }, 
+      transaction 
+    });
+    
     if (!staff) {
-      await t.rollback();
-      return res.status(400).json({ error: 'Invalid staff or salon' });
+      await transaction.rollback();
+      const { response, statusCode } = createErrorResponse(
+        'Invalid staff member or salon. Please verify the staff member works at this salon.',
+        400
+      );
+      return res.status(statusCode).json(response);
     }
-    // Validate services and check if they're available for this salon
+
+    // Validate services availability
     const services = await Service.findAll({ 
       where: { id: service_ids }, 
       include: [{
@@ -103,26 +207,29 @@ exports.bookAppointment = async (req, res) => {
         where: { id: salon_id },
         through: { attributes: [] }
       }],
-      transaction: t 
+      transaction 
     });
     
     if (services.length !== service_ids.length) {
-      await t.rollback();
-      return res.status(400).json({ 
-        error: 'One or more services are invalid or not available for this salon',
-        details: {
-          requested: service_ids.length,
-          found: services.length,
-          available_services: services.map(s => ({ id: s.id, name: s.name }))
+      await transaction.rollback();
+      const { response, statusCode } = createErrorResponse(
+        'One or more services are not available at this salon',
+        400,
+        {
+          requested_services: service_ids.length,
+          available_services: services.length,
+          available_service_names: services.map(s => s.name)
         }
-      });
+      );
+      return res.status(statusCode).json(response);
     }
-    // Calculate duration and price
+
+    // Calculate appointment details
     const totalDuration = services.reduce((sum, s) => sum + s.duration, 0);
     const totalPrice = services.reduce((sum, s) => sum + parseFloat(s.price), 0);
-    // Calculate end_at
     const startTime = new Date(start_at);
     const endTime = new Date(startTime.getTime() + totalDuration * 60000);
+
     // Check for appointment conflicts
     const hasConflict = await Appointment.findOne({
       where: {
@@ -131,98 +238,93 @@ exports.bookAppointment = async (req, res) => {
         [Op.or]: [
           { start_at: { [Op.between]: [startTime, endTime] } },
           { end_at: { [Op.between]: [startTime, endTime] } },
-          { [Op.and]: [ { start_at: { [Op.lte]: startTime } }, { end_at: { [Op.gte]: endTime } } ] }
+          { 
+            [Op.and]: [
+              { start_at: { [Op.lte]: startTime } }, 
+              { end_at: { [Op.gte]: endTime } }
+            ] 
+          }
         ]
       },
-      transaction: t
+      transaction
     });
+
     if (hasConflict) {
-      await t.rollback();
-      return res.status(409).json({ error: 'This staff member already has an appointment during the selected time.' });
+      await transaction.rollback();
+      const { response, statusCode } = createErrorResponse(
+        'This staff member is not available during the selected time. Please choose a different time or staff member.',
+        409
+      );
+      return res.status(statusCode).json(response);
     }
-    // Create appointment as 'pending'
+
+    // Create appointment
     const appointment = await Appointment.create({
       user_id: req.user.id,
       salon_id,
       staff_id,
       start_at: startTime,
       end_at: endTime,
-      status: 'pending', // Not 'booked' until payment is confirmed
+      status: 'pending',
       notes,
       total_price: totalPrice,
       duration: totalDuration
-    }, { transaction: t });
-    // Link services
+    }, { transaction });
+
+    // Link services to appointment
     for (const service of services) {
       await AppointmentService.create({
         appointment_id: appointment.id,
         service_id: service.id,
         price: service.price
-      }, { transaction: t });
+      }, { transaction });
     }
-    await t.commit();
-    // Send notification to user
-    await notificationService.sendToUsers([
-      req.user.id
-    ], 'Appointment Booked', 'Your appointment has been booked. Please proceed to payment.', { appointmentId: appointment.id });
-    // TODO: Integrate with payment provider here (create payment session/intent)
-    // For now, return a placeholder paymentSessionId
-    // const paymentSessionId = `demo-session-${appointment.id}`;
-    return res.status(201).json({
-      success: true,
-      appointment: serializeAppointment({
-        ...appointment.toJSON(),
-        services: services.map(s => ({
-          id: s.id,
-          name: s.name,
-          price: s.price,
-          duration: s.duration
-        }))
-      }),
-      // paymentSessionId // Frontend should use this to initiate payment
-    });
-  } catch (err) {
-    await t.rollback();
-    console.error('Book appointment error:', err);
-    return res.status(500).json({
-      error: 'Failed to book appointment',
-      message: err.message,
-      stack: err.stack
-    });
+
+    await transaction.commit();
+
+    // Send notification
+    await notificationService.sendToUsers(
+      [req.user.id], 
+      'Appointment Booked', 
+      'Your appointment has been booked successfully. Please proceed to payment to confirm your booking.',
+      { appointmentId: appointment.id }
+    );
+
+    const { response, statusCode } = createApiResponse(
+      'Appointment booked successfully. Please complete payment to confirm your booking.',
+      201,
+      {
+        appointment: serializeAppointment({
+          ...appointment.toJSON(),
+          services: services.map(s => ({
+            id: s.id,
+            name: s.name,
+            price: s.price,
+            duration: s.duration
+          }))
+        }),
+        next_step: 'Complete payment to confirm booking'
+      }
+    );
+
+    return res.status(statusCode).json(response);
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Book appointment error:', error);
+    const { response, statusCode } = createErrorResponse(
+      'Failed to book appointment. Please try again.',
+      500,
+      process.env.NODE_ENV === 'development' ? error.message : null
+    );
+    return res.status(statusCode).json(response);
   }
 };
 
-// Confirm payment and mark appointment as 'booked' (to be called by payment webhook or after payment success)
-exports.confirmPayment = async (req, res) => {
-  try {
-    const { appointmentId } = req.body;
-    const appointment = await Appointment.findByPk(appointmentId);
-    if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
-    if (appointment.status !== 'pending') return res.status(400).json({ error: 'Appointment is not pending' });
-    appointment.status = 'booked';
-    await appointment.save();
-    return res.json({ success: true, appointment: serializeAppointment(appointment) });
-  } catch (err) {
-    return res.status(500).json({ error: 'Failed to confirm payment' });
-  }
-};
-
-// Cancel pending appointment (to be called on payment failure/timeout)
-exports.cancelPendingAppointment = async (req, res) => {
-  try {
-    const { appointmentId } = req.body;
-    const appointment = await Appointment.findByPk(appointmentId);
-    if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
-    if (appointment.status !== 'pending') return res.status(400).json({ error: 'Appointment is not pending' });
-    appointment.status = 'cancelled';
-    await appointment.save();
-    return res.json({ success: true, appointment: serializeAppointment(appointment) });
-  } catch (err) {
-    return res.status(500).json({ error: 'Failed to cancel appointment' });
-  }
-};
-
-// Get all appointments for the current user (serialized)
+/**
+ * Get all appointments for the current user
+ * @route GET /api/mobile/appointments
+ */
 exports.getAppointments = async (req, res) => {
   try {
     const { 
@@ -311,25 +413,58 @@ exports.getAppointments = async (req, res) => {
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
 
-    return res.json({ 
-      success: true, 
-      appointments: appointments.map(serializeAppointment),
-      pagination: {
-        current_page: parseInt(page),
-        total_pages: totalPages,
-        total_count: totalCount,
-        limit: parseInt(limit),
-        has_next_page: hasNextPage,
-        has_prev_page: hasPrevPage
+    // Determine response message based on results
+    let message;
+    if (totalCount === 0) {
+      message = 'No appointments found. You haven\'t booked any appointments yet.';
+    } else if (appointments.length === 0) {
+      message = 'No appointments found for the current page.';
+    } else {
+      message = `Successfully retrieved ${appointments.length} appointment${appointments.length === 1 ? '' : 's'}`;
+    }
+
+    const { response, statusCode } = createApiResponse(
+      message,
+      200,
+      {
+        appointments: appointments.map(serializeAppointment),
+        pagination: {
+          current_page: parseInt(page),
+          total_pages: totalPages,
+          total_count: totalCount,
+          limit: parseInt(limit),
+          has_next_page: hasNextPage,
+          has_prev_page: hasPrevPage
+        },
+        filters: {
+          status,
+          salon_id,
+          staff_id,
+          date_from,
+          date_to,
+          sort,
+          order
+        }
       }
-    });
-  } catch (err) {
-    console.error('getAppointments error:', err);
-    return res.status(500).json({ error: 'Failed to fetch appointments' });
+    );
+
+    return res.status(statusCode).json(response);
+
+  } catch (error) {
+    console.error('getAppointments error:', error);
+    const { response, statusCode } = createErrorResponse(
+      'Failed to fetch appointments. Please try again.',
+      500,
+      process.env.NODE_ENV === 'development' ? error.message : null
+    );
+    return res.status(statusCode).json(response);
   }
 };
 
-// Get appointment by ID (serialized)
+/**
+ * Get appointment by ID
+ * @route GET /api/mobile/appointments/:id
+ */
 exports.getAppointmentById = async (req, res) => {
   try {
     const appointment = await Appointment.findOne({ 
@@ -362,35 +497,80 @@ exports.getAppointmentById = async (req, res) => {
         }
       ]
     });
-    if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
-    return res.json({ success: true, appointment: serializeAppointment(appointment) });
-  } catch (err) {
-    console.error('getAppointmentById error:', err);
-    return res.status(500).json({ error: 'Failed to fetch appointment' });
+
+    if (!appointment) {
+      const { response, statusCode } = createErrorResponse(
+        'Appointment not found. The appointment you\'re looking for doesn\'t exist or you don\'t have permission to view it.',
+        404
+      );
+      return res.status(statusCode).json(response);
+    }
+
+    const { response, statusCode } = createApiResponse(
+      'Appointment details retrieved successfully',
+      200,
+      {
+        appointment: serializeAppointment(appointment)
+      }
+    );
+
+    return res.status(statusCode).json(response);
+
+  } catch (error) {
+    console.error('getAppointmentById error:', error);
+    const { response, statusCode } = createErrorResponse(
+      'Failed to fetch appointment details. Please try again.',
+      500,
+      process.env.NODE_ENV === 'development' ? error.message : null
+    );
+    return res.status(statusCode).json(response);
   }
 };
 
-// Cancel appointment (serialized)
+/**
+ * Cancel appointment
+ * @route PUT /api/mobile/appointments/:id/cancel
+ */
 exports.cancelAppointment = async (req, res) => {
   try {
     const { cancellation_reason } = req.body;
-    const appointment = await Appointment.findOne({ where: { id: req.params.id, user_id: req.user.id } });
-    if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
+    const appointment = await Appointment.findOne({ 
+      where: { id: req.params.id, user_id: req.user.id } 
+    });
+
+    if (!appointment) {
+      const { response, statusCode } = createErrorResponse(
+        'Appointment not found. The appointment you\'re trying to cancel doesn\'t exist or you don\'t have permission to cancel it.',
+        404
+      );
+      return res.status(statusCode).json(response);
+    }
     
     // Check if appointment is already cancelled
     if (appointment.status === 'cancelled') {
-      return res.status(400).json({ 
-        error: 'Appointment is already cancelled',
-        message: 'This appointment has already been cancelled and cannot be cancelled again.'
-      });
+      const { response, statusCode } = createErrorResponse(
+        'Appointment is already cancelled',
+        400,
+        {
+          current_status: appointment.status,
+          cancelled_at: appointment.cancelled_at,
+          cancellation_reason: appointment.cancellation_reason
+        }
+      );
+      return res.status(statusCode).json(response);
     }
     
     // Check if appointment is completed
     if (appointment.status === 'completed') {
-      return res.status(400).json({ 
-        error: 'Cannot cancel completed appointment',
-        message: 'This appointment has already been completed and cannot be cancelled.'
-      });
+      const { response, statusCode } = createErrorResponse(
+        'Cannot cancel completed appointment',
+        400,
+        {
+          current_status: appointment.status,
+          message: 'This appointment has already been completed and cannot be cancelled.'
+        }
+      );
+      return res.status(statusCode).json(response);
     }
     
     // Set cancellation details
@@ -401,48 +581,49 @@ exports.cancelAppointment = async (req, res) => {
     
     await appointment.save();
     
-    // Send notification to user about cancellation
-    await notificationService.sendToUsers([
-      req.user.id
-    ], 'Appointment Cancelled', 'Your appointment has been cancelled successfully.', 
-    { 
-      appointmentId: appointment.id,
-      salonId: appointment.salon_id,
-      status: appointment.status,
-      cancellation_reason: appointment.cancellation_reason
-    });
+    // Send notification
+    await notificationService.sendToUsers(
+      [req.user.id], 
+      'Appointment Cancelled', 
+      'Your appointment has been cancelled successfully.',
+      { 
+        appointmentId: appointment.id,
+        salonId: appointment.salon_id,
+        status: appointment.status,
+        cancellation_reason: appointment.cancellation_reason
+      }
+    );
     
-    return res.json({ success: true, appointment: serializeAppointment(appointment) });
-  } catch (err) {
-    console.error('cancelAppointment error:', err);
-    return res.status(500).json({ error: 'Failed to cancel appointment' });
-  }
-}; 
+    const { response, statusCode } = createApiResponse(
+      'Appointment cancelled successfully',
+      200,
+      {
+        appointment: serializeAppointment(appointment),
+        cancellation_details: {
+          cancelled_at: appointment.cancelled_at,
+          cancelled_by: appointment.cancelled_by,
+          cancellation_reason: appointment.cancellation_reason
+        }
+      }
+    );
 
-// Update appointment status to 'completed'
-exports.completeAppointment = async (req, res) => {
-  try {
-    const appointmentId = req.params.id;
-    const appointment = await Appointment.findOne({ where: { id: appointmentId, user_id: req.user.id } });
-    if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
-    appointment.status = 'completed';
-    await appointment.save();
-    // Send notification to user
-    await notificationService.sendToUsers([
-      req.user.id
-    ], 'Appointment Completed', 'Your appointment has been marked as completed.', 
-    { appointmentId: appointment.id ,
-      salonId:appointment.salon_id,
-      status: appointment.status
+    return res.status(statusCode).json(response);
 
-    });
-    return res.json({ success: true, appointment: serializeAppointment(appointment) });
-  } catch (err) {
-    return res.status(500).json({ error: 'Failed to complete appointment' });
+  } catch (error) {
+    console.error('cancelAppointment error:', error);
+    const { response, statusCode } = createErrorResponse(
+      'Failed to cancel appointment. Please try again.',
+      500,
+      process.env.NODE_ENV === 'development' ? error.message : null
+    );
+    return res.status(statusCode).json(response);
   }
 };
 
-// Get appointment statistics for the current user
+/**
+ * Get appointment statistics for the current user
+ * @route GET /api/mobile/appointments/stats
+ */
 exports.getAppointmentStats = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -475,20 +656,66 @@ exports.getAppointmentStats = async (req, res) => {
       statsObject.by_status[stat.status] = parseInt(stat.dataValues.count);
     });
 
-    return res.json({ success: true, stats: statsObject });
-  } catch (err) {
-    console.error('getAppointmentStats error:', err);
-    return res.status(500).json({ error: 'Failed to fetch appointment statistics' });
+    // Determine message based on stats
+    let message;
+    if (totalAppointments === 0) {
+      message = 'No appointment statistics available. You haven\'t booked any appointments yet.';
+    } else {
+      message = `Appointment statistics retrieved successfully. You have ${totalAppointments} total appointment${totalAppointments === 1 ? '' : 's'}.`;
+    }
+
+    const { response, statusCode } = createApiResponse(
+      message,
+      200,
+      {
+        stats: statsObject,
+        summary: {
+          total_appointments: totalAppointments,
+          upcoming_appointments: upcomingAppointments,
+          completed_appointments: statsObject.by_status.completed || 0,
+          cancelled_appointments: statsObject.by_status.cancelled || 0,
+          pending_appointments: statsObject.by_status.pending || 0
+        }
+      }
+    );
+
+    return res.status(statusCode).json(response);
+
+  } catch (error) {
+    console.error('getAppointmentStats error:', error);
+    const { response, statusCode } = createErrorResponse(
+      'Failed to fetch appointment statistics. Please try again.',
+      500,
+      process.env.NODE_ENV === 'development' ? error.message : null
+    );
+    return res.status(statusCode).json(response);
   }
 };
 
-// Get available services for a salon (mobile API)
+/**
+ * Get available services for a salon
+ * @route GET /api/mobile/salons/:salon_id/services
+ */
 exports.getSalonServices = async (req, res) => {
   try {
     const { salon_id } = req.params;
     
     if (!salon_id) {
-      return res.status(400).json({ error: 'Salon ID is required' });
+      const { response, statusCode } = createErrorResponse(
+        'Salon ID is required',
+        400
+      );
+      return res.status(statusCode).json(response);
+    }
+
+    // Verify salon exists
+    const salon = await Salon.findByPk(salon_id);
+    if (!salon) {
+      const { response, statusCode } = createErrorResponse(
+        'Salon not found',
+        404
+      );
+      return res.status(statusCode).json(response);
     }
 
     const services = await Service.findAll({
@@ -501,42 +728,222 @@ exports.getSalonServices = async (req, res) => {
       order: [['name', 'ASC']]
     });
 
-    return res.json({
-      success: true,
-      services: services.map(service => ({
-        id: service.id,
-        name: service.name,
-        description: service.description,
-        price: service.price,
-        duration: service.duration,
-        image_url: service.image_url
-      }))
-    });
-  } catch (err) {
-    console.error('Get salon services error:', err);
-    return res.status(500).json({ error: 'Failed to fetch salon services' });
-  }
-}; 
+    // Determine message based on results
+    let message;
+    if (services.length === 0) {
+      message = 'No services available at this salon yet.';
+    } else {
+      message = `Successfully retrieved ${services.length} service${services.length === 1 ? '' : 's'} for this salon.`;
+    }
 
-// Get all services (for debugging)
+    const { response, statusCode } = createApiResponse(
+      message,
+      200,
+      {
+        salon: {
+          id: salon.id,
+          name: salon.name
+        },
+        services: services.map(service => ({
+          id: service.id,
+          name: service.name,
+          description: service.description,
+          price: service.price,
+          duration: service.duration,
+          image_url: service.image_url
+        })),
+        total_services: services.length
+      }
+    );
+
+    return res.status(statusCode).json(response);
+
+  } catch (error) {
+    console.error('Get salon services error:', error);
+    const { response, statusCode } = createErrorResponse(
+      'Failed to fetch salon services. Please try again.',
+      500,
+      process.env.NODE_ENV === 'development' ? error.message : null
+    );
+    return res.status(statusCode).json(response);
+  }
+};
+
+/**
+ * Get all services (for debugging/development)
+ * @route GET /api/mobile/services
+ */
 exports.getAllServices = async (req, res) => {
   try {
     const services = await Service.findAll({
       order: [['name', 'ASC']]
     });
 
-    return res.json({
-      success: true,
-      services: services.map(service => ({
-        id: service.id,
-        name: service.name,
-        description: service.description,
-        price: service.price,
-        duration: service.duration
-      }))
+    // Determine message based on results
+    let message;
+    if (services.length === 0) {
+      message = 'No services available in the system yet.';
+    } else {
+      message = `Successfully retrieved ${services.length} service${services.length === 1 ? '' : 's'}.`;
+    }
+
+    const { response, statusCode } = createApiResponse(
+      message,
+      200,
+      {
+        services: services.map(service => ({
+          id: service.id,
+          name: service.name,
+          description: service.description,
+          price: service.price,
+          duration: service.duration
+        })),
+        total_services: services.length
+      }
+    );
+
+    return res.status(statusCode).json(response);
+
+  } catch (error) {
+    console.error('Get all services error:', error);
+    const { response, statusCode } = createErrorResponse(
+      'Failed to fetch services. Please try again.',
+      500,
+      process.env.NODE_ENV === 'development' ? error.message : null
+    );
+    return res.status(statusCode).json(response);
+  }
+};
+
+// Legacy functions for backward compatibility
+exports.confirmPayment = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    const appointment = await Appointment.findByPk(appointmentId);
+    
+    if (!appointment) {
+      const { response, statusCode } = createErrorResponse(
+        'Appointment not found',
+        404
+      );
+      return res.status(statusCode).json(response);
+    }
+    
+    if (appointment.status !== 'pending') {
+      const { response, statusCode } = createErrorResponse(
+        'Appointment is not pending',
+        400
+      );
+      return res.status(statusCode).json(response);
+    }
+    
+    appointment.status = 'booked';
+    await appointment.save();
+    
+    const { response, statusCode } = createApiResponse(
+      'Payment confirmed and appointment booked successfully',
+      200,
+      {
+        appointment: serializeAppointment(appointment)
+      }
+    );
+    
+    return res.status(statusCode).json(response);
+  } catch (error) {
+    const { response, statusCode } = createErrorResponse(
+      'Failed to confirm payment',
+      500
+    );
+    return res.status(statusCode).json(response);
+  }
+};
+
+exports.cancelPendingAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    const appointment = await Appointment.findByPk(appointmentId);
+    
+    if (!appointment) {
+      const { response, statusCode } = createErrorResponse(
+        'Appointment not found',
+        404
+      );
+      return res.status(statusCode).json(response);
+    }
+    
+    if (appointment.status !== 'pending') {
+      const { response, statusCode } = createErrorResponse(
+        'Appointment is not pending',
+        400
+      );
+      return res.status(statusCode).json(response);
+    }
+    
+    appointment.status = 'cancelled';
+    await appointment.save();
+    
+    const { response, statusCode } = createApiResponse(
+      'Pending appointment cancelled successfully',
+      200,
+      {
+        appointment: serializeAppointment(appointment)
+      }
+    );
+    
+    return res.status(statusCode).json(response);
+  } catch (error) {
+    const { response, statusCode } = createErrorResponse(
+      'Failed to cancel appointment',
+      500
+    );
+    return res.status(statusCode).json(response);
+  }
+};
+
+exports.completeAppointment = async (req, res) => {
+  try {
+    const appointmentId = req.params.id;
+    const appointment = await Appointment.findOne({ 
+      where: { id: appointmentId, user_id: req.user.id } 
     });
-  } catch (err) {
-    console.error('Get all services error:', err);
-    return res.status(500).json({ error: 'Failed to fetch services' });
+    
+    if (!appointment) {
+      const { response, statusCode } = createErrorResponse(
+        'Appointment not found',
+        404
+      );
+      return res.status(statusCode).json(response);
+    }
+    
+    appointment.status = 'completed';
+    await appointment.save();
+    
+    // Send notification
+    await notificationService.sendToUsers(
+      [req.user.id], 
+      'Appointment Completed', 
+      'Your appointment has been marked as completed.',
+      { 
+        appointmentId: appointment.id,
+        salonId: appointment.salon_id,
+        status: appointment.status
+      }
+    );
+    
+    const { response, statusCode } = createApiResponse(
+      'Appointment marked as completed successfully',
+      200,
+      {
+        appointment: serializeAppointment(appointment)
+      }
+    );
+    
+    return res.status(statusCode).json(response);
+  } catch (error) {
+    const { response, statusCode } = createErrorResponse(
+      'Failed to complete appointment',
+      500
+    );
+    return res.status(statusCode).json(response);
   }
 }; 

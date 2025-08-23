@@ -1,7 +1,7 @@
 const path = require('path');
-const aiService = require('./aiService');
 const hairstyleRepository = require('../repositories/hairstyleRepository');
 const { buildUrl } = require('../helpers/urlHelper');
+const fs = require('fs');
 
 function parseTags(tags) {
   if (!tags) return [];
@@ -25,9 +25,7 @@ function parseTags(tags) {
 function mapHairstyleResponse(req, h) {
   return {
     ...h.toJSON(),
-    image_url: buildUrl(h.image_url, 'hairstyle'),
-    // segmented_image_url: buildUrl(h.segmented_image_url, 'hairstyle'),
-    // ar_model_url: buildUrl(h.ar_model_url, 'hairstyle')
+    image_url: buildUrl(h.image_url, 'hairstyle')
   };
 }
 
@@ -39,10 +37,10 @@ function mapHairstylesResponse(req, hairstyles) {
 }
 
 
+
 module.exports = {
   parseTags,
   mapHairstyleResponse,
   mapHairstylesResponse,
-  // triggerAIJobIfNeeded,
   ...hairstyleRepository,
 }; 

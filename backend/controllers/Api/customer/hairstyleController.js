@@ -43,7 +43,6 @@ const serializeHairstyle = (hairstyle) => {
     difficulty_level: hairstyle.difficulty_level,
     estimated_duration: hairstyle.estimated_duration,
     image_url: buildUrl(hairstyle.image_url, 'hairstyle'),
-    segmented_image_url: buildUrl(hairstyle.segmented_image_url, 'hairstyle'),
     tags: hairstyle.tags,
     created_at: hairstyle.createdAt,
     updated_at: hairstyle.updatedAt
@@ -56,14 +55,14 @@ const serializeHairstyle = (hairstyle) => {
  */
 exports.getHairstyles = async (req, res) => {
   try {
-    const { 
-      gender, 
-      length, 
-      color, 
+    const {
+      gender,
+      length,
+      color,
       name,
       style_type,
       difficulty_level,
-      page = 1, 
+      page = 1,
       limit = 20,
       sort = 'name',
       order = 'ASC'
@@ -71,27 +70,27 @@ exports.getHairstyles = async (req, res) => {
 
     // Build where clause
     const whereClause = {};
-    
+
     if (gender) {
       whereClause.gender = gender;
     }
-    
+
     if (length) {
       whereClause.length = length;
     }
-    
+
     if (color) {
       whereClause.color = color;
     }
-    
+
     if (style_type) {
       whereClause.style_type = style_type;
     }
-    
+
     if (difficulty_level) {
       whereClause.difficulty_level = difficulty_level;
     }
-    
+
     if (name) {
       whereClause.name = { [Op.iLike]: `%${name}%` };
     }
@@ -255,13 +254,13 @@ exports.getHairstyleById = async (req, res) => {
  */
 exports.searchHairstyles = async (req, res) => {
   try {
-    const { 
+    const {
       q, // search query
       gender,
       length,
       color,
-      page = 1, 
-      limit = 20 
+      page = 1,
+      limit = 20
     } = req.query;
 
     if (!q) {
@@ -280,15 +279,15 @@ exports.searchHairstyles = async (req, res) => {
         { tags: { [Op.iLike]: `%${q}%` } }
       ]
     };
-    
+
     if (gender) {
       whereClause.gender = gender;
     }
-    
+
     if (length) {
       whereClause.length = length;
     }
-    
+
     if (color) {
       whereClause.color = color;
     }

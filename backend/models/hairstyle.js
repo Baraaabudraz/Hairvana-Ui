@@ -22,14 +22,9 @@ module.exports = (sequelize, DataTypes) => {
     description: DataTypes.TEXT,
     tags: DataTypes.ARRAY(DataTypes.STRING),
     image_url: DataTypes.STRING,
-    ar_model_url: DataTypes.STRING,
     gender: DataTypes.STRING,
     length: DataTypes.STRING,
     color: DataTypes.STRING,
-    segmented_image_url: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
     salon_id: {
       type: DataTypes.UUID,
       allowNull: false,

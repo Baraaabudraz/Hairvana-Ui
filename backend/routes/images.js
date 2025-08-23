@@ -44,8 +44,8 @@ router.get('/staff/:uuid', (req, res) => {
 });
 
 // Serve hairstyle images
-router.get('/hairstyles/original/:filename', (req, res) => {
-  const filePath = path.join(__dirname, '../public/uploads/hairstyles/original', req.params.filename);
+router.get('/hairstyles/:filename', (req, res) => {
+  const filePath = path.join(__dirname, '../public/uploads/hairstyles/', req.params.filename);
   if (fs.existsSync(filePath)) {
     res.sendFile(filePath);
   } else {

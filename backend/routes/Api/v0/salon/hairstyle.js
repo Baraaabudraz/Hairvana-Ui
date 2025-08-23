@@ -10,7 +10,7 @@ const {
 } = require("../../../../validation/hairstyleValidation");
 
 const uploadHairstyle = createUploadMiddleware({
-  uploadDir: "/hairstyles/original",
+  uploadDir: "/hairstyles",
   allowedTypes: ["image/jpeg", "image/png"],
   maxSize: 5 * 1024 * 1024, // 5MB
 });
@@ -23,12 +23,14 @@ router.post(
   createHairstyleValidation,
   hairstyleController.uploadHairstyle
 );
+
 // List all hairstyles for a specific salon
 router.get(
   "/:salonId/hairstyles",
   authenticateOwner,
   hairstyleController.getHairstyles
 );
+
 // Update a hairstyle for a specific salon
 router.put(
   "/salon/:salonId/hairstyle/:id",
@@ -37,11 +39,14 @@ router.put(
   updateHairstyleValidation,
   hairstyleController.updateHairstyle
 );
+
 // Delete a hairstyle for a specific salon
 router.delete(
   "/salon/:salonId/hairstyle/:id",
   authenticateOwner,
   hairstyleController.deleteHairstyle
 );
+
+
 
 module.exports = router;

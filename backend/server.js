@@ -96,7 +96,7 @@ app.use(
   require("./routes/Api/v0/customer/devices")
 );
 app.use("/backend/images", require("./routes/images"));
-
+app.use('/backend/api/v0/customer/hairstyle-tryon', require('./routes/Api/v0/customer/hairstyleTryOn'));
 
 
 // Mobile API Routes for Salon Owner

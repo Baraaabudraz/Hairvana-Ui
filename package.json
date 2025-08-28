@@ -44,6 +44,7 @@
     "express": "^4.18.2",
     "express-validator": "^7.0.1",
     "framer-motion": "^11.0.0",
+    "jsencrypt": "^3.5.4",
     "jsonwebtoken": "^9.0.2",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.522.0",

@@ -3,6 +3,7 @@ const { commonRules } = require('./index');
 
 /**
  * Validation schema for creating a new subscription
+ * Simplified: Only salonId and planId required - everything else is calculated automatically
  */
 const createSubscriptionValidation = [
   body('salonId')
@@ -13,108 +14,74 @@ const createSubscriptionValidation = [
   
   body('planId')
     .notEmpty()
-    .withMessage('Plan ID is required'),
+    .withMessage('Plan ID is required')
+    .isUUID()
+    .withMessage('Plan ID must be a valid UUID'),
   
-  body('status')
-    .optional()
-    .isIn(['active', 'trial', 'cancelled', 'past_due'])
-    .withMessage('Invalid subscription status'),
-  
-  commonRules.date('startDate'),
-  
-  commonRules.date('nextBillingDate'),
-  
-  commonRules.requiredNumber('amount'),
-  
+  // Optional billing cycle - defaults to plan's default billing period
   body('billingCycle')
-    .notEmpty()
-    .withMessage('Billing cycle is required')
+    .optional()
     .isIn(['monthly', 'yearly'])
     .withMessage('Invalid billing cycle'),
   
-  body('usage')
-    .optional()
-    .isObject()
-    .withMessage('Usage must be an object'),
-  
-  body('paymentMethod')
-    .optional()
-    .isObject()
-    .withMessage('Payment method must be an object'),
-  
-  // Validate payment method details if provided
-  body('paymentMethod.type')
-    .if(body('paymentMethod').exists())
-    .notEmpty()
-    .withMessage('Payment method type is required')
-    .isIn(['card'])
-    .withMessage('Invalid payment method type'),
-  
-  body('paymentMethod.last4')
-    .if(body('paymentMethod').exists())
-    .notEmpty()
-    .withMessage('Card last 4 digits are required')
-    .isLength({ min: 4, max: 4 })
-    .withMessage('Card last 4 digits must be 4 characters'),
-  
-  body('paymentMethod.brand')
-    .if(body('paymentMethod').exists())
-    .notEmpty()
-    .withMessage('Card brand is required'),
-  
-  body('paymentMethod.expiryMonth')
-    .if(body('paymentMethod').exists())
-    .notEmpty()
-    .withMessage('Card expiry month is required')
-    .isInt({ min: 1, max: 12 })
-    .withMessage('Invalid expiry month'),
-  
-  body('paymentMethod.expiryYear')
-    .if(body('paymentMethod').exists())
-    .notEmpty()
-    .withMessage('Card expiry year is required')
-    .isInt({ min: new Date().getFullYear() })
-    .withMessage('Invalid expiry year'),
+  // All other fields are calculated automatically:
+  // - amount: calculated from plan pricing
+  // - startDate: set to current date
+  // - nextBillingDate: calculated based on billing cycle
+  // - status: defaults to 'active'
+  // - usage: initialized with plan limits
 ];
 
 /**
- * Validation schema for updating an existing subscription
+ * Validation schema for upgrading/downgrading subscriptions
+ * Simplified: Only salonId and planId required - everything else is calculated automatically
  */
 const updateSubscriptionValidation = [
-  body('planId')
-    .optional()
+  body('salonId')
     .notEmpty()
-    .withMessage('Plan ID cannot be empty'),
-  
-  body('status')
-    .optional()
-    .isIn(['active', 'trial', 'cancelled', 'past_due'])
-    .withMessage('Invalid subscription status'),
-  
-  body('nextBillingDate')
-    .optional()
-    .isISO8601()
-    .withMessage('Invalid next billing date format'),
-  
-  body('amount')
-    .optional()
-    .isNumeric()
-    .withMessage('Amount must be a number'),
-  
+    .withMessage('Salon ID is required')
+    .isUUID()
+    .withMessage('Salon ID must be a valid UUID'),
+
+  body('planId')
+    .notEmpty()
+    .withMessage('Plan ID is required')
+    .isUUID()
+    .withMessage('Plan ID must be a valid UUID'),
+
+  // Optional billing cycle - if not provided, keeps current billing cycle
   body('billingCycle')
     .optional()
     .isIn(['monthly', 'yearly'])
     .withMessage('Invalid billing cycle'),
-  
-  body('usage')
+
+  // All other fields are calculated automatically:
+  // - amount: calculated from plan pricing
+  // - nextBillingDate: calculated based on upgrade/downgrade logic
+  // - status: managed automatically
+  // - usage: preserved and updated with new limits
+];
+
+/**
+ * Validation schema for subscription payment intent creation
+ */
+const createPaymentIntentValidation = [
+  body('salonId')
+    .notEmpty()
+    .withMessage('Salon ID is required')
+    .isUUID()
+    .withMessage('Salon ID must be a valid UUID'),
+
+  body('planId')
+    .notEmpty()
+    .withMessage('Plan ID is required')
+    .isUUID()
+    .withMessage('Plan ID must be a valid UUID'),
+
+  body('billingCycle')
     .optional()
-    .isObject()
-    .withMessage('Usage must be an object'),
-  
-  body('paymentMethod')
-    .optional()
-    .isObject()
-    .withMessage('Payment method must be an object'),
+    .isIn(['monthly', 'yearly'])
+    .withMessage('Invalid billing cycle')
 ];
 
 /**
@@ -159,5 +126,6 @@ const createBillingRecordValidation = [
 module.exports = {
   createSubscriptionValidation,
   updateSubscriptionValidation,
-  createBillingRecordValidation
+  createBillingRecordValidation,
+  createPaymentIntentValidation
 };

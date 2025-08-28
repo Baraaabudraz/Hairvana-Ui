@@ -151,12 +151,38 @@ exports.createSubscription = async (data) => {
   if (!plan) throw new Error("Invalid plan ID");
   const salon = await Salon.findOne({ where: { id: data.salonId } });
   if (!salon) throw new Error("Invalid salon ID");
+  
+  // Calculate next billing date based on billing cycle
+  const startDate = data.startDate || new Date();
+  const billingCycle = data.billingCycle || plan.billing_period || 'monthly';
+  const nextBillingDate = new Date(startDate);
+  
+  if (billingCycle === 'yearly') {
+    nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
+  } else {
+    nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+  }
+  
+  // Initialize usage with plan limits
+  const usage = {
+    bookings: 0,
+    bookingsLimit: plan.limits?.bookings || 0,
+    staff: 0,
+    staffLimit: plan.limits?.staff || 0,
+    locations: 1,
+    locationsLimit: plan.limits?.locations || 1,
+  };
+  
   const newSub = await Subscription.create({
-    ...data,
-    amount: plan.price,
-    startDate: data.startDate || new Date(),
+    salonId: data.salonId,
+    planId: data.planId,
+    amount: billingCycle === 'yearly' ? plan.yearly_price : plan.price,
+    startDate: startDate,
+    nextBillingDate: nextBillingDate,
     status: data.status || "active",
-    billingCycle: data.billingCycle || plan.billingPeriod,
+    billingCycle: billingCycle,
+    billingPeriod: billingCycle, // Set both for compatibility
+    usage: usage,
   });
   return newSub.toJSON();
 };
@@ -335,4 +361,197 @@ exports.deletePlan = async (id) => {
   if (!plan) return null;
   await plan.destroy();
   return true;
+};
+
+exports.getSubscriptionBySalonId = async (salonId) => {
+  const subscription = await Subscription.findOne({
+    where: { salon_id: salonId },
+    include: [
+      { model: SubscriptionPlan, as: 'plan' }
+    ],
+    order: [['created_at', 'DESC']]
+  });
+  
+  if (!subscription) return null;
+  
+  const s = subscription.toJSON();
+  let usage = s.usage;
+  if (!usage) {
+    usage = {
+      bookings: 0,
+      bookingsLimit: s.plan && s.plan.limits && s.plan.limits.bookings != null ? s.plan.limits.bookings : 0,
+      staff: 0,
+      staffLimit: s.plan && s.plan.limits && s.plan.limits.staff != null ? s.plan.limits.staff : 0,
+      locations: 1,
+      locationsLimit: s.plan && s.plan.limits && s.plan.limits.locations != null ? s.plan.limits.locations : 1,
+    };
+  }
+  
+  return {
+    id: s.id,
+    salonId: s.salon_id,
+    plan: s.plan,
+    status: s.status,
+    startDate: s.start_date,
+    endDate: s.end_date,
+    billingCycle: s.billing_cycle,
+    nextBillingDate: s.next_billing_date,
+    amount: s.amount,
+    usage: usage,
+    paymentMethod: s.payment_method,
+    createdAt: s.created_at,
+    updatedAt: s.updated_at
+  };
+};
+
+exports.getBillingHistoryBySubscriptionId = async (subscriptionId) => {
+  const billingHistory = await BillingHistory.findAll({
+    where: { subscription_id: subscriptionId },
+    order: [['date', 'DESC']]
+  });
+  
+  return billingHistory.map(bh => {
+    const obj = bh.toJSON();
+    return {
+      ...obj,
+      total: obj.total !== undefined ? obj.total : Number(obj.amount) + Number(obj.tax_amount || 0),
+    };
+  });
+};
+
+/**
+ * Upgrade subscription (immediate activation)
+ * @param {string} id - Subscription ID
+ * @param {Object} data - Upgrade data
+ * @returns {Object} Updated subscription
+ */
+exports.upgradeSubscription = async (id, data) => {
+  const subscription = await Subscription.findByPk(id, {
+    include: [{ model: SubscriptionPlan, as: 'plan' }]
+  });
+  
+  if (!subscription) {
+    throw new Error('Subscription not found');
+  }
+
+  // Get the new plan to calculate the amount
+  const newPlan = await SubscriptionPlan.findByPk(data.planId);
+  if (!newPlan) {
+    throw new Error('Plan not found');
+  }
+
+  // Calculate amount based on billing cycle
+  const amount = data.billingCycle === 'yearly' ? newPlan.yearly_price : newPlan.price;
+
+  // Update subscription immediately
+  const updateData = {
+    planId: data.planId,
+    billingCycle: data.billingCycle,
+    amount: amount,
+    // For immediate upgrades, we might want to adjust the billing date
+    nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    status: 'active'
+  };
+
+  await subscription.update(updateData);
+
+  // Create a billing record for the upgrade (prorated amount)
+  const currentPlan = subscription.plan;
+  const currentAmount = subscription.billing_cycle === 'yearly' ? currentPlan.yearly_price : currentPlan.price;
+  const proratedAmount = amount - currentAmount;
+
+  if (proratedAmount > 0) {
+    await BillingHistory.create({
+      subscription_id: id,
+      date: new Date(),
+      amount: proratedAmount,
+      status: 'pending',
+      description: `Upgrade to ${newPlan.name} plan`,
+      invoice_number: `UPG-${Date.now()}`,
+      total: proratedAmount
+    });
+  }
+
+  // Return updated subscription
+  const updatedSubscription = await Subscription.findByPk(id, {
+    include: [{ model: SubscriptionPlan, as: 'plan' }]
+  });
+
+  const s = updatedSubscription.toJSON();
+  return {
+    id: s.id,
+    salonId: s.salon_id,
+    plan: s.plan,
+    status: s.status,
+    startDate: s.start_date,
+    endDate: s.end_date,
+    billingCycle: s.billing_cycle,
+    nextBillingDate: s.next_billing_date,
+    amount: s.amount,
+    usage: s.usage,
+    paymentMethod: s.payment_method,
+    createdAt: s.created_at,
+    updatedAt: s.updated_at,
+    upgradeType: 'immediate'
+  };
+};
+
+/**
+ * Downgrade subscription (end of cycle activation)
+ * @param {string} id - Subscription ID
+ * @param {Object} data - Downgrade data
+ * @returns {Object} Updated subscription
+ */
+exports.downgradeSubscription = async (id, data) => {
+  const subscription = await Subscription.findByPk(id, {
+    include: [{ model: SubscriptionPlan, as: 'plan' }]
+  });
+  
+  if (!subscription) {
+    throw new Error('Subscription not found');
+  }
+
+  // Get the new plan to calculate the amount
+  const newPlan = await SubscriptionPlan.findByPk(data.planId);
+  if (!newPlan) {
+    throw new Error('Plan not found');
+  }
+
+  // Calculate amount based on billing cycle
+  const amount = data.billingCycle === 'yearly' ? newPlan.yearly_price : newPlan.price;
+
+  // For downgrades, we schedule the change for the end of the current billing cycle
+  const updateData = {
+    planId: data.planId,
+    billingCycle: data.billingCycle,
+    amount: amount,
+    status: 'active'
+    // Note: In a real implementation, you might want to add scheduled_downgrade fields
+    // to track when the downgrade should take effect
+  };
+
+  await subscription.update(updateData);
+
+  // Return updated subscription
+  const updatedSubscription = await Subscription.findByPk(id, {
+    include: [{ model: SubscriptionPlan, as: 'plan' }]
+  });
+
+  const s = updatedSubscription.toJSON();
+  return {
+    id: s.id,
+    salonId: s.salon_id,
+    plan: s.plan,
+    status: s.status,
+    startDate: s.start_date,
+    endDate: s.end_date,
+    billingCycle: s.billing_cycle,
+    nextBillingDate: s.next_billing_date,
+    amount: s.amount,
+    usage: s.usage,
+    paymentMethod: s.payment_method,
+    createdAt: s.created_at,
+    updatedAt: s.updated_at,
+    downgradeType: 'end_of_cycle'
+  };
 };

@@ -88,6 +88,15 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.JSONB,
         field: "payment_method",
       },
+      paymentId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "subscription_payments",
+          key: "id",
+        },
+        field: "payment_id",
+      },
     },
     {
       sequelize,

@@ -148,4 +148,54 @@ exports.deletePlan = async (id) => {
   } catch (err) {
     throw new Error('Failed to delete plan: ' + err.message);
   }
+};
+
+exports.getSubscriptionBySalonId = async (salonId) => {
+  if (!salonId) throw new Error('Salon ID is required');
+  try {
+    return await subscriptionRepository.getSubscriptionBySalonId(salonId);
+  } catch (err) {
+    throw new Error('Failed to get subscription by salon ID: ' + err.message);
+  }
+};
+
+exports.getBillingHistoryBySubscriptionId = async (subscriptionId) => {
+  if (!subscriptionId) throw new Error('Subscription ID is required');
+  try {
+    return await subscriptionRepository.getBillingHistoryBySubscriptionId(subscriptionId);
+  } catch (err) {
+    throw new Error('Failed to get billing history: ' + err.message);
+  }
+};
+
+/**
+ * Upgrade subscription (immediate activation)
+ * @param {string} id - Subscription ID
+ * @param {Object} data - Upgrade data
+ * @returns {Object} Updated subscription
+ */
+exports.upgradeSubscription = async (id, data) => {
+  if (!id) throw new Error('Subscription ID is required');
+  if (!data || typeof data !== 'object') throw new Error('Upgrade data is required');
+  try {
+    return await subscriptionRepository.upgradeSubscription(id, data);
+  } catch (err) {
+    throw new Error('Failed to upgrade subscription: ' + err.message);
+  }
+};
+
+/**
+ * Downgrade subscription (end of cycle activation)
+ * @param {string} id - Subscription ID
+ * @param {Object} data - Downgrade data
+ * @returns {Object} Updated subscription
+ */
+exports.downgradeSubscription = async (id, data) => {
+  if (!id) throw new Error('Subscription ID is required');
+  if (!data || typeof data !== 'object') throw new Error('Downgrade data is required');
+  try {
+    return await subscriptionRepository.downgradeSubscription(id, data);
+  } catch (err) {
+    throw new Error('Failed to downgrade subscription: ' + err.message);
+  }
 }; 

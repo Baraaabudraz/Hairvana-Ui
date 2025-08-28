@@ -9,7 +9,7 @@ module.exports = {
     // Create subscription_plans table
     await queryInterface.createTable('subscription_plans', {
       id: {
-        type: Sequelize.TEXT,
+        type: Sequelize.UUID,
         primaryKey: true
       },
       name: {
@@ -186,7 +186,7 @@ module.exports = {
     // Insert default subscription plans
     await queryInterface.bulkInsert('subscription_plans', [
       {
-        id: 'basic',
+        id: '00000000-0000-0000-0000-000000000001',
         name: 'Basic',
         price: 19.99,
         yearly_price: 199.99,
@@ -198,7 +198,7 @@ module.exports = {
         updated_at: new Date()
       },
       {
-        id: 'standard',
+        id: '00000000-0000-0000-0000-000000000002',
         name: 'Standard',
         price: 49.99,
         yearly_price: 499.99,
@@ -210,7 +210,7 @@ module.exports = {
         updated_at: new Date()
       },
       {
-        id: 'premium',
+        id: '00000000-0000-0000-0000-000000000003',
         name: 'Premium',
         price: 99.99,
         yearly_price: 999.99,

@@ -263,8 +263,33 @@ exports.stripeWebhook = async (req, res, next) => {
 
 async function handlePaymentSucceeded(paymentIntent) {
   const { Payment, Appointment } = require('../../../models');
+  const subscriptionPaymentService = require('../../../services/subscriptionPaymentService');
   
   try {
+    // Check if this is a subscription payment
+    if (paymentIntent.metadata && paymentIntent.metadata.subscription_payment_id) {
+      console.log(`Processing subscription payment: ${paymentIntent.metadata.subscription_payment_id}`);
+      
+      try {
+        const subscription = await subscriptionPaymentService.handleSuccessfulSubscriptionPayment(paymentIntent.id);
+        console.log(`Subscription created successfully: ${subscription.id}`);
+        
+        // Send notification to salon owner
+        await notificationService.sendToUsers([
+          paymentIntent.metadata.user_id
+        ], 'Subscription Activated', 'Your subscription payment was successful and your salon subscription is now active.', { 
+          subscriptionId: subscription.id,
+          salonId: paymentIntent.metadata.salon_id 
+        });
+        
+        return;
+      } catch (subscriptionError) {
+        console.error('Error processing subscription payment:', subscriptionError);
+        // Continue to check for regular appointment payment
+      }
+    }
+    
+    // Handle regular appointment payment
     const payment = await Payment.findOne({ 
       where: { transaction_id: paymentIntent.id } 
     });

@@ -492,7 +492,7 @@ export function HairvanaInterface() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const [activeView, setActiveView] = useState<'home' | 'gallery' | 'booking' | 'profile' | 'chat' | 'evaluation' | 'bookAppointment' | 'payment' | 'favorites' | 'salons' | 'paymentDetails' | 'history' | 'salonDetails' | 'styleDetails' | 'settings' | 'bookingHistory'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'gallery' | 'booking' | 'profile' | 'chat' | 'evaluation' | 'bookAppointment' | 'payment' | 'favorites' | 'salons' | 'paymentDetails' | 'history' | 'salonDetails' | 'styleDetails' | 'settings' | 'bookingHistory' | 'ar'>('home');
   const [selectedStyle, setSelectedStyle] = useState<HairstyleCard | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');

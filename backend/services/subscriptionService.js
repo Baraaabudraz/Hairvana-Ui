@@ -159,6 +159,15 @@ exports.getSubscriptionBySalonId = async (salonId) => {
   }
 };
 
+exports.getSubscriptionByOwnerId = async (ownerId) => {
+  if (!ownerId) throw new Error('Owner ID is required');
+  try {
+    return await subscriptionRepository.getSubscriptionByOwnerId(ownerId);
+  } catch (err) {
+    throw new Error('Failed to get subscription by owner ID: ' + err.message);
+  }
+};
+
 exports.getBillingHistoryBySubscriptionId = async (subscriptionId) => {
   if (!subscriptionId) throw new Error('Subscription ID is required');
   try {

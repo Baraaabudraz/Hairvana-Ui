@@ -14,6 +14,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "salon_id",
         as: "salon",
       });
+      Subscription.belongsTo(models.User, {
+        foreignKey: "owner_id",
+        as: "owner",
+      });
       Subscription.belongsTo(models.SubscriptionPlan, {
         foreignKey: "plan_id",
         as: "plan",
@@ -30,12 +34,21 @@ module.exports = (sequelize, DataTypes) => {
       },
       salonId: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: "salons",
           key: "id",
         },
         field: "salon_id",
+      },
+      ownerId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "users",
+          key: "id",
+        },
+        field: "owner_id",
       },
       planId: {
         type: DataTypes.UUID,

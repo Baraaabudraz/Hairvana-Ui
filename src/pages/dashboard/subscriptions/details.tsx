@@ -105,8 +105,8 @@ interface Usage {
 
 interface Subscription {
   id: string;
-  salonId: string;
-  salonName: string;
+  salonId?: string;
+  salonName?: string;
   ownerId: string;
   ownerName: string;
   ownerEmail: string;
@@ -239,11 +239,13 @@ export default function SubscriptionDetailsPage() {
     const fetchSubscription = async () => {
       try {
         setLoading(true);
+        setSubscription(null); // Reset subscription to null when starting to fetch
         const data = await fetchSubscriptionById(params.id as string);
         console.log("data", data);
         setSubscription(data);
       } catch (error) {
         console.error("Error fetching subscription:", error);
+        setSubscription(null); // Ensure subscription is null on error
         toast({
           title: "Error",
           description: "Failed to load subscription details. Please try again.",
@@ -256,6 +258,9 @@ export default function SubscriptionDetailsPage() {
 
     if (params.id) {
       fetchSubscription();
+    } else {
+      setLoading(false);
+      setSubscription(null);
     }
   }, [params.id, toast]);
 
@@ -479,26 +484,26 @@ export default function SubscriptionDetailsPage() {
                   invoice.invoiceNumber || invoice.invoice_number || ""
                 }</p>
                 <p><strong>Date:</strong> ${
-                  invoice.date
+                  invoice.date && !isNaN(new Date(invoice.date).getTime())
                     ? format(new Date(invoice.date), "MMMM dd, yyyy")
-                    : ""
+                    : "N/A"
                 }</p>
                 <p><strong>Due Date:</strong> ${
-                  invoice.date
+                  invoice.date && !isNaN(new Date(invoice.date).getTime())
                     ? format(new Date(invoice.date), "MMMM dd, yyyy")
-                    : ""
+                    : "N/A"
                 }</p>
                 <p><strong>Billing Period:</strong> ${
-                  invoice.date ? format(new Date(invoice.date), "MMM dd") : ""
+                  invoice.date && !isNaN(new Date(invoice.date).getTime()) ? format(new Date(invoice.date), "MMM dd") : "N/A"
                 } - ${
-      invoice.date
+      invoice.date && !isNaN(new Date(invoice.date).getTime())
         ? format(
             new Date(
               new Date(invoice.date).getTime() + 30 * 24 * 60 * 60 * 1000
             ),
             "MMM dd, yyyy"
           )
-        : ""
+        : "N/A"
     }</p>
               </div>
             </div>
@@ -536,9 +541,9 @@ export default function SubscriptionDetailsPage() {
               <p><strong>Payment Method:</strong> ${paymentMethodBrand} ending in ${paymentMethodLast4}</p>
               <p><strong>Transaction ID:</strong> txn_${invoice.id || ""}</p>
               <p><strong>Payment Date:</strong> ${
-                invoice.date
+                invoice.date && !isNaN(new Date(invoice.date).getTime())
                   ? format(new Date(invoice.date), "MMMM dd, yyyy")
-                  : ""
+                  : "N/A"
               }</p>
             </div>
 
@@ -660,16 +665,16 @@ export default function SubscriptionDetailsPage() {
   const handleEmailInvoice = (invoice: BillingHistory) => {
     const subject = `Invoice ${
       invoice.invoiceNumber || invoice.invoice_number
-    } - ${subscription?.salonName}`;
+    } - ${subscription?.salonName || subscription?.ownerName || "Subscription"}`;
     const body = `Dear ${subscription?.ownerName},
 
 Please find attached your invoice ${
       invoice.invoiceNumber || invoice.invoice_number
-    } for ${subscription?.salonName}.
+    } for ${subscription?.salonName || subscription?.ownerName || "your subscription"}.
 
 Invoice Details:
 - Amount: $${Number(invoice.amount).toFixed(2)}
-- Date: ${format(new Date(invoice.date), "MMMM dd, yyyy")}
+- Date: ${invoice.date && !isNaN(new Date(invoice.date).getTime()) ? format(new Date(invoice.date), "MMMM dd, yyyy") : "N/A"}
 - Status: ${invoice.status.toUpperCase()}
 
 Thank you for your business!
@@ -700,7 +705,7 @@ Hairvana Team`;
   const openEditSubscriptionDialog = () => {
     if (subscription) {
       setEditSubscriptionData({
-        billingCycle: subscription.billingCycle,
+        billingCycle: subscription?.billingCycle || "monthly",
         autoRenew: true, // You might want to get this from subscription data
         trialDays: 0, // You might want to get this from subscription data
       });
@@ -753,7 +758,7 @@ Hairvana Team`;
       );
       toast({
         title: "Plan upgraded successfully",
-        description: `${subscription.salonName} has been upgraded to ${selectedNewPlan.name} plan.`,
+        description: `${subscription?.salonName || subscription?.ownerName || "Subscription"} has been upgraded to ${selectedNewPlan.name} plan.`,
       });
       setUpgradeDialogOpen(false);
       setSelectedNewPlan(null);
@@ -790,7 +795,7 @@ Hairvana Team`;
       );
       toast({
         title: "Plan downgraded successfully",
-        description: `${subscription.salonName} has been downgraded to ${selectedNewPlan.name} plan.`,
+        description: `${subscription?.salonName || subscription?.ownerName || "Subscription"} has been downgraded to ${selectedNewPlan.name} plan.`,
       });
       setDowngradeDialogOpen(false);
       setSelectedNewPlan(null);
@@ -1112,15 +1117,17 @@ Hairvana Team`;
     return plans.filter((plan) => planOrder.indexOf(plan.name) < currentIndex);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
-      </div>
-    );
-  }
-
-  if (!subscription) {
+  // Show loading spinner while loading or if subscription is null
+  if (loading || !subscription) {
+    if (loading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+        </div>
+      );
+    }
+    
+    // If not loading but subscription is null, show not found
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -1138,8 +1145,7 @@ Hairvana Team`;
     );
   }
 
-  const PlanIcon = getPlanIcon(subscription.plan);
-
+  // Helper functions
   const getUsagePercentage = (current: number, limit: number | "unlimited") => {
     if (limit === "unlimited") return 0;
     return Math.min((current / limit) * 100, 100);
@@ -1151,14 +1157,27 @@ Hairvana Team`;
     return "bg-green-500";
   };
 
-  const bookingsPercentage = getUsagePercentage(
+  const formatDate = (dateString: string | null | undefined, formatString: string = "MMM dd, yyyy") => {
+    if (!dateString || isNaN(new Date(dateString).getTime())) {
+      return "N/A";
+    }
+    try {
+      return format(new Date(dateString), formatString);
+    } catch (error) {
+      return "N/A";
+    }
+  };
+
+  // Only calculate these if subscription exists
+  const PlanIcon = subscription ? getPlanIcon(subscription.plan) : null;
+  const bookingsPercentage = subscription ? getUsagePercentage(
     subscription.usage.bookings,
     subscription.usage.bookingsLimit
-  );
-  const staffPercentage = getUsagePercentage(
+  ) : 0;
+  const staffPercentage = subscription ? getUsagePercentage(
     subscription.usage.staff,
     subscription.usage.staffLimit
-  );
+  ) : 0;
 
   return (
     <div className="space-y-6">
@@ -1172,7 +1191,7 @@ Hairvana Team`;
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {subscription.salonName} Subscription
+              {subscription?.salonName || subscription?.ownerName || "Subscription"} Details
             </h1>
             <p className="text-gray-600">Subscription Details & Management</p>
           </div>
@@ -1202,47 +1221,47 @@ Hairvana Team`;
                 <Avatar className="h-16 w-16">
                   <AvatarImage
                     src="https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=2"
-                    alt={subscription.salonName}
+                    alt={subscription?.salonName || subscription?.ownerName || "Salon"}
                   />
                   <AvatarFallback className="text-lg">
-                    {subscription.salonName
+                    {(subscription?.salonName || subscription?.ownerName || "S")
                       .split(" ")
                       .map((n) => n[0])
                       .join("")}
                   </AvatarFallback>
                 </Avatar>
                 <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow-md">
-                  <PlanIcon className="h-4 w-4 text-gray-600" />
+                  {PlanIcon && <PlanIcon className="h-4 w-4 text-gray-600" />}
                 </div>
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {subscription.salonName}
+                  {subscription?.salonName || subscription?.ownerName || "Salon"}
                 </h2>
-                <p className="text-gray-600">{subscription.ownerName}</p>
+                <p className="text-gray-600">{subscription?.ownerName || "Owner"}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge className={planColors[subscription.plan]}>
-                    {subscription.plan} Plan
+                  <Badge className={planColors[subscription?.plan || "Basic"]}>
+                    {subscription?.plan || "Basic"} Plan
                   </Badge>
-                  <Badge className={statusColors[subscription.status]}>
-                    {subscription.status}
+                  <Badge className={statusColors[subscription?.status || "active"]}>
+                    {subscription?.status || "active"}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
                     Started{" "}
-                    {format(new Date(subscription.startDate), "MMM dd, yyyy")}
+                    {formatDate(subscription?.startDate, "MMM dd, yyyy")}
                   </div>
                   <div className="flex items-center gap-1">
-                    <DollarSign className="h-4 w-4" />${subscription.amount}/
-                    {subscription.billingCycle}
+                    <DollarSign className="h-4 w-4" />${subscription?.amount || 0}/
+                    {subscription?.billingCycle || "monthly"}
                   </div>
                 </div>
               </div>
             </div>
             <div className="flex gap-2">
-              {subscription.status === "active" && (
+              {subscription?.status === "active" && (
                 <>
                   <Button
                     variant="outline"
@@ -1285,14 +1304,14 @@ Hairvana Team`;
                   Bookings Usage
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {subscription.usage.bookings}
-                  {subscription.usage.bookingsLimit !== "unlimited" &&
-                    `/${subscription.usage.bookingsLimit}`}
+                  {subscription?.usage?.bookings || 0}
+                  {subscription?.usage?.bookingsLimit !== "unlimited" &&
+                    `/${subscription?.usage?.bookingsLimit}`}
                 </p>
               </div>
               <Calendar className="h-8 w-8 text-blue-500" />
             </div>
-            {subscription.usage.bookingsLimit !== "unlimited" && (
+            {subscription?.usage?.bookingsLimit !== "unlimited" && (
               <div className="w-full h-2 bg-gray-200 rounded-full">
                 <div
                   className={`h-2 rounded-full ${getUsageColor(
@@ -1302,7 +1321,7 @@ Hairvana Team`;
                 />
               </div>
             )}
-            {subscription.usage.bookingsLimit === "unlimited" && (
+            {subscription?.usage?.bookingsLimit === "unlimited" && (
               <p className="text-sm text-green-600 font-medium">Unlimited</p>
             )}
           </CardContent>
@@ -1316,14 +1335,14 @@ Hairvana Team`;
                   Staff Members
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {subscription.usage.staff}
-                  {subscription.usage.staffLimit !== "unlimited" &&
-                    `/${subscription.usage.staffLimit}`}
+                  {subscription?.usage?.staff || 0}
+                  {subscription?.usage?.staffLimit !== "unlimited" &&
+                    `/${subscription?.usage?.staffLimit}`}
                 </p>
               </div>
               <Users className="h-8 w-8 text-green-500" />
             </div>
-            {subscription.usage.staffLimit !== "unlimited" && (
+            {subscription?.usage?.staffLimit !== "unlimited" && (
               <div className="w-full h-2 bg-gray-200 rounded-full">
                 <div
                   className={`h-2 rounded-full ${getUsageColor(
@@ -1333,7 +1352,7 @@ Hairvana Team`;
                 />
               </div>
             )}
-            {subscription.usage.staffLimit === "unlimited" && (
+            {subscription?.usage?.staffLimit === "unlimited" && (
               <p className="text-sm text-green-600 font-medium">Unlimited</p>
             )}
           </CardContent>
@@ -1345,22 +1364,22 @@ Hairvana Team`;
               <div>
                 <p className="text-sm font-medium text-gray-600">Locations</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {subscription.usage.locations}
-                  {subscription.usage.locationsLimit !== "unlimited" &&
-                    `/${subscription.usage.locationsLimit}`}
+                  {subscription?.usage?.locations || 0}
+                  {subscription?.usage?.locationsLimit !== "unlimited" &&
+                    `/${subscription?.usage?.locationsLimit}`}
                 </p>
               </div>
               <Building2 className="h-8 w-8 text-purple-500" />
             </div>
-            {subscription.usage.locationsLimit === "unlimited" ? (
+            {subscription?.usage?.locationsLimit === "unlimited" ? (
               <p className="text-sm text-green-600 font-medium">Unlimited</p>
-            ) : (
-              <p className="text-sm text-gray-600">
-                {subscription.usage.locationsLimit -
-                  subscription.usage.locations}{" "}
-                remaining
-              </p>
-            )}
+                          ) : (
+                <p className="text-sm text-gray-600">
+                  {(subscription?.usage?.locationsLimit || 0) -
+                    (subscription?.usage?.locations || 0)}{" "}
+                  remaining
+                </p>
+              )}
           </CardContent>
         </Card>
       </div>
@@ -1380,8 +1399,8 @@ Hairvana Team`;
               <div>
                 <p className="text-sm font-medium">Current Plan</p>
                 <p className="text-sm text-gray-600">
-                  {subscription.plan} - ${subscription.amount}/
-                  {subscription.billingCycle}
+                  {subscription?.plan || "Basic"} - ${subscription?.amount || 0}/
+                  {subscription?.billingCycle || "monthly"}
                 </p>
               </div>
             </div>
@@ -1390,25 +1409,22 @@ Hairvana Team`;
               <div>
                 <p className="text-sm font-medium">Next Billing Date</p>
                 <p className="text-sm text-gray-600">
-                  {format(
-                    new Date(subscription.nextBillingDate),
-                    "MMMM dd, yyyy"
-                  )}
+                  {formatDate(subscription?.nextBillingDate, "MMMM dd, yyyy")}
                 </p>
               </div>
             </div>
-            {subscription.paymentMethod && (
+            {subscription?.paymentMethod && (
               <div className="flex items-center gap-3">
                 <CreditCard className="h-4 w-4 text-gray-400" />
                 <div>
                   <p className="text-sm font-medium">Payment Method</p>
                   <p className="text-sm text-gray-600">
-                    {subscription.paymentMethod.brand} ending in{" "}
-                    {subscription.paymentMethod.last4}
+                    {subscription?.paymentMethod?.brand || "Card"} ending in{" "}
+                    {subscription?.paymentMethod?.last4 || "****"}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Expires {subscription.paymentMethod.expiryMonth}/
-                    {subscription.paymentMethod.expiryYear}
+                    Expires {subscription?.paymentMethod?.expiryMonth || "MM"}/
+                    {subscription?.paymentMethod?.expiryYear || "YYYY"}
                   </p>
                 </div>
               </div>
@@ -1436,7 +1452,7 @@ Hairvana Team`;
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {subscription.features.map((feature, index) => (
+              {(subscription?.features || []).map((feature, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <span className="text-sm text-gray-700">{feature}</span>
@@ -1474,7 +1490,7 @@ Hairvana Team`;
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {subscription.billingHistory.map((invoice) => (
+            {(subscription?.billingHistory || []).map((invoice) => (
               <div
                 key={invoice.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
@@ -1499,7 +1515,7 @@ Hairvana Team`;
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-600">
-                      {format(new Date(invoice.date), "MMM dd, yyyy")} • Invoice
+                      {formatDate(invoice.date, "MMM dd, yyyy")} • Invoice
                       #{invoice.invoiceNumber || invoice.invoice_number || ""}
                     </p>
                     {invoice.taxAmount && (
@@ -1571,14 +1587,14 @@ Hairvana Team`;
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center p-4 bg-gray-50 rounded-lg">
                 <p className="text-2xl font-bold text-gray-900">
-                  {subscription.billingHistory.length}
+                  {subscription?.billingHistory?.length || 0}
                 </p>
                 <p className="text-sm text-gray-600">Total Invoices</p>
               </div>
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <p className="text-2xl font-bold text-green-600">
                   {
-                    subscription.billingHistory.filter(
+                    (subscription?.billingHistory || []).filter(
                       (inv) => inv.status === "paid"
                     ).length
                   }
@@ -1588,7 +1604,7 @@ Hairvana Team`;
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <p className="text-2xl font-bold text-blue-600">
                   $
-                  {subscription.billingHistory
+                  {(subscription?.billingHistory || [])
                     .reduce((sum, inv) => sum + Number(inv.total), 0)
                     .toFixed(2)}
                 </p>
@@ -1597,7 +1613,7 @@ Hairvana Team`;
               <div className="text-center p-4 bg-purple-50 rounded-lg">
                 <p className="text-2xl font-bold text-purple-600">
                   $
-                  {subscription.billingHistory
+                  {(subscription?.billingHistory || [])
                     .reduce((sum, inv) => sum + Number(inv.tax_amount || 0), 0)
                     .toFixed(2)}
                 </p>
@@ -1609,7 +1625,7 @@ Hairvana Team`;
       </Card>
 
       {/* Status Alerts */}
-      {subscription.status === "trial" && (
+      {subscription?.status === "trial" && (
         <Card className="border-0 shadow-sm border-blue-200 bg-blue-50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-blue-900">
@@ -1621,7 +1637,7 @@ Hairvana Team`;
             <p className="text-blue-700">
               This subscription is currently in trial period. The trial will end
               on{" "}
-              {format(new Date(subscription.nextBillingDate), "MMMM dd, yyyy")}.
+              {formatDate(subscription?.nextBillingDate, "MMMM dd, yyyy")}.
             </p>
             <div className="mt-4">
               <Button className="bg-blue-600 hover:bg-blue-700">
@@ -1633,7 +1649,7 @@ Hairvana Team`;
         </Card>
       )}
 
-      {subscription.status === "cancelled" && (
+      {subscription?.status === "cancelled" && (
         <Card className="border-0 shadow-sm border-red-200 bg-red-50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-900">
@@ -1644,7 +1660,7 @@ Hairvana Team`;
           <CardContent>
             <p className="text-red-700">
               This subscription has been cancelled. Access will continue until{" "}
-              {format(new Date(subscription.nextBillingDate), "MMMM dd, yyyy")}.
+              {formatDate(subscription?.nextBillingDate, "MMMM dd, yyyy")}.
             </p>
             <div className="mt-4">
               <Button className="bg-green-600 hover:bg-green-700">
@@ -1663,7 +1679,7 @@ Hairvana Team`;
             <AlertDialogTitle>Cancel Subscription</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to cancel the subscription for "
-              {subscription?.salonName}"? This action will immediately revoke
+              {subscription?.salonName || subscription?.ownerName || "this subscription"}"? This action will immediately revoke
               access to premium features and cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1696,7 +1712,7 @@ Hairvana Team`;
           <DialogHeader>
             <DialogTitle>Upgrade Subscription Plan</DialogTitle>
             <DialogDescription>
-              Choose a higher tier plan for "{subscription?.salonName}"
+              Choose a higher tier plan for "{subscription?.salonName || subscription?.ownerName || "this subscription"}"
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1708,7 +1724,7 @@ Hairvana Team`;
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {subscription &&
-                getAvailableUpgrades(subscription.plan).map((plan) => {
+                getAvailableUpgrades(subscription?.plan || "Basic").map((plan) => {
                   const PlanIcon = getPlanIcon(plan.name);
                   const isSelected = selectedNewPlan?.id === plan.id;
                   return (
@@ -1758,7 +1774,7 @@ Hairvana Team`;
                 })}
             </div>
             {subscription &&
-              getAvailableUpgrades(subscription.plan).length === 0 && (
+              getAvailableUpgrades(subscription?.plan || "Basic").length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <Crown className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>Already on the highest plan</p>
@@ -1793,7 +1809,7 @@ Hairvana Team`;
           <DialogHeader>
             <DialogTitle>Downgrade Subscription Plan</DialogTitle>
             <DialogDescription>
-              Choose a lower tier plan for "{subscription?.salonName}"
+              Choose a lower tier plan for "{subscription?.salonName || subscription?.ownerName || "this subscription"}"
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1808,7 +1824,7 @@ Hairvana Team`;
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {subscription &&
-                getAvailableDowngrades(subscription.plan).map((plan) => {
+                getAvailableDowngrades(subscription?.plan || "Basic").map((plan) => {
                   const PlanIcon = getPlanIcon(plan.name);
                   const isSelected = selectedNewPlan?.id === plan.id;
                   return (
@@ -1858,7 +1874,7 @@ Hairvana Team`;
                 })}
             </div>
             {subscription &&
-              getAvailableDowngrades(subscription.plan).length === 0 && (
+              getAvailableDowngrades(subscription?.plan || "Basic").length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <Zap className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>Already on the lowest plan</p>
@@ -1896,19 +1912,19 @@ Hairvana Team`;
           <DialogHeader>
             <DialogTitle>Edit Payment Method</DialogTitle>
             <DialogDescription>
-              Update the payment method for "{subscription?.salonName}"
+              Update the payment method for "{subscription?.salonName || subscription?.ownerName || "this subscription"}"
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {subscription?.paymentMethod && (
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-800">
-                  <strong>Current:</strong> {subscription.paymentMethod.brand}{" "}
-                  ending in {subscription.paymentMethod.last4}
+                  <strong>Current:</strong> {subscription?.paymentMethod?.brand || "Card"}{" "}
+                  ending in {subscription?.paymentMethod?.last4 || "****"}
                 </p>
                 <p className="text-xs text-gray-600">
-                  Expires {subscription.paymentMethod.expiryMonth}/
-                  {subscription.paymentMethod.expiryYear}
+                  Expires {subscription?.paymentMethod?.expiryMonth || "MM"}/
+                  {subscription?.paymentMethod?.expiryYear || "YYYY"}
                 </p>
               </div>
             )}
@@ -2017,7 +2033,7 @@ Hairvana Team`;
           <DialogHeader>
             <DialogTitle>Generate Invoice</DialogTitle>
             <DialogDescription>
-              Create a new invoice for "{subscription?.salonName}"
+              Create a new invoice for "{subscription?.salonName || subscription?.ownerName || "this subscription"}"
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -2163,7 +2179,7 @@ Hairvana Team`;
           <DialogHeader>
             <DialogTitle>Edit Subscription</DialogTitle>
             <DialogDescription>
-              Update subscription settings for "{subscription?.salonName}"
+              Update subscription settings for "{subscription?.salonName || subscription?.ownerName || "this subscription"}"
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

@@ -82,4 +82,10 @@ router.get('/payment/:paymentId/status',
   subscriptionPaymentController.checkPaymentStatus
 );
 
+// Send invoice email for a payment
+router.post('/payment/:paymentId/send-invoice',
+  authenticateOwner,
+  subscriptionPaymentController.sendInvoiceEmail
+);
+
 module.exports = router;

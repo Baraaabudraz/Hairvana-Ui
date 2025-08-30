@@ -244,20 +244,19 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
       locationsLimit: plan.limits?.locations || 1,
     };
 
-    // Create subscription for the owner (not tied to a specific salon)
-    const subscription = await Subscription.create({
-      salonId: null, // No specific salon - applies to all owner's salons
-      planId: payment.plan_id,
-      paymentId: payment.id,
-      amount: payment.amount,
-      startDate: startDate,
-      nextBillingDate: nextBillingDate,
-      status: 'active',
-      billingCycle: payment.billing_cycle,
-      billingPeriod: payment.billing_cycle,
-      usage: usage,
-      ownerId: payment.owner_id, // Link to owner instead of specific salon
-    }, { transaction: t });
+         // Create subscription for the owner (not tied to a specific salon)
+     const subscription = await Subscription.create({
+       planId: payment.plan_id,
+       paymentId: payment.id,
+       amount: payment.amount,
+       startDate: startDate,
+       nextBillingDate: nextBillingDate,
+       status: 'active',
+       billingCycle: payment.billing_cycle,
+       billingPeriod: payment.billing_cycle,
+       usage: usage,
+       ownerId: payment.owner_id, // Link to owner instead of specific salon
+     }, { transaction: t });
 
     return subscription;
   });
@@ -270,18 +269,18 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
  * @param {string} paymentId - Payment ID
  * @returns {Object} Subscription details
  */
-exports.getSubscriptionByPaymentId = async (paymentId) => {
-  const subscription = await Subscription.findOne({
-    where: { paymentId: paymentId },
-    include: [
-      { model: SubscriptionPlan, as: 'plan' },
-      { model: Salon, as: 'salon' }
-    ]
-  });
+ exports.getSubscriptionByPaymentId = async (paymentId) => {
+   const subscription = await Subscription.findOne({
+     where: { paymentId: paymentId },
+     include: [
+       { model: SubscriptionPlan, as: 'plan' },
+       { model: User, as: 'owner' }
+     ]
+   });
 
-  if (!subscription) {
-    throw new Error('Subscription not found for this payment');
-  }
+   if (!subscription) {
+     throw new Error('Subscription not found for this payment');
+   }
 
-  return subscription.toJSON();
-};
+   return subscription.toJSON();
+ };

@@ -1,59 +1,71 @@
-const {
-  Subscription,
-  Salon,
-  SubscriptionPlan,
-  BillingHistory,
-} = require("../models");
+ const {
+   Subscription,
+   Salon,
+   SubscriptionPlan,
+   BillingHistory,
+   User,
+ } = require("../models");
 const { Op } = require("sequelize");
 
-exports.getAllSubscriptions = async (query) => {
-  const { status, salonId, ownerId, search, includePlans } = query;
-  const where = {};
-  if (status && status !== "all") where.status = status;
-  if (salonId) where.salon_id = salonId;
-  const salonWhere = {};
-  if (ownerId) salonWhere.owner_id = ownerId;
-  if (search) {
-    salonWhere[Op.or] = [
-      { name: { [Op.iLike]: `%${search}%` } },
-      { owner_name: { [Op.iLike]: `%${search}%` } },
-    ];
-  }
-  const subscriptions = await Subscription.findAll({
-    where,
-    include: [
-      {
-        model: Salon,
-        as: "salon",
-        where: Object.keys(salonWhere).length ? salonWhere : undefined,
-        required: !!(ownerId || search),
-      },
-      { model: SubscriptionPlan, as: "plan" },
-    ],
-  });
-  const formattedSubscriptions = subscriptions.map((sub) => {
-    const s = sub.toJSON();
-    return {
-      id: s.id,
-      salonId: s.salon_id,
-      salonName: s.salon?.name,
-      salonPhone: s.salon?.phone,
-      salonEmail: s.salon?.email,
-      ownerId: s.salon?.owner_id,
-      ownerName: s.salon?.owner_name,
-      ownerEmail: s.salon?.owner_email,
-      plan: s.plan?.name,
-      status: s.status,
-      startDate: s.start_date,
-      nextBillingDate: s.next_billing_date,
-      amount: s.amount,
-      billingCycle: s.billing_cycle,
-      features: s.plan?.features,
-      usage: s.usage,
-      paymentMethod: s.payment_method,
-      billingHistory: [],
-    };
-  });
+ exports.getAllSubscriptions = async (query) => {
+   const { status, salonId, ownerId, search, includePlans } = query;
+   const where = {};
+   if (status && status !== "all") where.status = status;
+   if (ownerId) where.owner_id = ownerId;
+   
+   // Build include array - we'll handle salon filtering separately
+   const include = [
+     { model: SubscriptionPlan, as: "plan" },
+     { model: User, as: "owner" }
+   ];
+   
+   let subscriptions = await Subscription.findAll({
+     where,
+     include: include,
+   });
+   
+   // If filtering by salon, we need to filter after the fact
+   if (salonId) {
+     const salon = await Salon.findByPk(salonId);
+     if (salon) {
+       subscriptions = subscriptions.filter(sub => sub.owner_id === salon.owner_id);
+     } else {
+       subscriptions = []; // No salon found, return empty array
+     }
+   }
+   
+   // If searching, filter by owner name/email
+   if (search) {
+     subscriptions = subscriptions.filter(sub => {
+       const ownerName = sub.owner?.name || sub.owner?.email || '';
+       return ownerName.toLowerCase().includes(search.toLowerCase());
+     });
+   }
+   
+   const formattedSubscriptions = subscriptions.map((sub) => {
+     const s = sub.toJSON();
+     return {
+       id: s.id,
+       ownerId: s.owner_id,
+       ownerName: s.owner?.name || s.owner?.email,
+       ownerEmail: s.owner?.email,
+       plan: s.plan?.name,
+       status: s.status,
+       startDate: s.start_date,
+       nextBillingDate: s.next_billing_date,
+       amount: s.amount,
+       billingCycle: s.billing_cycle,
+       features: s.plan?.features,
+       usage: s.usage,
+       paymentMethod: s.payment_method,
+       billingHistory: [],
+       // For backward compatibility, include salon info if we have a salonId filter
+       salonId: salonId || null,
+       salonName: null, // We'll need to fetch this separately if needed
+       salonPhone: null,
+       salonEmail: null,
+     };
+   });
   const stats = {
     total: formattedSubscriptions.length,
     active: formattedSubscriptions.filter((s) => s.status === "active").length,
@@ -76,116 +88,114 @@ exports.getAllSubscriptions = async (query) => {
   return response;
 };
 
-exports.getSubscriptionById = async (id) => {
-  const sub = await Subscription.findOne({
-    where: { id },
-    include: [
-      { model: Salon, as: "salon" },
-      { model: SubscriptionPlan, as: "plan" },
-    ],
-  });
-  if (!sub) return null;
-  const s = sub.toJSON();
-  let usage = s.usage;
-  if (!usage) {
-    usage = {
-      bookings: 0,
-      bookingsLimit:
-        s.plan && s.plan.limits && s.plan.limits.bookings != null
-          ? s.plan.limits.bookings
-          : 0,
-      staff: 0,
-      staffLimit:
-        s.plan && s.plan.limits && s.plan.limits.staff != null
-          ? s.plan.limits.staff
-          : 0,
-      locations: 1,
-      locationsLimit:
-        s.plan && s.plan.limits && s.plan.limits.locations != null
-          ? s.plan.limits.locations
-          : 1,
-    };
-  }
-  let billingHistory = await BillingHistory.findAll({
-    where: { subscription_id: s.id },
-    order: [["date", "DESC"]],
-  });
-  billingHistory = billingHistory.map((bh) => {
-    const obj = bh.toJSON();
-    return {
-      ...obj,
-      total:
-        obj.total !== undefined
-          ? obj.total
-          : Number(obj.amount) + Number(obj.tax_amount || 0),
-    };
-  });
-  return {
-    id: s.id,
-    salonId: s.salon_id,
-    salonName: s.salon?.name,
-    salonPhone: s.salon?.phone,
-    salonEmail: s.salon?.email,
-    ownerId: s.salon?.owner_id,
-    ownerName: s.salon?.ownerName,
-    ownerEmail: s.salon?.ownerEmail,
-    plan: s.plan?.name,
-    status: s.status,
-    startDate: s.start_date,
-    nextBillingDate: s.nextBillingDate,
-    amount: s.amount,
-    billingCycle: s.billingCycle,
-    features: s.plan?.features,
-    usage,
-    paymentMethod: s.paymentMethod,
-    billingHistory,
-    startDate: s.startDate,
-  };
-};
+ exports.getSubscriptionById = async (id) => {
+   const sub = await Subscription.findOne({
+     where: { id },
+     include: [
+       { model: User, as: "owner" },
+       { model: SubscriptionPlan, as: "plan" },
+     ],
+   });
+   if (!sub) return null;
+   const s = sub.toJSON();
+   let usage = s.usage;
+   if (!usage) {
+     usage = {
+       bookings: 0,
+       bookingsLimit:
+         s.plan && s.plan.limits && s.plan.limits.bookings != null
+           ? s.plan.limits.bookings
+           : 0,
+       staff: 0,
+       staffLimit:
+         s.plan && s.plan.limits && s.plan.limits.staff != null
+           ? s.plan.limits.staff
+           : 0,
+       locations: 1,
+       locationsLimit:
+         s.plan && s.plan.limits && s.plan.limits.locations != null
+           ? s.plan.limits.locations
+           : 1,
+     };
+   }
+   let billingHistory = await BillingHistory.findAll({
+     where: { subscription_id: s.id },
+     order: [["date", "DESC"]],
+   });
+   billingHistory = billingHistory.map((bh) => {
+     const obj = bh.toJSON();
+     return {
+       ...obj,
+       total:
+         obj.total !== undefined
+           ? obj.total
+           : Number(obj.amount) + Number(obj.tax_amount || 0),
+     };
+   });
+   return {
+     id: s.id,
+     ownerId: s.owner_id,
+     ownerName: s.owner?.name || s.owner?.email,
+     ownerEmail: s.owner?.email,
+     plan: s.plan?.name,
+     status: s.status,
+     startDate: s.start_date,
+     nextBillingDate: s.next_billing_date,
+     amount: s.amount,
+     billingCycle: s.billing_cycle,
+     features: s.plan?.features,
+     usage,
+     paymentMethod: s.payment_method,
+     billingHistory,
+   };
+ };
 
-exports.createSubscription = async (data) => {
-  console.log("data", data);
-  if (!data.salonId || !data.planId)
-    throw new Error("salon_id and plan_id are required");
-  const plan = await SubscriptionPlan.findOne({ where: { id: data.planId } });
-  if (!plan) throw new Error("Invalid plan ID");
-  const salon = await Salon.findOne({ where: { id: data.salonId } });
-  if (!salon) throw new Error("Invalid salon ID");
-  
-  // Calculate next billing date based on billing cycle
-  const startDate = data.startDate || new Date();
-  const billingCycle = data.billingCycle || plan.billing_period || 'monthly';
-  const nextBillingDate = new Date(startDate);
-  
-  if (billingCycle === 'yearly') {
-    nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
-  } else {
-    nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
-  }
-  
-  // Initialize usage with plan limits
-  const usage = {
-    bookings: 0,
-    bookingsLimit: plan.limits?.bookings || 0,
-    staff: 0,
-    staffLimit: plan.limits?.staff || 0,
-    locations: 1,
-    locationsLimit: plan.limits?.locations || 1,
-  };
-  
-  const newSub = await Subscription.create({
-    salonId: data.salonId,
-    planId: data.planId,
-    amount: billingCycle === 'yearly' ? plan.yearly_price : plan.price,
-    startDate: startDate,
-    nextBillingDate: nextBillingDate,
-    status: data.status || "active",
-    billingCycle: billingCycle,
-    billingPeriod: billingCycle, // Set both for compatibility
-    usage: usage,
-  });
-  return newSub.toJSON();
-};
+ exports.createSubscription = async (data) => {
+   console.log("data", data);
+   if (!data.ownerId || !data.planId)
+     throw new Error("owner_id and plan_id are required");
+   const plan = await SubscriptionPlan.findOne({ where: { id: data.planId } });
+   if (!plan) throw new Error("Invalid plan ID");
+   const user = await User.findOne({ where: { id: data.ownerId } });
+   if (!user) throw new Error("Invalid owner ID");
+   
+   // Calculate next billing date based on billing cycle
+   const startDate = data.startDate || new Date();
+   const billingCycle = data.billingCycle || plan.billing_period || 'monthly';
+   const nextBillingDate = new Date(startDate);
+   
+   if (billingCycle === 'yearly') {
+     nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
+   } else {
+     nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+   }
+   
+   // Get count of salons for this owner to set initial location count
+   const salonCount = await Salon.count({ where: { owner_id: data.ownerId } });
+   
+   // Initialize usage with plan limits
+   const usage = {
+     bookings: 0,
+     bookingsLimit: plan.limits?.bookings || 0,
+     staff: 0,
+     staffLimit: plan.limits?.staff || 0,
+     locations: Math.max(1, salonCount), // At least 1 location
+     locationsLimit: plan.limits?.locations || 1,
+   };
+   
+   const newSub = await Subscription.create({
+     ownerId: data.ownerId,
+     planId: data.planId,
+     amount: billingCycle === 'yearly' ? plan.yearly_price : plan.price,
+     startDate: startDate,
+     nextBillingDate: nextBillingDate,
+     status: data.status || "active",
+     billingCycle: billingCycle,
+     billingPeriod: billingCycle, // Set both for compatibility
+     usage: usage,
+   });
+   return newSub.toJSON();
+ };
 
 exports.updateSubscription = async (id, data) => {
   if (data.planId) {
@@ -523,23 +533,23 @@ exports.upgradeSubscription = async (id, data) => {
     include: [{ model: SubscriptionPlan, as: 'plan' }]
   });
 
-  const s = updatedSubscription.toJSON();
-  return {
-    id: s.id,
-    salonId: s.salon_id,
-    plan: s.plan,
-    status: s.status,
-    startDate: s.start_date,
-    endDate: s.end_date,
-    billingCycle: s.billing_cycle,
-    nextBillingDate: s.next_billing_date,
-    amount: s.amount,
-    usage: s.usage,
-    paymentMethod: s.payment_method,
-    createdAt: s.created_at,
-    updatedAt: s.updated_at,
-    upgradeType: 'immediate'
-  };
+     const s = updatedSubscription.toJSON();
+   return {
+     id: s.id,
+     ownerId: s.owner_id,
+     plan: s.plan,
+     status: s.status,
+     startDate: s.start_date,
+     endDate: s.end_date,
+     billingCycle: s.billing_cycle,
+     nextBillingDate: s.next_billing_date,
+     amount: s.amount,
+     usage: s.usage,
+     paymentMethod: s.payment_method,
+     createdAt: s.created_at,
+     updatedAt: s.updated_at,
+     upgradeType: 'immediate'
+   };
 };
 
 /**
@@ -583,21 +593,21 @@ exports.downgradeSubscription = async (id, data) => {
     include: [{ model: SubscriptionPlan, as: 'plan' }]
   });
 
-  const s = updatedSubscription.toJSON();
-  return {
-    id: s.id,
-    salonId: s.salon_id,
-    plan: s.plan,
-    status: s.status,
-    startDate: s.start_date,
-    endDate: s.end_date,
-    billingCycle: s.billing_cycle,
-    nextBillingDate: s.next_billing_date,
-    amount: s.amount,
-    usage: s.usage,
-    paymentMethod: s.payment_method,
-    createdAt: s.created_at,
-    updatedAt: s.updated_at,
-    downgradeType: 'end_of_cycle'
-  };
+     const s = updatedSubscription.toJSON();
+   return {
+     id: s.id,
+     ownerId: s.owner_id,
+     plan: s.plan,
+     status: s.status,
+     startDate: s.start_date,
+     endDate: s.end_date,
+     billingCycle: s.billing_cycle,
+     nextBillingDate: s.next_billing_date,
+     amount: s.amount,
+     usage: s.usage,
+     paymentMethod: s.payment_method,
+     createdAt: s.created_at,
+     updatedAt: s.updated_at,
+     downgradeType: 'end_of_cycle'
+   };
 };

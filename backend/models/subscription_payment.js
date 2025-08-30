@@ -5,16 +5,10 @@ const { v4: uuidv4 } = require('uuid');
 module.exports = (sequelize, DataTypes) => {
   class SubscriptionPayment extends Model {
     static associate(models) {
-      // SubscriptionPayment belongs to a User (salon owner)
+      // SubscriptionPayment belongs to a User (owner)
       SubscriptionPayment.belongsTo(models.User, {
-        foreignKey: 'user_id',
-        as: 'user'
-      });
-      
-      // SubscriptionPayment belongs to a Salon
-      SubscriptionPayment.belongsTo(models.Salon, {
-        foreignKey: 'salon_id',
-        as: 'salon'
+        foreignKey: 'owner_id',
+        as: 'owner'
       });
       
       // SubscriptionPayment belongs to a SubscriptionPlan
@@ -35,21 +29,12 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false,
     },
-    user_id: {
+
+    owner_id: {
       type: DataTypes.UUID,
       allowNull: false,
       references: {
         model: 'users',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'CASCADE'
-    },
-    salon_id: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      references: {
-        model: 'salons',
         key: 'id'
       },
       onUpdate: 'CASCADE',

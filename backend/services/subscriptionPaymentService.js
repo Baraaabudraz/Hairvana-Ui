@@ -51,7 +51,9 @@ exports.createSubscriptionPaymentIntent = async (data) => {
     billing_cycle: billingCycle,
     method: 'stripe',
     status: 'pending',
-    expires_at: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
+    expires_at: billingCycle === 'yearly' 
+      ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 1 month
     metadata: {
       plan_name: plan.name,
       owner_name: user.name || user.email,

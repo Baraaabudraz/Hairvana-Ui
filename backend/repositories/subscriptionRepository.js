@@ -404,6 +404,47 @@ exports.getSubscriptionBySalonId = async (salonId) => {
   };
 };
 
+exports.getSubscriptionByOwnerId = async (ownerId) => {
+  const subscription = await Subscription.findOne({
+    where: { owner_id: ownerId },
+    include: [
+      { model: SubscriptionPlan, as: 'plan' }
+    ],
+    order: [['created_at', 'DESC']]
+  });
+  
+  if (!subscription) return null;
+  
+  const s = subscription.toJSON();
+  let usage = s.usage;
+  if (!usage) {
+    usage = {
+      bookings: 0,
+      bookingsLimit: s.plan && s.plan.limits && s.plan.limits.bookings != null ? s.plan.limits.bookings : 0,
+      staff: 0,
+      staffLimit: s.plan && s.plan.limits && s.plan.limits.staff != null ? s.plan.limits.staff : 0,
+      locations: 1,
+      locationsLimit: s.plan && s.plan.limits && s.plan.limits.locations != null ? s.plan.limits.locations : 1,
+    };
+  }
+  
+  return {
+    id: s.id,
+    ownerId: s.owner_id,
+    plan: s.plan,
+    status: s.status,
+    startDate: s.start_date,
+    endDate: s.end_date,
+    billingCycle: s.billing_cycle,
+    nextBillingDate: s.next_billing_date,
+    amount: s.amount,
+    usage: usage,
+    paymentMethod: s.payment_method,
+    createdAt: s.created_at,
+    updatedAt: s.updated_at
+  };
+};
+
 exports.getBillingHistoryBySubscriptionId = async (subscriptionId) => {
   const billingHistory = await BillingHistory.findAll({
     where: { subscription_id: subscriptionId },

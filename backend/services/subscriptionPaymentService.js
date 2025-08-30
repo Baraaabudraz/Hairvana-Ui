@@ -214,6 +214,9 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
     // Get plan details
     const plan = await SubscriptionPlan.findByPk(payment.plan_id, { transaction: t });
     
+    // Get owner details
+    const owner = await User.findByPk(payment.owner_id, { transaction: t });
+    
     // Get all salons belonging to this owner
     const salons = await Salon.findAll({
       where: { owner_id: payment.owner_id },
@@ -244,24 +247,45 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
       locationsLimit: plan.limits?.locations || 1,
     };
 
-         // Create subscription for the owner (not tied to a specific salon)
-     const subscription = await Subscription.create({
-       planId: payment.plan_id,
-       paymentId: payment.id,
-       amount: payment.amount,
-       startDate: startDate,
-       nextBillingDate: nextBillingDate,
-       status: 'active',
-       billingCycle: payment.billing_cycle,
-       billingPeriod: payment.billing_cycle,
-       usage: usage,
-       ownerId: payment.owner_id, // Link to owner instead of specific salon
-     }, { transaction: t });
+    // Create subscription for the owner (not tied to a specific salon)
+    const subscription = await Subscription.create({
+      planId: payment.plan_id,
+      paymentId: payment.id,
+      amount: payment.amount,
+      startDate: startDate,
+      nextBillingDate: nextBillingDate,
+      status: 'active',
+      billingCycle: payment.billing_cycle,
+      billingPeriod: payment.billing_cycle,
+      usage: usage,
+      ownerId: payment.owner_id, // Link to owner instead of specific salon
+    }, { transaction: t });
 
-    return subscription;
+    return { subscription, payment, plan, owner };
   });
 
-  return result;
+  // Send invoice email after successful transaction
+  try {
+    const emailService = require('./emailService');
+    const emailSent = await emailService.sendInvoiceEmail(
+      result.owner.email,
+      result.payment,
+      result.subscription,
+      result.plan,
+      result.owner
+    );
+    
+    if (emailSent) {
+      console.log(`Invoice email sent successfully to ${result.owner.email} for payment ${result.payment.id}`);
+    } else {
+      console.error(`Failed to send invoice email to ${result.owner.email} for payment ${result.payment.id}`);
+    }
+  } catch (emailError) {
+    console.error('Error sending invoice email:', emailError);
+    // Don't fail the payment process if email fails
+  }
+
+  return result.subscription;
 };
 
 /**
@@ -284,3 +308,50 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
 
    return subscription.toJSON();
  };
+
+/**
+ * Manually send invoice email for a payment
+ * @param {string} paymentId - Payment ID
+ * @param {string} userId - User ID for verification
+ * @returns {Object} Email sending result
+ */
+exports.sendInvoiceEmailForPayment = async (paymentId, userId) => {
+  const payment = await SubscriptionPayment.findOne({
+    where: { id: paymentId, owner_id: userId },
+    include: [
+      { model: SubscriptionPlan, as: 'plan' },
+      { model: User, as: 'owner' }
+    ]
+  });
+
+  if (!payment) {
+    throw new Error('Payment not found or access denied');
+  }
+
+  // Get subscription if it exists
+  let subscription = null;
+  try {
+    subscription = await Subscription.findOne({
+      where: { paymentId: paymentId }
+    });
+  } catch (error) {
+    console.log('No subscription found for payment:', paymentId);
+  }
+
+  // Send invoice email
+  const emailService = require('./emailService');
+  const emailSent = await emailService.sendInvoiceEmail(
+    payment.owner.email,
+    payment,
+    subscription,
+    payment.plan,
+    payment.owner
+  );
+
+  return {
+    success: emailSent,
+    email: payment.owner.email,
+    paymentId: payment.id,
+    message: emailSent ? 'Invoice email sent successfully' : 'Failed to send invoice email'
+  };
+};

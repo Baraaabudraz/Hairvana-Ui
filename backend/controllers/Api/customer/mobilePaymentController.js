@@ -276,10 +276,12 @@ async function handlePaymentSucceeded(paymentIntent) {
         
         // Send notification to salon owner
         await notificationService.sendToUsers([
-          paymentIntent.metadata.user_id
+          paymentIntent.metadata.user_id,
+          paymentIntent.metadata.owner_id
         ], 'Subscription Activated', 'Your subscription payment was successful and your salon subscription is now active.', { 
           subscriptionId: subscription.id,
-          salonId: paymentIntent.metadata.salon_id 
+          salonId: paymentIntent.metadata.salon_id,
+          ownerId: paymentIntent.metadata.owner_id
         });
         
         return;

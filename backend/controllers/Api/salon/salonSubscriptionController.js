@@ -100,23 +100,15 @@ exports.getCurrentSubscription = async (req, res, next) => {
  */
 exports.subscribeToPlan = async (req, res, next) => {
   try {
-    const { salonId, planId, billingCycle } = req.body;
+    const { planId, billingCycle } = req.body;
+    const userId = req.user.id;
 
-    // Verify salon ownership
-    const salon = await salonService.getSalonById(salonId, req);
-    if (!salon || salon.owner_id !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. You can only subscribe for your own salons.'
-      });
-    }
-
-    // Check if salon already has an active subscription
-    const existingSubscription = await subscriptionService.getSubscriptionBySalonId(salonId);
+    // Check if owner already has an active subscription
+    const existingSubscription = await subscriptionService.getSubscriptionByOwnerId(userId);
     if (existingSubscription && existingSubscription.status === 'active') {
       return res.status(400).json({
         success: false,
-        message: 'Salon already has an active subscription. Please upgrade or cancel existing subscription first.'
+        message: 'You already have an active subscription. Please upgrade or cancel existing subscription first.'
       });
     }
 
@@ -134,7 +126,6 @@ exports.subscribeToPlan = async (req, res, next) => {
       success: true,
       message: 'Please complete payment to activate your subscription. Use the payment endpoint to create a payment intent.',
       data: {
-        salonId,
         planId,
         billingCycle: billingCycle || plan.billing_period || 'monthly',
         plan: {
@@ -145,7 +136,6 @@ exports.subscribeToPlan = async (req, res, next) => {
         },
         nextStep: 'Create payment intent using POST /backend/api/v0/salon/subscription/payment/create-intent',
         paymentRequestData: {
-          salonId: salonId,
           planId: planId,
           billingCycle: billingCycle || plan.billing_period || 'monthly'
         }

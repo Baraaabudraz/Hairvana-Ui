@@ -7,20 +7,10 @@ const salonService = require('../../../services/salonService');
  */
 exports.createSubscriptionPaymentIntent = async (req, res, next) => {
   try {
-    const { salonId, planId, billingCycle } = req.body;
+    const { planId, billingCycle } = req.body;
     const userId = req.user.id;
 
-    // Verify salon ownership
-    const salon = await salonService.getSalonById(salonId, req);
-    if (!salon || salon.owner_id !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. You can only create payments for your own salons.'
-      });
-    }
-
     const paymentIntent = await subscriptionPaymentService.createSubscriptionPaymentIntent({
-      salonId,
       planId,
       billingCycle: billingCycle || 'monthly',
       userId
@@ -60,12 +50,11 @@ exports.getSubscriptionPaymentById = async (req, res, next) => {
  * Get subscription payments for a salon
  * GET /backend/api/v0/salon/subscription/payment/salon/:salonId
  */
-exports.getSubscriptionPaymentsBySalonId = async (req, res, next) => {
+exports.getSubscriptionPaymentsByOwnerId = async (req, res, next) => {
   try {
-    const { salonId } = req.params;
     const userId = req.user.id;
 
-    const payments = await subscriptionPaymentService.getSubscriptionPaymentsBySalonId(salonId, userId);
+    const payments = await subscriptionPaymentService.getSubscriptionPaymentsByOwnerId(userId);
 
     return res.status(200).json({
       success: true,

@@ -7,11 +7,11 @@ const Stripe = require('stripe');
  * @returns {Object} Payment intent with client secret
  */
 exports.createSubscriptionPaymentIntent = async (data) => {
-  const { salonId, planId, billingCycle, userId } = data;
+  const { planId, billingCycle, userId } = data;
 
   // Validate inputs
-  if (!salonId || !planId || !userId) {
-    throw new Error('Salon ID, Plan ID, and User ID are required');
+  if (!planId || !userId) {
+    throw new Error('Plan ID and User ID are required');
   }
 
   // Get plan details
@@ -20,14 +20,10 @@ exports.createSubscriptionPaymentIntent = async (data) => {
     throw new Error('Invalid plan ID');
   }
 
-  // Get salon details and verify ownership
-  const salon = await Salon.findByPk(salonId);
-  if (!salon) {
-    throw new Error('Invalid salon ID');
-  }
-
-  if (salon.owner_id !== userId) {
-    throw new Error('Access denied. You can only pay for your own salons.');
+  // Verify user exists
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new Error('Invalid user ID');
   }
 
   // Calculate amount based on billing cycle
@@ -49,8 +45,7 @@ exports.createSubscriptionPaymentIntent = async (data) => {
 
   // Create subscription payment record
   const subscriptionPayment = await SubscriptionPayment.create({
-    user_id: userId,
-    salon_id: salonId,
+    owner_id: userId,
     plan_id: planId,
     amount: amount,
     billing_cycle: billingCycle,
@@ -59,7 +54,7 @@ exports.createSubscriptionPaymentIntent = async (data) => {
     expires_at: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
     metadata: {
       plan_name: plan.name,
-      salon_name: salon.name,
+      owner_name: user.name || user.email,
       billing_cycle: billingCycle
     }
   });
@@ -70,12 +65,11 @@ exports.createSubscriptionPaymentIntent = async (data) => {
     currency: 'usd',
     metadata: {
       subscription_payment_id: subscriptionPayment.id,
-      salon_id: salonId,
+      owner_id: userId,
       plan_id: planId,
-      user_id: userId,
       billing_cycle: billingCycle
     },
-    description: `Subscription payment for ${plan.name} plan - ${salon.name}`,
+    description: `Subscription payment for ${plan.name} plan - ${user.name || user.email}`,
     automatic_payment_methods: {
       enabled: true,
     },
@@ -98,9 +92,9 @@ exports.createSubscriptionPaymentIntent = async (data) => {
       name: plan.name,
       description: plan.description
     },
-    salon: {
-      id: salon.id,
-      name: salon.name
+    owner: {
+      id: user.id,
+      name: user.name || user.email
     },
     billingCycle: billingCycle,
     expiresAt: subscriptionPayment.expires_at
@@ -115,11 +109,10 @@ exports.createSubscriptionPaymentIntent = async (data) => {
  */
 exports.getSubscriptionPaymentById = async (paymentId, userId) => {
   const payment = await SubscriptionPayment.findOne({
-    where: { id: paymentId, user_id: userId },
+    where: { id: paymentId, owner_id: userId },
     include: [
       { model: SubscriptionPlan, as: 'plan' },
-      { model: Salon, as: 'salon' },
-      { model: User, as: 'user' }
+      { model: User, as: 'owner' }
     ]
   });
 
@@ -136,18 +129,12 @@ exports.getSubscriptionPaymentById = async (paymentId, userId) => {
  * @param {string} userId - User ID for verification
  * @returns {Array} Payment history
  */
-exports.getSubscriptionPaymentsBySalonId = async (salonId, userId) => {
-  // Verify salon ownership
-  const salon = await Salon.findByPk(salonId);
-  if (!salon || salon.owner_id !== userId) {
-    throw new Error('Access denied. You can only view payments for your own salons.');
-  }
-
+exports.getSubscriptionPaymentsByOwnerId = async (userId) => {
   const payments = await SubscriptionPayment.findAll({
-    where: { salon_id: salonId },
+    where: { owner_id: userId },
     include: [
       { model: SubscriptionPlan, as: 'plan' },
-      { model: User, as: 'user' }
+      { model: User, as: 'owner' }
     ],
     order: [['created_at', 'DESC']]
   });
@@ -163,7 +150,7 @@ exports.getSubscriptionPaymentsBySalonId = async (salonId, userId) => {
  */
 exports.cancelSubscriptionPayment = async (paymentId, userId) => {
   const payment = await SubscriptionPayment.findOne({
-    where: { id: paymentId, user_id: userId }
+    where: { id: paymentId, owner_id: userId }
   });
 
   if (!payment) {
@@ -222,9 +209,18 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
       payment_date: new Date()
     }, { transaction: t });
 
-    // Create subscription
+    // Get plan details
     const plan = await SubscriptionPlan.findByPk(payment.plan_id, { transaction: t });
-    const salon = await Salon.findByPk(payment.salon_id, { transaction: t });
+    
+    // Get all salons belonging to this owner
+    const salons = await Salon.findAll({
+      where: { owner_id: payment.owner_id },
+      transaction: t
+    });
+
+    if (salons.length === 0) {
+      throw new Error('No salons found for this owner');
+    }
 
     // Calculate next billing date
     const startDate = new Date();
@@ -242,13 +238,13 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
       bookingsLimit: plan.limits?.bookings || 0,
       staff: 0,
       staffLimit: plan.limits?.staff || 0,
-      locations: 1,
+      locations: salons.length,
       locationsLimit: plan.limits?.locations || 1,
     };
 
-    // Create subscription
+    // Create subscription for the owner (not tied to a specific salon)
     const subscription = await Subscription.create({
-      salonId: payment.salon_id,
+      salonId: null, // No specific salon - applies to all owner's salons
       planId: payment.plan_id,
       paymentId: payment.id,
       amount: payment.amount,
@@ -258,6 +254,7 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
       billingCycle: payment.billing_cycle,
       billingPeriod: payment.billing_cycle,
       usage: usage,
+      ownerId: payment.owner_id, // Link to owner instead of specific salon
     }, { transaction: t });
 
     return subscription;

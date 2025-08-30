@@ -9,20 +9,16 @@ module.exports = (sequelize, DataTypes) => {
      * This method is not a part of Sequelize lifecycle.
      * The `models/index` file will call this method automatically.
      */
-    static associate(models) {
-      Subscription.belongsTo(models.Salon, {
-        foreignKey: "salon_id",
-        as: "salon",
-      });
-      Subscription.belongsTo(models.User, {
-        foreignKey: "owner_id",
-        as: "owner",
-      });
-      Subscription.belongsTo(models.SubscriptionPlan, {
-        foreignKey: "plan_id",
-        as: "plan",
-      });
-    }
+         static associate(models) {
+       Subscription.belongsTo(models.User, {
+         foreignKey: "owner_id",
+         as: "owner",
+       });
+       Subscription.belongsTo(models.SubscriptionPlan, {
+         foreignKey: "plan_id",
+         as: "plan",
+       });
+     }
   }
   Subscription.init(
     {
@@ -32,24 +28,15 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         allowNull: false,
       },
-      salonId: {
-        type: DataTypes.UUID,
-        allowNull: true,
-        references: {
-          model: "salons",
-          key: "id",
-        },
-        field: "salon_id",
-      },
-      ownerId: {
-        type: DataTypes.UUID,
-        allowNull: true,
-        references: {
-          model: "users",
-          key: "id",
-        },
-        field: "owner_id",
-      },
+                    ownerId: {
+         type: DataTypes.UUID,
+         allowNull: false,
+         references: {
+           model: "users",
+           key: "id",
+         },
+         field: "owner_id",
+       },
       planId: {
         type: DataTypes.UUID,
         allowNull: false,

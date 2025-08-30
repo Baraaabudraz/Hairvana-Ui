@@ -1,4 +1,4 @@
-const { SubscriptionPayment, SubscriptionPlan, Salon, User } = require('../models');
+const { SubscriptionPayment, SubscriptionPlan, Salon, User, Subscription } = require('../models');
 const Stripe = require('stripe');
 
 /**

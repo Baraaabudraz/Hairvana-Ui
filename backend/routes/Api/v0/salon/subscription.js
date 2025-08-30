@@ -64,10 +64,10 @@ router.get('/payment/:paymentId',
   subscriptionPaymentController.getSubscriptionPaymentById
 );
 
-// Get subscription payments for a salon
-router.get('/payment/salon/:salonId',
+// Get subscription payments for the authenticated owner
+router.get('/payment/owner',
   authenticateOwner,
-  subscriptionPaymentController.getSubscriptionPaymentsBySalonId
+  subscriptionPaymentController.getSubscriptionPaymentsByOwnerId
 );
 
 // Cancel subscription payment

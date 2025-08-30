@@ -21,7 +21,7 @@ export default function DashboardPage() {
     }
   }, []);
 
-  if (user?.role === "user") {
+  if (user?.role === "customer") {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">

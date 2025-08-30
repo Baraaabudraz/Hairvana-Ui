@@ -3,15 +3,9 @@ const { commonRules } = require('./index');
 
 /**
  * Validation schema for creating a new subscription
- * Simplified: Only salonId and planId required - everything else is calculated automatically
+ * Simplified: Only planId required - everything else is calculated automatically
  */
 const createSubscriptionValidation = [
-  body('salonId')
-    .notEmpty()
-    .withMessage('Salon ID is required')
-    .isUUID()
-    .withMessage('Salon ID must be a valid UUID'),
-  
   body('planId')
     .notEmpty()
     .withMessage('Plan ID is required')
@@ -34,15 +28,9 @@ const createSubscriptionValidation = [
 
 /**
  * Validation schema for upgrading/downgrading subscriptions
- * Simplified: Only salonId and planId required - everything else is calculated automatically
+ * Simplified: Only planId required - everything else is calculated automatically
  */
 const updateSubscriptionValidation = [
-  body('salonId')
-    .notEmpty()
-    .withMessage('Salon ID is required')
-    .isUUID()
-    .withMessage('Salon ID must be a valid UUID'),
-
   body('planId')
     .notEmpty()
     .withMessage('Plan ID is required')
@@ -66,12 +54,6 @@ const updateSubscriptionValidation = [
  * Validation schema for subscription payment intent creation
  */
 const createPaymentIntentValidation = [
-  body('salonId')
-    .notEmpty()
-    .withMessage('Salon ID is required')
-    .isUUID()
-    .withMessage('Salon ID must be a valid UUID'),
-
   body('planId')
     .notEmpty()
     .withMessage('Plan ID is required')

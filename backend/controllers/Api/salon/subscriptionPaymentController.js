@@ -132,3 +132,28 @@ exports.checkPaymentStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Send invoice email for a payment
+ * POST /backend/api/v0/salon/subscription/payment/:paymentId/send-invoice
+ */
+exports.sendInvoiceEmail = async (req, res, next) => {
+  try {
+    const { paymentId } = req.params;
+    const userId = req.user.id;
+
+    const result = await subscriptionPaymentService.sendInvoiceEmailForPayment(paymentId, userId);
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        email: result.email,
+        paymentId: result.paymentId,
+        sent: result.success
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};

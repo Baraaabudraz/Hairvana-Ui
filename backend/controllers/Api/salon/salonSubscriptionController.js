@@ -182,34 +182,51 @@ exports.subscribeToPlan = async (req, res, next) => {
  */
 exports.upgradeSubscription = async (req, res, next) => {
   try {
-    const { salonId, planId, billingCycle } = req.body;
+    const { planId, billingCycle } = req.body;
+    const ownerId = req.user.id; // Get owner ID from authenticated user
     
-    // Verify salon ownership
-    const salon = await salonService.getSalonById(salonId, req);
-    if (!salon || salon.owner_id !== req.user.id) {
-      return res.status(403).json({
+    // Validate required parameters
+    if (!planId) {
+      return res.status(400).json({
         success: false,
-        message: 'Access denied. You can only upgrade subscriptions for your own salons.'
+        message: 'Plan ID is required'
       });
     }
 
-    // Get current subscription
-    const currentSubscription = await subscriptionService.getSubscriptionBySalonId(salonId);
+    // Get current subscription by owner ID
+    const currentSubscription = await subscriptionService.getSubscriptionByOwnerId(ownerId);
     if (!currentSubscription) {
       return res.status(404).json({
         success: false,
-        message: 'No active subscription found for this salon'
+        message: 'No active subscription found for this owner'
       });
     }
 
+    // Debug logging
+    console.log('Upgrade subscription - Debug info:', {
+      ownerId,
+      planId,
+      billingCycle,
+      currentSubscriptionId: currentSubscription.id,
+      currentPlanId: currentSubscription.plan?.id,
+      currentPlan: currentSubscription.plan
+    });
+
     // Get plan details to validate upgrade
-    const currentPlan = await subscriptionService.getPlanById(currentSubscription.planId);
+    const currentPlan = await subscriptionService.getPlanById(currentSubscription.plan?.id);
     const newPlan = await subscriptionService.getPlanById(planId);
     
     if (!newPlan) {
       return res.status(404).json({
         success: false,
         message: 'Plan not found'
+      });
+    }
+
+    if (!currentPlan) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current subscription plan not found'
       });
     }
 
@@ -250,34 +267,41 @@ exports.upgradeSubscription = async (req, res, next) => {
  */
 exports.downgradeSubscription = async (req, res, next) => {
   try {
-    const { salonId, planId, billingCycle } = req.body;
+    const { planId, billingCycle } = req.body;
+    const ownerId = req.user.id; // Get owner ID from authenticated user
     
-    // Verify salon ownership
-    const salon = await salonService.getSalonById(salonId, req);
-    if (!salon || salon.owner_id !== req.user.id) {
-      return res.status(403).json({
+    // Validate required parameters
+    if (!planId) {
+      return res.status(400).json({
         success: false,
-        message: 'Access denied. You can only downgrade subscriptions for your own salons.'
+        message: 'Plan ID is required'
       });
     }
 
-    // Get current subscription
-    const currentSubscription = await subscriptionService.getSubscriptionBySalonId(salonId);
+    // Get current subscription by owner ID
+    const currentSubscription = await subscriptionService.getSubscriptionByOwnerId(ownerId);
     if (!currentSubscription) {
       return res.status(404).json({
         success: false,
-        message: 'No active subscription found for this salon'
+        message: 'No active subscription found for this owner'
       });
     }
 
     // Get plan details to validate downgrade
-    const currentPlan = await subscriptionService.getPlanById(currentSubscription.planId);
+    const currentPlan = await subscriptionService.getPlanById(currentSubscription.plan?.id);
     const newPlan = await subscriptionService.getPlanById(planId);
     
     if (!newPlan) {
       return res.status(404).json({
         success: false,
         message: 'Plan not found'
+      });
+    }
+
+    if (!currentPlan) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current subscription plan not found'
       });
     }
 

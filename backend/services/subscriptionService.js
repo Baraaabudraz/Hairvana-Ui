@@ -98,6 +98,100 @@ exports.updatePaymentMethod = async (id, data, supabase) => {
   if (!id) throw new Error('Subscription ID is required');
   if (!data || typeof data !== 'object') throw new Error('Payment method data is required');
   if (!supabase) throw new Error('Supabase client is required');
+
+/**
+ * Upgrade subscription to a new plan
+ * @param {string} subscriptionId - Current subscription ID
+ * @param {string} newPlanId - New plan ID to upgrade to
+ * @param {string} billingCycle - Billing cycle for new plan
+ * @returns {Object} Updated subscription
+ */
+exports.upgradeSubscription = async (subscriptionId, newPlanId, billingCycle) => {
+  if (!subscriptionId) throw new Error('Subscription ID is required');
+  if (!newPlanId) throw new Error('New plan ID is required');
+  
+  try {
+    // Get current subscription
+    const currentSubscription = await subscriptionRepository.getSubscriptionById(subscriptionId);
+    if (!currentSubscription) {
+      throw new Error('Subscription not found');
+    }
+
+    // Get new plan details
+    const newPlan = await subscriptionRepository.getPlanById(newPlanId);
+    if (!newPlan) {
+      throw new Error('New plan not found');
+    }
+
+    // Validate that this is actually an upgrade (higher tier plan)
+    if (newPlan.price <= currentSubscription.amount) {
+      throw new Error('This appears to be a downgrade. Please use the downgrade endpoint instead.');
+    }
+
+    // Calculate new amount based on billing cycle
+    const newAmount = billingCycle === 'yearly' ? newPlan.yearly_price : newPlan.price;
+
+    // Update subscription
+    const updatedSubscription = await subscriptionRepository.updateSubscription(subscriptionId, {
+      planId: newPlanId,
+      amount: newAmount,
+      billingCycle: billingCycle || currentSubscription.billingCycle,
+      // Keep existing start date but update next billing date
+      nextBillingDate: new Date(Date.now() + (billingCycle === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000)
+    });
+
+    return updatedSubscription;
+  } catch (err) {
+    throw new Error('Failed to upgrade subscription: ' + err.message);
+  }
+};
+
+/**
+ * Downgrade subscription to a new plan
+ * @param {string} subscriptionId - Current subscription ID
+ * @param {string} newPlanId - New plan ID to downgrade to
+ * @param {string} billingCycle - Billing cycle for new plan
+ * @returns {Object} Updated subscription
+ */
+exports.downgradeSubscription = async (subscriptionId, newPlanId, billingCycle) => {
+  if (!subscriptionId) throw new Error('Subscription ID is required');
+  if (!newPlanId) throw new Error('New plan ID is required');
+  
+  try {
+    // Get current subscription
+    const currentSubscription = await subscriptionRepository.getSubscriptionById(subscriptionId);
+    if (!currentSubscription) {
+      throw new Error('Subscription not found');
+    }
+
+    // Get new plan details
+    const newPlan = await subscriptionRepository.getPlanById(newPlanId);
+    if (!newPlan) {
+      throw new Error('New plan not found');
+    }
+
+    // Validate that this is actually a downgrade (lower tier plan)
+    if (newPlan.price >= currentSubscription.amount) {
+      throw new Error('This appears to be an upgrade. Please use the upgrade endpoint instead.');
+    }
+
+    // Calculate new amount based on billing cycle
+    const newAmount = billingCycle === 'yearly' ? newPlan.yearly_price : newPlan.price;
+
+    // Update subscription
+    const updatedSubscription = await subscriptionRepository.updateSubscription(subscriptionId, {
+      planId: newPlanId,
+      amount: newAmount,
+      billingCycle: billingCycle || currentSubscription.billingCycle,
+      // Keep existing start date but update next billing date
+      nextBillingDate: new Date(Date.now() + (billingCycle === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000)
+    });
+
+    return updatedSubscription;
+  } catch (err) {
+    throw new Error('Failed to downgrade subscription: ' + err.message);
+  }
+};
   try {
     return await subscriptionRepository.updatePaymentMethod(id, data, supabase);
   } catch (err) {

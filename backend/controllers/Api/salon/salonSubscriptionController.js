@@ -370,7 +370,7 @@ exports.downgradeSubscription = async (req, res, next) => {
         },
         downgradeAdjustment: downgradeAdjustment,
         billingCycle: billingCycle || currentSubscription.billingCycle,
-        nextStep: 'Create payment intent using POST /backend/api/v0/salon/subscription/payment/create-upgrade-intent',
+        nextStep: 'Create payment intent using POST /backend/api/v0/salon/subscription/payment/create-downgrade-intent',
         paymentRequestData: downgradePaymentData
       }
     });

@@ -13,11 +13,21 @@ const { Op } = require("sequelize");
    if (status && status !== "all") where.status = status;
    if (ownerId) where.owner_id = ownerId;
    
-   // Build include array - we'll handle salon filtering separately
-   const include = [
-     { model: SubscriptionPlan, as: "plan" },
-     { model: User, as: "owner" }
-   ];
+     // Build include array - include salon information through owner
+  const include = [
+    { model: SubscriptionPlan, as: "plan" },
+    { 
+      model: User, 
+      as: "owner",
+      include: [
+        {
+          model: Salon,
+          as: "salons",
+          required: false, // Left join to include users even if no salons
+        }
+      ]
+    }
+  ];
    
    let subscriptions = await Subscription.findAll({
      where,
@@ -44,6 +54,10 @@ const { Op } = require("sequelize");
    
    const formattedSubscriptions = subscriptions.map((sub) => {
      const s = sub.toJSON();
+     
+     // Get the first salon for this owner (assuming one owner can have multiple salons)
+     const ownerSalon = s.owner?.salons && s.owner.salons.length > 0 ? s.owner.salons[0] : null;
+     
      return {
        id: s.id,
        ownerId: s.owner_id,
@@ -59,11 +73,11 @@ const { Op } = require("sequelize");
        usage: s.usage,
        paymentMethod: s.payment_method,
        billingHistory: [],
-       // For backward compatibility, include salon info if we have a salonId filter
-       salonId: salonId || null,
-       salonName: null, // We'll need to fetch this separately if needed
-       salonPhone: null,
-       salonEmail: null,
+       // Include actual salon information
+       salonId: ownerSalon?.id || null,
+       salonName: ownerSalon?.name || null,
+       salonPhone: ownerSalon?.phone || null,
+       salonEmail: ownerSalon?.email || null,
      };
    });
   const stats = {

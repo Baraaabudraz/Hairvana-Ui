@@ -26,6 +26,18 @@ exports.createSubscriptionPaymentIntent = async (data) => {
     throw new Error('Invalid user ID');
   }
 
+  // Check if user already has an active subscription
+  const existingSubscription = await Subscription.findOne({
+    where: { 
+      owner_id: userId,
+      status: 'active'
+    }
+  });
+
+  if (existingSubscription) {
+    throw new Error('You already have an active subscription. Please upgrade or cancel your existing subscription first.');
+  }
+
   // Calculate amount based on billing cycle
   const amount = billingCycle === 'yearly' ? plan.yearly_price : plan.price;
 
@@ -201,6 +213,26 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
   if (payment.status === 'paid') {
     // Payment already processed
     return await this.getSubscriptionByPaymentId(payment.id);
+  }
+
+  // Double-check: Ensure user doesn't already have an active subscription
+  const existingSubscription = await Subscription.findOne({
+    where: { 
+      owner_id: payment.owner_id,
+      status: 'active'
+    }
+  });
+
+  if (existingSubscription) {
+    // Update payment status to cancelled since we can't create duplicate subscription
+    await payment.update({ 
+      status: 'cancelled',
+      metadata: {
+        ...payment.metadata,
+        cancellation_reason: 'User already has active subscription'
+      }
+    });
+    throw new Error('Cannot create subscription: User already has an active subscription');
   }
 
   // Use transaction to ensure data consistency

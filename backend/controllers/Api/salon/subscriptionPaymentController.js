@@ -162,6 +162,34 @@ exports.createUpgradePaymentIntent = async (req, res, next) => {
 };
 
 /**
+ * Create downgrade payment intent
+ * POST /backend/api/v0/salon/subscription/payment/create-downgrade-intent
+ */
+exports.createDowngradePaymentIntent = async (req, res, next) => {
+  try {
+    const { 
+      planId, 
+      billingCycle
+    } = req.body;
+    const userId = req.user.id;
+
+    const paymentIntent = await subscriptionPaymentService.createDowngradePaymentIntent({
+      planId,
+      billingCycle: billingCycle || 'monthly',
+      userId
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: `Payment intent created for ${paymentIntent.upgradeType}. Complete payment to ${paymentIntent.upgradeType} subscription.`,
+      data: paymentIntent
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Send invoice email for a payment
  * POST /backend/api/v0/salon/subscription/payment/:paymentId/send-invoice
  */

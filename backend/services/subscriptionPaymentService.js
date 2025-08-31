@@ -579,6 +579,194 @@ exports.createUpgradePaymentIntent = async (data) => {
 };
 
 /**
+ * Create downgrade payment intent
+ * @param {Object} data - Downgrade payment data
+ * @returns {Object} Payment intent with client secret
+ */
+exports.createDowngradePaymentIntent = async (data) => {
+  try {
+    console.log('createDowngradePaymentIntent called with data:', data);
+    
+    const { planId, billingCycle, userId } = data;
+
+    // Validate inputs
+    if (!planId || !userId) {
+      throw new Error('Plan ID and User ID are required');
+    }
+    
+    console.log('Input validation passed:', { planId, billingCycle, userId });
+
+    // Get plan details
+    const plan = await SubscriptionPlan.findByPk(planId);
+    if (!plan) {
+      throw new Error('Invalid plan ID');
+    }
+    
+    console.log('Plan found:', { planId: plan.id, planName: plan.name, planPrice: plan.price, planYearlyPrice: plan.yearly_price });
+
+    // Verify user exists
+    const user = await User.findByPk(userId);
+    if (!user) {
+      throw new Error('Invalid user ID');
+    }
+
+    // Get current subscription automatically
+    const currentSubscription = await Subscription.findOne({
+      where: { 
+        owner_id: userId,
+        status: 'active'
+      }
+    });
+
+    if (!currentSubscription) {
+      throw new Error('No active subscription found. Please subscribe to a plan first.');
+    }
+    
+    console.log('Current subscription found:', { 
+      subscriptionId: currentSubscription.id, 
+      planId: currentSubscription.planId,
+      status: currentSubscription.status 
+    });
+
+    // Get current plan to determine if this is actually a downgrade
+    const currentPlan = await SubscriptionPlan.findByPk(currentSubscription.planId);
+    if (!currentPlan) {
+      throw new Error('Current subscription plan not found');
+    }
+    
+    console.log('Current plan found:', { 
+      planId: currentPlan.id, 
+      planName: currentPlan.name, 
+      planPrice: currentPlan.price, 
+      planYearlyPrice: currentPlan.yearly_price 
+    });
+    
+    // Validate plan has pricing information
+    if (!currentPlan.price && !currentPlan.yearly_price) {
+      throw new Error('Current plan has no pricing information');
+    }
+    
+    if (!plan.price && !plan.yearly_price) {
+      throw new Error('New plan has no pricing information');
+    }
+
+    // Verify this is actually a downgrade
+    const currentAmount = currentPlan.price || 0;
+    const newAmount = billingCycle === 'yearly' ? (plan.yearly_price || plan.price) : (plan.price || 0);
+    
+    console.log('Price comparison:', {
+      currentAmount,
+      newAmount,
+      billingCycle,
+      currentPlanPrice: currentPlan.price,
+      newPlanPrice: plan.price,
+      newPlanYearlyPrice: plan.yearly_price
+    });
+    
+    // Ensure this is actually a downgrade
+    if (newAmount >= currentAmount) {
+      throw new Error('This is not a downgrade. The selected plan has the same or higher price than your current plan.');
+    }
+    
+    // Force upgradeType to be 'downgrade'
+    const upgradeType = 'downgrade';
+    
+    console.log('Downgrade detection:', {
+      currentPlanPrice: currentAmount,
+      newPlanPrice: newAmount,
+      upgradeType: upgradeType
+    });
+
+    // Calculate amount based on billing cycle
+    const amount = billingCycle === 'yearly' ? plan.yearly_price : plan.price;
+
+    // Get Stripe configuration
+    const { IntegrationSettings } = require('../models');
+    const settings = await IntegrationSettings.findOne({ order: [['updated_at', 'DESC']] });
+    
+    if (!settings || settings.stripe_enabled === false) {
+      throw new Error('Payments are currently disabled by the admin.');
+    }
+    
+    if (!settings.payment_api_key) {
+      throw new Error('Stripe API key is not configured.');
+    }
+
+    const stripe = Stripe(settings.payment_api_key);
+
+    // Create downgrade payment record
+    const subscriptionPayment = await SubscriptionPayment.create({
+      owner_id: userId,
+      plan_id: planId,
+      amount: amount,
+      billing_cycle: billingCycle,
+      method: 'stripe',
+      status: 'pending',
+      expires_at: billingCycle === 'yearly' 
+        ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 1 month
+      metadata: {
+        plan_name: plan.name,
+        owner_name: user.name || user.email,
+        billing_cycle: billingCycle,
+        upgrade_type: upgradeType,
+        current_subscription_id: currentSubscription.id,
+        is_upgrade: false,
+        is_downgrade: true
+      }
+    });
+
+    // Create Stripe PaymentIntent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(Number(amount) * 100), // Convert to cents
+      currency: 'usd',
+      metadata: {
+        subscription_payment_id: subscriptionPayment.id,
+        owner_id: userId,
+        plan_id: planId,
+        billing_cycle: billingCycle,
+        upgrade_type: upgradeType,
+        current_subscription_id: currentSubscription.id
+      },
+      description: `Subscription ${upgradeType} payment for ${plan.name} plan - ${user.name || user.email}`,
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    // Update payment record with Stripe details
+    await subscriptionPayment.update({
+      payment_intent_id: paymentIntent.id,
+      client_secret: paymentIntent.client_secret,
+      transaction_id: paymentIntent.id
+    });
+
+    return {
+      paymentId: subscriptionPayment.id,
+      clientSecret: paymentIntent.client_secret,
+      amount: amount,
+      currency: 'usd',
+      plan: {
+        id: plan.id,
+        name: plan.name,
+        description: plan.description
+      },
+      owner: {
+        id: user.id,
+        name: user.name || user.email
+      },
+      billingCycle: billingCycle,
+      upgradeType: upgradeType,
+      currentSubscriptionId: currentSubscription.id,
+      expiresAt: subscriptionPayment.expires_at
+    };
+  } catch (error) {
+    console.error('Error in createDowngradePaymentIntent:', error);
+    throw error;
+  }
+};
+
+/**
  * Handle upgrade/downgrade payment after successful payment
  * @param {Object} payment - Payment object
  * @returns {Object} Updated subscription

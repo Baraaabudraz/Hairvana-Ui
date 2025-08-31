@@ -108,7 +108,34 @@ exports.subscribeToPlan = async (req, res, next) => {
     if (existingSubscription && existingSubscription.status === 'active') {
       return res.status(400).json({
         success: false,
-        message: 'You already have an active subscription. Please upgrade or cancel existing subscription first.'
+        message: 'You already have an active subscription. Please upgrade or cancel existing subscription first.',
+        data: {
+          currentSubscription: {
+            id: existingSubscription.id,
+            plan: existingSubscription.plan?.name || 'Unknown Plan',
+            status: existingSubscription.status,
+            startDate: existingSubscription.startDate,
+            nextBillingDate: existingSubscription.nextBillingDate,
+            amount: existingSubscription.amount
+          },
+          actions: [
+            {
+              type: 'upgrade',
+              description: 'Upgrade to a higher tier plan',
+              endpoint: 'POST /backend/api/v0/salon/subscription/upgrade'
+            },
+            {
+              type: 'downgrade',
+              description: 'Downgrade to a lower tier plan',
+              endpoint: 'POST /backend/api/v0/salon/subscription/downgrade'
+            },
+            {
+              type: 'cancel',
+              description: 'Cancel current subscription',
+              endpoint: 'POST /backend/api/v0/salon/subscription/cancel'
+            }
+          ]
+        }
       });
     }
 

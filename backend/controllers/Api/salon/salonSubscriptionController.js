@@ -238,20 +238,43 @@ exports.upgradeSubscription = async (req, res, next) => {
       });
     }
 
-    const upgradeData = {
+    // Calculate upgrade cost
+    const currentAmount = currentSubscription.amount;
+    const newAmount = billingCycle === 'yearly' ? newPlan.yearly_price : newPlan.price;
+    const upgradeCost = newAmount - currentAmount;
+
+    // Create upgrade payment intent instead of immediate upgrade
+    const upgradePaymentData = {
       planId,
-      billingCycle: billingCycle || currentSubscription.billingCycle
+      billingCycle: billingCycle || currentSubscription.billingCycle,
+      upgradeType: 'upgrade',
+      currentSubscriptionId: currentSubscription.id,
+      upgradeCost: upgradeCost,
+      currentAmount: currentAmount,
+      newAmount: newAmount
     };
 
-    const upgradedSubscription = await subscriptionService.upgradeSubscription(
-      currentSubscription.id, 
-      upgradeData
-    );
-    
+    // Redirect to payment flow for upgrade
     return res.status(200).json({
       success: true,
-      message: 'Subscription upgraded successfully. New features are now available. All pricing and billing details calculated automatically.',
-      data: upgradedSubscription
+      message: 'Please complete payment to upgrade your subscription. New features will be available immediately after payment.',
+      data: {
+        upgradeType: 'upgrade',
+        currentPlan: {
+          id: currentPlan.id,
+          name: currentPlan.name,
+          price: currentAmount
+        },
+        nextPlan: {
+          id: newPlan.id,
+          name: newPlan.name,
+          price: newAmount
+        },
+        upgradeCost: upgradeCost,
+        billingCycle: billingCycle || currentSubscription.billingCycle,
+        nextStep: 'Create payment intent using POST /backend/api/v0/salon/subscription/payment/create-upgrade-intent',
+        paymentRequestData: upgradePaymentData
+      }
     });
   } catch (error) {
     next(error);
@@ -313,20 +336,43 @@ exports.downgradeSubscription = async (req, res, next) => {
       });
     }
 
-    const downgradeData = {
+    // Calculate downgrade adjustment
+    const currentAmount = currentSubscription.amount;
+    const newAmount = billingCycle === 'yearly' ? newPlan.yearly_price : newPlan.price;
+    const downgradeAdjustment = currentAmount - newAmount;
+
+    // Create downgrade payment intent instead of immediate downgrade
+    const downgradePaymentData = {
       planId,
-      billingCycle: billingCycle || currentSubscription.billingCycle
+      billingCycle: billingCycle || currentSubscription.billingCycle,
+      upgradeType: 'downgrade',
+      currentSubscriptionId: currentSubscription.id,
+      downgradeAdjustment: downgradeAdjustment,
+      currentAmount: currentAmount,
+      newAmount: newAmount
     };
 
-    const downgradedSubscription = await subscriptionService.downgradeSubscription(
-      currentSubscription.id, 
-      downgradeData
-    );
-    
+    // Redirect to payment flow for downgrade
     return res.status(200).json({
       success: true,
-      message: 'Subscription downgrade scheduled successfully. Changes will take effect at the end of your current billing cycle. All pricing and billing details calculated automatically.',
-      data: downgradedSubscription
+      message: 'Please complete payment to downgrade your subscription. Changes will take effect immediately after payment.',
+      data: {
+        upgradeType: 'downgrade',
+        currentPlan: {
+          id: currentPlan.id,
+          name: currentPlan.name,
+          price: currentAmount
+        },
+        nextPlan: {
+          id: newPlan.id,
+          name: newPlan.name,
+          price: newAmount
+        },
+        downgradeAdjustment: downgradeAdjustment,
+        billingCycle: billingCycle || currentSubscription.billingCycle,
+        nextStep: 'Create payment intent using POST /backend/api/v0/salon/subscription/payment/create-upgrade-intent',
+        paymentRequestData: downgradePaymentData
+      }
     });
   } catch (error) {
     next(error);

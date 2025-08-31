@@ -134,6 +134,34 @@ exports.checkPaymentStatus = async (req, res, next) => {
 };
 
 /**
+ * Create upgrade/downgrade payment intent
+ * POST /backend/api/v0/salon/subscription/payment/create-upgrade-intent
+ */
+exports.createUpgradePaymentIntent = async (req, res, next) => {
+  try {
+    const { 
+      planId, 
+      billingCycle
+    } = req.body;
+    const userId = req.user.id;
+
+    const paymentIntent = await subscriptionPaymentService.createUpgradePaymentIntent({
+      planId,
+      billingCycle: billingCycle || 'monthly',
+      userId
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: `Payment intent created for ${paymentIntent.upgradeType}. Complete payment to ${paymentIntent.upgradeType} subscription.`,
+      data: paymentIntent
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Send invoice email for a payment
  * POST /backend/api/v0/salon/subscription/payment/:paymentId/send-invoice
  */

@@ -58,6 +58,14 @@ router.post('/payment/create-payment',
   subscriptionPaymentController.createSubscriptionPaymentIntent
 );
 
+// Create upgrade/downgrade payment intent
+router.post('/payment/create-upgrade-intent',
+  authenticateOwner,
+  createPaymentIntentValidation,
+  validate,
+  subscriptionPaymentController.createUpgradePaymentIntent
+);
+
 // Get subscription payment by ID
 router.get('/payment/:paymentId',
   authenticateOwner,

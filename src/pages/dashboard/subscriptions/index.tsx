@@ -102,8 +102,8 @@ interface Usage {
 
 interface Subscription {
   id: string;
-  salonId: string;
-  salonName: string;
+  salonId: string | null;
+  salonName: string | null;
   ownerId: string;
   ownerName: string;
   ownerEmail: string;
@@ -925,15 +925,17 @@ export default function SubscriptionsPage() {
                             View Details
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link
-                            to={`/dashboard/salons/${subscription.salonId}`}
-                            className="flex items-center w-full"
-                          >
-                            <Building2 className="mr-2 h-4 w-4" />
-                            View Salon
-                          </Link>
-                        </DropdownMenuItem>
+                        {subscription.salonId && (
+                          <DropdownMenuItem asChild>
+                            <Link
+                              to={`/dashboard/salons/${subscription.salonId}`}
+                              className="flex items-center w-full"
+                            >
+                              <Building2 className="mr-2 h-4 w-4" />
+                              View Salon
+                            </Link>
+                          </DropdownMenuItem>
+                        )}
                         {subscription.status === "active" && (
                           <>
                             <DropdownMenuItem

@@ -3,7 +3,7 @@ const router = express.Router();
 const { authenticateOwner } = require('../../../../middleware/passportMiddleware');
 const salonSubscriptionController = require('../../../../controllers/Api/salon/salonSubscriptionController');
 const subscriptionPaymentController = require('../../../../controllers/Api/salon/subscriptionPaymentController');
-const { createSubscriptionValidation, createPaymentIntentValidation } = require('../../../../validation/subscriptionValidation');
+const { createSubscriptionValidation, updateSubscriptionValidation, createPaymentIntentValidation } = require('../../../../validation/subscriptionValidation');
 const validate = require('../../../../middleware/validate');
 
 // Get all available subscription plans
@@ -26,7 +26,7 @@ router.post('/subscribe',
 // Upgrade subscription (immediate activation)
 router.post('/upgrade', 
   authenticateOwner, 
-  createSubscriptionValidation,
+  updateSubscriptionValidation,
   validate,
   salonSubscriptionController.upgradeSubscription
 );
@@ -34,7 +34,7 @@ router.post('/upgrade',
 // Downgrade subscription (end of cycle activation)
 router.post('/downgrade', 
   authenticateOwner, 
-  createSubscriptionValidation,
+  updateSubscriptionValidation,
   validate,
   salonSubscriptionController.downgradeSubscription
 );

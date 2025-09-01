@@ -12,8 +12,8 @@ router.get('/plans', authenticateOwner, salonSubscriptionController.getSubscript
 // Get subscription plan by ID
 router.get('/plans/:id', authenticateOwner, salonSubscriptionController.getSubscriptionPlanById);
 
-// Get current salon subscription
-router.get('/current/salon/:salonId', authenticateOwner, salonSubscriptionController.getCurrentSubscription);
+// Get current owner subscription (not tied to specific salon)
+router.get('/current', authenticateOwner, salonSubscriptionController.getCurrentSubscription);
 
 // Subscribe to a plan
 router.post('/subscribe', 
@@ -42,11 +42,11 @@ router.post('/downgrade',
 // Cancel subscription
 router.post('/cancel', authenticateOwner, salonSubscriptionController.cancelSubscription);
 
-// Get subscription usage
-router.get('/usage/salon/:salonId', authenticateOwner, salonSubscriptionController.getSubscriptionUsage);
+// Get subscription usage for owner (not tied to specific salon)
+router.get('/usage', authenticateOwner, salonSubscriptionController.getSubscriptionUsage);
 
-// Get billing history
-router.get('/billing-history/salon/:salonId', authenticateOwner, salonSubscriptionController.getBillingHistory);
+// Get billing history for owner (not tied to specific salon)
+router.get('/billing-history', authenticateOwner, salonSubscriptionController.getBillingHistory);
 
 // ===== SUBSCRIPTION PAYMENT ENDPOINTS =====
 

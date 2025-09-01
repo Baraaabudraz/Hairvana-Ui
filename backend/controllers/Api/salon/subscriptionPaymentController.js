@@ -213,3 +213,25 @@ exports.sendInvoiceEmail = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Backfill billing history for all existing payments
+ * POST /backend/api/v0/salon/subscription/payment/backfill-billing-history
+ */
+exports.backfillBillingHistory = async (req, res, next) => {
+  try {
+    const result = await subscriptionPaymentService.ensureBillingHistoryForAllPayments();
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        created: result.created,
+        existing: result.existing,
+        total: result.total
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -1,4 +1,4 @@
-const { SubscriptionPayment, SubscriptionPlan, Salon, User, Subscription } = require('../models');
+const { SubscriptionPayment, SubscriptionPlan, Salon, User, Subscription, BillingHistory } = require('../models');
 const Stripe = require('stripe');
 
 /**
@@ -301,7 +301,21 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
       ownerId: payment.owner_id, // Link to owner instead of specific salon
     }, { transaction: t });
 
-    return { subscription, payment, plan, owner };
+    // Create billing history record
+    const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    await BillingHistory.create({
+      subscription_id: subscription.id,
+      date: new Date(),
+      amount: payment.amount,
+      status: 'paid',
+      description: `New subscription payment for ${plan.name} plan - ${payment.billing_cycle}`,
+      invoice_number: invoiceNumber,
+      subtotal: payment.amount,
+      total: payment.amount,
+      tax_amount: 0
+    }, { transaction: t });
+
+    return { subscription, payment, plan, owner, invoiceNumber };
   });
 
   // Send invoice email after successful transaction
@@ -378,6 +392,30 @@ exports.sendInvoiceEmailForPayment = async (paymentId, userId) => {
     console.log('No subscription found for payment:', paymentId);
   }
 
+  // Ensure billing history record exists
+  if (subscription) {
+    const existingBillingHistory = await BillingHistory.findOne({
+      where: { subscription_id: subscription.id }
+    });
+
+    if (!existingBillingHistory) {
+      // Create billing history record if it doesn't exist
+      const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      await BillingHistory.create({
+        subscription_id: subscription.id,
+        date: payment.payment_date || new Date(),
+        amount: payment.amount,
+        status: payment.status,
+        description: `Payment for ${payment.plan?.name || 'subscription'} plan - ${payment.billing_cycle}`,
+        invoice_number: invoiceNumber,
+        subtotal: payment.amount,
+        total: payment.amount,
+        tax_amount: 0
+      });
+      console.log(`Created missing billing history record for payment ${paymentId}`);
+    }
+  }
+
   // Send invoice email
   const emailService = require('./emailService');
   const emailSent = await emailService.sendInvoiceEmail(
@@ -394,6 +432,70 @@ exports.sendInvoiceEmailForPayment = async (paymentId, userId) => {
     paymentId: payment.id,
     message: emailSent ? 'Invoice email sent successfully' : 'Failed to send invoice email'
   };
+};
+
+/**
+ * Ensure billing history records exist for all payments
+ * This function can be used to backfill missing billing history records
+ * @returns {Object} Result of the backfill operation
+ */
+exports.ensureBillingHistoryForAllPayments = async () => {
+  try {
+    const payments = await SubscriptionPayment.findAll({
+      where: { status: 'paid' },
+      include: [
+        { model: SubscriptionPlan, as: 'plan' },
+        { model: User, as: 'owner' }
+      ]
+    });
+
+    let createdCount = 0;
+    let existingCount = 0;
+
+    for (const payment of payments) {
+      // Find subscription for this payment
+      const subscription = await Subscription.findOne({
+        where: { paymentId: payment.id }
+      });
+
+      if (subscription) {
+        // Check if billing history already exists
+        const existingBillingHistory = await BillingHistory.findOne({
+          where: { subscription_id: subscription.id }
+        });
+
+        if (!existingBillingHistory) {
+          // Create billing history record
+          const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+          await BillingHistory.create({
+            subscription_id: subscription.id,
+            date: payment.payment_date || new Date(),
+            amount: payment.amount,
+            status: payment.status,
+            description: `Payment for ${payment.plan?.name || 'subscription'} plan - ${payment.billing_cycle}`,
+            invoice_number: invoiceNumber,
+            subtotal: payment.amount,
+            total: payment.amount,
+            tax_amount: 0
+          });
+          createdCount++;
+        } else {
+          existingCount++;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `Billing history backfill completed`,
+      created: createdCount,
+      existing: existingCount,
+      total: payments.length
+    };
+  } catch (error) {
+    console.error('Error ensuring billing history for all payments:', error);
+    throw error;
+  }
 };
 
 /**
@@ -822,7 +924,21 @@ exports.handleUpgradePayment = async (payment) => {
       }
     }, { transaction: t });
 
-    return { subscription: updatedSubscription, payment, plan: newPlan, owner };
+    // Create billing history record for upgrade/downgrade
+    const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    await BillingHistory.create({
+      subscription_id: updatedSubscription.id,
+      date: new Date(),
+      amount: payment.amount,
+      status: 'paid',
+      description: `Subscription ${upgrade_type} payment for ${newPlan.name} plan - ${payment.billing_cycle}`,
+      invoice_number: invoiceNumber,
+      subtotal: payment.amount,
+      total: payment.amount,
+      tax_amount: 0
+    }, { transaction: t });
+
+    return { subscription: updatedSubscription, payment, plan: newPlan, owner, invoiceNumber };
   });
 
   // Send invoice email after successful transaction
@@ -837,9 +953,9 @@ exports.handleUpgradePayment = async (payment) => {
     );
     
     if (emailSent) {
-      console.log(`Upgrade invoice email sent successfully to ${result.owner.email} for payment ${result.payment.id}`);
+      console.log(`${result.payment.metadata.upgrade_type} invoice email sent successfully to ${result.owner.email} for payment ${result.payment.id}`);
     } else {
-      console.error(`Failed to send upgrade invoice email to ${result.owner.email} for payment ${result.payment.id}`);
+      console.error(`Failed to send ${result.payment.metadata.upgrade_type} invoice email to ${result.owner.email} for payment ${result.payment.id}`);
     }
   } catch (emailError) {
     console.error('Error sending upgrade invoice email:', emailError);

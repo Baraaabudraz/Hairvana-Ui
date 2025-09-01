@@ -431,52 +431,76 @@ exports.cancelSubscription = async (req, res, next) => {
 
     const Stripe = require('stripe');
     const stripe = Stripe(settings.payment_api_key);
-
-    // Check if subscription has Stripe subscription ID
-    if (currentSubscription.stripeSubscriptionId) {
+    // Check if subscription has payment ID (which links to Stripe)
+    if (currentSubscription.paymentId) {
       try {
-        // Cancel the Stripe subscription
-        const stripeSubscription = await stripe.subscriptions.update(
-          currentSubscription.stripeSubscriptionId,
-          {
-            cancel_at_period_end: true, // Cancel at end of current billing period
-            proration_behavior: 'none' // Don't prorate - let user finish current period
-          }
-        );
-
-        console.log('Stripe subscription cancelled successfully:', {
-          stripeSubscriptionId: stripeSubscription.id,
-          status: stripeSubscription.status,
-          cancelAt: stripeSubscription.cancel_at
-        });
-
-        // Update local subscription to reflect Stripe cancellation
-        await currentSubscription.update({
-          status: 'cancelling', // New status to indicate it's cancelling
-          cancelAtPeriodEnd: true,
-          stripeStatus: stripeSubscription.status
-        });
-
-        return res.status(200).json({
-          success: true,
-          message: 'Subscription cancelled successfully. You will have access until the end of your current billing period.',
-          data: {
-            subscription: {
-              id: currentSubscription.id,
-              status: 'cancelling',
-              cancelAtPeriodEnd: true,
-              currentPeriodEnd: currentSubscription.nextBillingDate,
-              stripeStatus: stripeSubscription.status
-            },
-            billing: {
-              message: 'No more charges will be made. Your subscription will end on the next billing date.',
-              nextBillingDate: currentSubscription.nextBillingDate
+        // Get the payment record to find Stripe payment intent ID
+        const { SubscriptionPayment } = require('../../../models');
+        const payment = await SubscriptionPayment.findByPk(currentSubscription.paymentId);
+        
+        if (payment && payment.payment_intent_id) {
+          // Cancel the Stripe payment intent
+          const stripePaymentIntent = await stripe.paymentIntents.cancel(
+            payment.payment_intent_id,
+            {
+              cancellation_reason: 'requested_by_customer'
             }
-          }
-        });
+          );
+
+          console.log('Stripe payment intent cancelled successfully:', {
+            paymentIntentId: stripePaymentIntent.id,
+            status: stripePaymentIntent.status
+          });
+
+          // Update payment status
+          await payment.update({
+            status: 'cancelled',
+            metadata: {
+              ...payment.metadata,
+              cancellation_reason: 'requested_by_customer',
+              cancelled_at: new Date()
+            }
+          });
+
+          // Update local subscription to reflect cancellation
+          await currentSubscription.update({
+            status: 'cancelled',
+            endDate: new Date()
+          });
+
+          return res.status(200).json({
+            success: true,
+            message: 'Subscription cancelled successfully. Your access has been terminated immediately.',
+            data: {
+              subscription: {
+                id: currentSubscription.id,
+                status: 'cancelled',
+                endDate: new Date(),
+                stripeStatus: stripePaymentIntent.status
+              },
+              billing: {
+                message: 'No more charges will be made. Your subscription has been terminated.',
+                cancelledAt: new Date()
+              }
+            }
+          });
+
+        } else {
+          // Payment exists but no Stripe payment intent ID
+          const cancelledSubscription = await subscriptionService.cancelSubscription(currentSubscription.id);
+          
+          return res.status(200).json({
+            success: true,
+            message: 'Subscription cancelled successfully (payment found but no Stripe link)',
+            data: {
+              subscription: cancelledSubscription,
+              note: 'Payment record found but no Stripe payment intent ID'
+            }
+          });
+        }
 
       } catch (stripeError) {
-        console.error('Error cancelling Stripe subscription:', stripeError);
+        console.error('Error cancelling Stripe payment intent:', stripeError);
         
         // If Stripe fails, still cancel locally but warn user
         const cancelledSubscription = await subscriptionService.cancelSubscription(currentSubscription.id);
@@ -491,7 +515,7 @@ exports.cancelSubscription = async (req, res, next) => {
         });
       }
     } else {
-      // No Stripe subscription ID - cancel locally only
+      // No payment ID - cancel locally only
       const cancelledSubscription = await subscriptionService.cancelSubscription(currentSubscription.id);
       
       return res.status(200).json({
@@ -499,7 +523,7 @@ exports.cancelSubscription = async (req, res, next) => {
         message: 'Subscription cancelled successfully (local only)',
         data: {
           subscription: cancelledSubscription,
-          note: 'This subscription was not linked to Stripe'
+          note: 'This subscription was not linked to any payment'
         }
       });
     }

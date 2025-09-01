@@ -48,37 +48,21 @@ exports.getSubscriptionPlanById = async (req, res, next) => {
 };
 
 /**
- * Get current salon subscription
+ * Get current owner subscription (not tied to specific salon)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Function} next - Express next function
  */
 exports.getCurrentSubscription = async (req, res, next) => {
   try {
-    const { salonId } = req.params;
-    
-    if (!salonId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Salon ID is required'
-      });
-    }
+    const userId = req.user.id;
 
-    // Verify salon ownership
-    const salon = await salonService.getSalonById(salonId, req);
-    if (!salon || salon.owner_id !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. You can only view subscriptions for your own salons.'
-      });
-    }
-
-    const subscription = await subscriptionService.getSubscriptionBySalonId(salonId);
+    const subscription = await subscriptionService.getSubscriptionByOwnerId(userId);
     
     if (!subscription) {
       return res.status(404).json({
         success: false,
-        message: 'No active subscription found for this salon'
+        message: 'No active subscription found for your account'
       });
     }
 
@@ -420,36 +404,20 @@ exports.cancelSubscription = async (req, res, next) => {
 };
 
 /**
- * Get subscription usage
+ * Get subscription usage for owner (not tied to specific salon)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Function} next - Express next function
  */
 exports.getSubscriptionUsage = async (req, res, next) => {
   try {
-    const { salonId } = req.params;
-    
-    if (!salonId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Salon ID is required'
-      });
-    }
+    const userId = req.user.id;
 
-    // Verify salon ownership
-    const salon = await salonService.getSalonById(salonId, req);
-    if (!salon || salon.owner_id !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. You can only view usage for your own salons.'
-      });
-    }
-
-    const subscription = await subscriptionService.getSubscriptionBySalonId(salonId);
+    const subscription = await subscriptionService.getSubscriptionByOwnerId(userId);
     if (!subscription) {
       return res.status(404).json({
         success: false,
-        message: 'No active subscription found for this salon'
+        message: 'No active subscription found for your account'
       });
     }
 
@@ -475,36 +443,20 @@ exports.getSubscriptionUsage = async (req, res, next) => {
 };
 
 /**
- * Get billing history
+ * Get billing history for owner (not tied to specific salon)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Function} next - Express next function
  */
 exports.getBillingHistory = async (req, res, next) => {
   try {
-    const { salonId } = req.params;
-    
-    if (!salonId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Salon ID is required'
-      });
-    }
+    const userId = req.user.id;
 
-    // Verify salon ownership
-    const salon = await salonService.getSalonById(salonId, req);
-    if (!salon || salon.owner_id !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. You can only view billing history for your own salons.'
-      });
-    }
-
-    const subscription = await subscriptionService.getSubscriptionBySalonId(salonId);
+    const subscription = await subscriptionService.getSubscriptionByOwnerId(userId);
     if (!subscription) {
       return res.status(404).json({
         success: false,
-        message: 'No active subscription found for this salon'
+        message: 'No active subscription found for your account'
       });
     }
 

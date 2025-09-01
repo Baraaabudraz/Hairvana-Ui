@@ -104,4 +104,10 @@ router.post('/payment/:paymentId/send-invoice',
   subscriptionPaymentController.sendInvoiceEmail
 );
 
+// Backfill billing history for all existing payments
+router.post('/payment/backfill-billing-history',
+  authenticateOwner,
+  subscriptionPaymentController.backfillBillingHistory
+);
+
 module.exports = router;

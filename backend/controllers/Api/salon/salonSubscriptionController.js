@@ -364,41 +364,148 @@ exports.downgradeSubscription = async (req, res, next) => {
 };
 
 /**
- * Cancel subscription
+ * Cancel subscription with Stripe integration
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Function} next - Express next function
  */
 exports.cancelSubscription = async (req, res, next) => {
   try {
-    const { salonId } = req.body;
-    
-    // Verify salon ownership
-    const salon = await salonService.getSalonById(salonId, req);
-    if (!salon || salon.owner_id !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. You can only cancel subscriptions for your own salons.'
-      });
-    }
+    const userId = req.user.id;
 
-    // Get current subscription
-    const currentSubscription = await subscriptionService.getSubscriptionBySalonId(salonId);
+    // Get current subscription by owner ID
+    const currentSubscription = await subscriptionService.getSubscriptionByOwnerId(userId);
     if (!currentSubscription) {
       return res.status(404).json({
         success: false,
-        message: 'No active subscription found for this salon'
+        message: 'No active subscription found for your account'
       });
     }
 
-    const cancelledSubscription = await subscriptionService.cancelSubscription(currentSubscription.id);
+    // Prevent cancelling if subscription is already being cancelled or cancelled
+    if (currentSubscription.status === 'cancelling' || currentSubscription.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel subscription. Your subscription is already ${currentSubscription.status === 'cancelling' ? 'being cancelled' : 'cancelled'}.`,
+        data: {
+          subscription: {
+            id: currentSubscription.id,
+            status: currentSubscription.status,
+            cancelAtPeriodEnd: currentSubscription.cancelAtPeriodEnd || false,
+            currentPeriodEnd: currentSubscription.nextBillingDate
+          },
+          actions: currentSubscription.status === 'cancelling' ? [
+            {
+              type: 'reactivate',
+              description: 'Reactivate your subscription before it expires',
+              endpoint: 'POST /backend/api/v0/salon/subscription/reactivate'
+            }
+          ] : [
+            {
+              type: 'subscribe',
+              description: 'Subscribe to a new plan',
+              endpoint: 'POST /backend/api/v0/salon/subscription/subscribe'
+            }
+          ]
+        }
+      });
+    }
+
+    // Get Stripe configuration
+    const { IntegrationSettings } = require('../../../models');
+    const settings = await IntegrationSettings.findOne({ order: [['updated_at', 'DESC']] });
     
-    return res.status(200).json({
-      success: true,
-      message: 'Subscription cancelled successfully',
-      data: cancelledSubscription
-    });
+    if (!settings || settings.stripe_enabled === false) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payments are currently disabled by the admin.'
+      });
+    }
+    
+    if (!settings.payment_api_key) {
+      return res.status(400).json({
+        success: false,
+        message: 'Stripe API key is not configured.'
+      });
+    }
+
+    const Stripe = require('stripe');
+    const stripe = Stripe(settings.payment_api_key);
+
+    // Check if subscription has Stripe subscription ID
+    if (currentSubscription.stripeSubscriptionId) {
+      try {
+        // Cancel the Stripe subscription
+        const stripeSubscription = await stripe.subscriptions.update(
+          currentSubscription.stripeSubscriptionId,
+          {
+            cancel_at_period_end: true, // Cancel at end of current billing period
+            proration_behavior: 'none' // Don't prorate - let user finish current period
+          }
+        );
+
+        console.log('Stripe subscription cancelled successfully:', {
+          stripeSubscriptionId: stripeSubscription.id,
+          status: stripeSubscription.status,
+          cancelAt: stripeSubscription.cancel_at
+        });
+
+        // Update local subscription to reflect Stripe cancellation
+        await currentSubscription.update({
+          status: 'cancelling', // New status to indicate it's cancelling
+          cancelAtPeriodEnd: true,
+          stripeStatus: stripeSubscription.status
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: 'Subscription cancelled successfully. You will have access until the end of your current billing period.',
+          data: {
+            subscription: {
+              id: currentSubscription.id,
+              status: 'cancelling',
+              cancelAtPeriodEnd: true,
+              currentPeriodEnd: currentSubscription.nextBillingDate,
+              stripeStatus: stripeSubscription.status
+            },
+            billing: {
+              message: 'No more charges will be made. Your subscription will end on the next billing date.',
+              nextBillingDate: currentSubscription.nextBillingDate
+            }
+          }
+        });
+
+      } catch (stripeError) {
+        console.error('Error cancelling Stripe subscription:', stripeError);
+        
+        // If Stripe fails, still cancel locally but warn user
+        const cancelledSubscription = await subscriptionService.cancelSubscription(currentSubscription.id);
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Subscription cancelled locally, but there was an issue with Stripe. Please contact support.',
+          data: {
+            subscription: cancelledSubscription,
+            warning: 'Stripe cancellation failed - contact support to ensure no future charges'
+          }
+        });
+      }
+    } else {
+      // No Stripe subscription ID - cancel locally only
+      const cancelledSubscription = await subscriptionService.cancelSubscription(currentSubscription.id);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Subscription cancelled successfully (local only)',
+        data: {
+          subscription: cancelledSubscription,
+          note: 'This subscription was not linked to Stripe'
+        }
+      });
+    }
+
   } catch (error) {
+    console.error('Error in cancelSubscription:', error);
     next(error);
   }
 };

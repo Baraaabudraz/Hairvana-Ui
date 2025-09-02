@@ -364,7 +364,7 @@ exports.downgradeSubscription = async (req, res, next) => {
 };
 
 /**
- * Cancel subscription with Stripe integration
+ * Cancel subscription with Stripe integration and refund logic
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Function} next - Express next function
@@ -411,6 +411,13 @@ exports.cancelSubscription = async (req, res, next) => {
       });
     }
 
+    // Calculate days since subscription start for refund eligibility
+    const subscriptionStartDate = new Date(currentSubscription.startDate);
+    const currentDate = new Date();
+    const daysSinceStart = Math.floor((currentDate - subscriptionStartDate) / (1000 * 60 * 60 * 24));
+    const refundWindowDays = 10;
+    const isEligibleForRefund = daysSinceStart <= refundWindowDays;
+
     // Get Stripe configuration
     const { IntegrationSettings } = require('../../../models');
     const settings = await IntegrationSettings.findOne({ order: [['updated_at', 'DESC']] });
@@ -431,14 +438,50 @@ exports.cancelSubscription = async (req, res, next) => {
 
     const Stripe = require('stripe');
     const stripe = Stripe(settings.payment_api_key);
+
     // Check if subscription has payment ID (which links to Stripe)
     if (currentSubscription.paymentId) {
       try {
         // Get the payment record to find Stripe payment intent ID
-        const { SubscriptionPayment } = require('../../../models');
+        const { SubscriptionPayment, BillingHistory } = require('../../../models');
         const payment = await SubscriptionPayment.findByPk(currentSubscription.paymentId);
         
         if (payment && payment.payment_intent_id) {
+          let refundResult = null;
+          let finalStatus = 'cancelled';
+          let finalPaymentStatus = 'cancelled';
+
+          // Process refund if eligible (within 10 days)
+          if (isEligibleForRefund) {
+            try {
+              refundResult = await stripe.refunds.create({
+                payment_intent: payment.payment_intent_id,
+                amount: Math.round(Number(currentSubscription.amount) * 100), // Convert to cents
+                reason: 'requested_by_customer',
+                metadata: {
+                  subscription_id: currentSubscription.id,
+                  cancellation_reason: 'requested_by_customer',
+                  days_used: daysSinceStart.toString(),
+                  refund_window_days: refundWindowDays.toString(),
+                  refund_type: 'full_refund_within_window'
+                }
+              });
+              
+              console.log('Stripe refund created successfully:', {
+                refundId: refundResult.id,
+                amount: currentSubscription.amount,
+                daysSinceStart: daysSinceStart
+              });
+
+              finalStatus = 'refunded';
+              finalPaymentStatus = 'refunded';
+            } catch (refundError) {
+              console.error('Error creating Stripe refund:', refundError);
+              // Continue with cancellation even if refund fails
+              // Status will remain 'cancelled' without refund
+            }
+          }
+
           // Cancel the Stripe payment intent
           const stripePaymentIntent = await stripe.paymentIntents.cancel(
             payment.payment_intent_id,
@@ -452,35 +495,95 @@ exports.cancelSubscription = async (req, res, next) => {
             status: stripePaymentIntent.status
           });
 
-          // Update payment status
-          await payment.update({
-            status: 'cancelled',
-            metadata: {
-              ...payment.metadata,
-              cancellation_reason: 'requested_by_customer',
-              cancelled_at: new Date()
+          // Use transaction to ensure data consistency
+          const result = await SubscriptionPayment.sequelize.transaction(async (t) => {
+            // Update payment status based on refund eligibility
+            await payment.update({
+              status: finalPaymentStatus,
+              metadata: {
+                ...payment.metadata,
+                cancellation_reason: 'requested_by_customer',
+                cancelled_at: new Date(),
+                days_since_start: daysSinceStart,
+                refund_window_days: refundWindowDays,
+                is_eligible_for_refund: isEligibleForRefund,
+                refund_processed: refundResult ? true : false,
+                refund_id: refundResult?.id || null,
+                refund_amount: refundResult ? currentSubscription.amount : 0
+              }
+            }, { transaction: t });
+
+            // Update local subscription to reflect cancellation
+            await currentSubscription.update({
+              status: finalStatus,
+              endDate: new Date()
+            }, { transaction: t });
+
+            // Create refund billing history record if refund was processed
+            if (refundResult && isEligibleForRefund) {
+              const refundInvoiceNumber = `REF-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+              await BillingHistory.create({
+                subscription_id: currentSubscription.id,
+                date: new Date(),
+                amount: -Number(currentSubscription.amount), // Negative amount for refund
+                status: 'refunded',
+                description: `Full refund for cancelled subscription - ${daysSinceStart} days used (within ${refundWindowDays}-day refund window)`,
+                invoice_number: refundInvoiceNumber,
+                subtotal: -Number(currentSubscription.amount),
+                total: -Number(currentSubscription.amount),
+                tax_amount: 0,
+                metadata: {
+                  refund_id: refundResult.id,
+                  days_used: daysSinceStart,
+                  refund_window_days: refundWindowDays,
+                  cancellation_reason: 'requested_by_customer',
+                  refund_type: 'full_refund_within_window'
+                }
+              }, { transaction: t });
             }
+
+            return { payment, subscription: currentSubscription, refundResult, isEligibleForRefund };
           });
 
-          // Update local subscription to reflect cancellation
-          await currentSubscription.update({
-            status: 'cancelled',
-            endDate: new Date()
-          });
+          // Prepare response message based on refund status
+          let responseMessage = '';
+          if (isEligibleForRefund && refundResult) {
+            responseMessage = `Subscription cancelled successfully with full refund of $${Number(currentSubscription.amount).toFixed(2)}. Refund processed within ${refundWindowDays}-day window.`;
+          } else if (isEligibleForRefund && !refundResult) {
+            responseMessage = `Subscription cancelled successfully. Refund was eligible but failed to process. Please contact support.`;
+          } else {
+            responseMessage = `Subscription cancelled successfully without refund. ${refundWindowDays}-day refund window has expired.`;
+          }
 
           return res.status(200).json({
             success: true,
-            message: 'Subscription cancelled successfully. Your access has been terminated immediately.',
+            message: responseMessage,
             data: {
               subscription: {
                 id: currentSubscription.id,
-                status: 'cancelled',
+                status: finalStatus,
                 endDate: new Date(),
                 stripeStatus: stripePaymentIntent.status
               },
+              refund: isEligibleForRefund ? {
+                eligible: true,
+                amount: currentSubscription.amount,
+                refundId: refundResult?.id || null,
+                daysUsed: daysSinceStart,
+                refundWindowDays: refundWindowDays,
+                processed: refundResult ? true : false
+              } : {
+                eligible: false,
+                reason: `Refund window expired (${daysSinceStart} days > ${refundWindowDays} days)`,
+                daysUsed: daysSinceStart,
+                refundWindowDays: refundWindowDays
+              },
               billing: {
-                message: 'No more charges will be made. Your subscription has been terminated.',
-                cancelledAt: new Date()
+                message: isEligibleForRefund && refundResult 
+                  ? `Full refund of $${Number(currentSubscription.amount).toFixed(2)} has been processed. No more charges will be made.`
+                  : 'No more charges will be made. Your subscription has been terminated.',
+                cancelledAt: new Date(),
+                refundWindow: `${refundWindowDays} days from start date`
               }
             }
           });

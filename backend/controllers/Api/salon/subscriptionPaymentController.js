@@ -245,7 +245,15 @@ exports.refundSubscriptionPayment = async (req, res, next) => {
     const { paymentId } = req.params;
     const userId = req.user.id;
 
-    const result = await subscriptionPaymentService.refundSubscriptionPayment(paymentId, userId);
+    const { refund_reason } = req.body || {};
+    if (!refund_reason || !String(refund_reason).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'refund_reason is required',
+      });
+    }
+
+    const result = await subscriptionPaymentService.refundSubscriptionPayment(paymentId, userId, String(refund_reason).trim());
 
     const statusCode = result.success ? 200 : 400;
     return res.status(statusCode).json({

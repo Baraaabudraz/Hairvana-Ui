@@ -504,7 +504,7 @@ exports.ensureBillingHistoryForAllPayments = async () => {
  * @param {string} userId - Authenticated owner ID
  * @returns {Object} Refund result and updated entities
  */
-exports.refundSubscriptionPayment = async (paymentId, userId) => {
+exports.refundSubscriptionPayment = async (paymentId, userId, refundReasonInput) => {
   // Validate payment
   const payment = await SubscriptionPayment.findOne({
     where: { id: paymentId, owner_id: userId }
@@ -554,17 +554,30 @@ exports.refundSubscriptionPayment = async (paymentId, userId) => {
     throw new Error('Stripe payment intent not found for this payment');
   }
 
+  // Map custom reason to Stripe's limited reasons when possible
+  const normalizedReason = (refundReasonInput || '').toLowerCase();
+  const stripeReasonMap = {
+    'requested_by_customer': 'requested_by_customer',
+    'duplicate': 'duplicate',
+    'fraudulent': 'fraudulent',
+    'customer_request': 'requested_by_customer',
+    'change_of_mind': 'requested_by_customer',
+    'not_satisfied': 'requested_by_customer'
+  };
+  const stripeReason = stripeReasonMap[normalizedReason] || 'requested_by_customer';
+
   // Perform Stripe refund
   const refund = await stripe.refunds.create({
     payment_intent: payment.payment_intent_id,
     amount: Math.round(Number(payment.amount) * 100),
-    reason: 'requested_by_customer',
+    reason: stripeReason,
     metadata: {
       owner_id: userId,
       subscription_id: subscription?.id || null,
       refund_window_days: refundWindowDays.toString(),
       days_since_start: daysSinceStart.toString(),
-      refund_type: 'full_refund_within_window'
+      refund_type: 'full_refund_within_window',
+      refund_reason: refundReasonInput
     }
   });
 
@@ -573,13 +586,14 @@ exports.refundSubscriptionPayment = async (paymentId, userId) => {
     await payment.update({
       status: 'refunded',
       refund_amount: payment.amount,
-      refund_reason: 'requested_by_customer',
+      refund_reason: refundReasonInput,
       metadata: {
         ...(payment.metadata || {}),
         refunded_at: new Date(),
         refund_id: refund.id,
         refund_window_days: refundWindowDays,
-        days_since_start: daysSinceStart
+        days_since_start: daysSinceStart,
+        refund_reason: refundReasonInput
       }
     }, { transaction: t });
 

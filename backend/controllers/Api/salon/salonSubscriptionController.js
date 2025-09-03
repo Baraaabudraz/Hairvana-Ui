@@ -448,7 +448,7 @@ exports.cancelSubscription = async (req, res, next) => {
         
         if (payment && payment.payment_intent_id) {
           let refundResult = null;
-          let finalStatus = 'cancelled';
+          let finalSubscriptionStatus = 'cancelled';
           let finalPaymentStatus = 'cancelled';
 
           // Process refund if eligible (within 10 days)
@@ -466,61 +466,58 @@ exports.cancelSubscription = async (req, res, next) => {
                   refund_type: 'full_refund_within_window'
                 }
               });
-              
+
               console.log('Stripe refund created successfully:', {
                 refundId: refundResult.id,
                 amount: currentSubscription.amount,
-                daysSinceStart: daysSinceStart
+                daysSinceStart
               });
 
-              finalStatus = 'refunded';
               finalPaymentStatus = 'refunded';
             } catch (refundError) {
               console.error('Error creating Stripe refund:', refundError);
               // Continue with cancellation even if refund fails
-              // Status will remain 'cancelled' without refund
             }
           }
 
-          // Cancel the Stripe payment intent
-          const stripePaymentIntent = await stripe.paymentIntents.cancel(
-            payment.payment_intent_id,
-            {
-              cancellation_reason: 'requested_by_customer'
+          // Try to retrieve PI and cancel only if cancellable (ignore errors)
+          let stripePaymentIntentStatus = null;
+          try {
+            const pi = await stripe.paymentIntents.retrieve(payment.payment_intent_id);
+            stripePaymentIntentStatus = pi.status;
+            const cancellableStatuses = ['requires_payment_method', 'requires_confirmation', 'requires_capture'];
+            if (cancellableStatuses.includes(pi.status)) {
+              await stripe.paymentIntents.cancel(payment.payment_intent_id, {
+                cancellation_reason: 'requested_by_customer'
+              });
             }
-          );
+          } catch (piError) {
+            console.warn('Stripe PI retrieve/cancel warning:', piError?.message || piError);
+          }
 
-          console.log('Stripe payment intent cancelled successfully:', {
-            paymentIntentId: stripePaymentIntent.id,
-            status: stripePaymentIntent.status
-          });
-
-          // Use transaction to ensure data consistency
-          const result = await SubscriptionPayment.sequelize.transaction(async (t) => {
-            // Update payment status based on refund eligibility
+          // Persist changes atomically
+          await SubscriptionPayment.sequelize.transaction(async (t) => {
             await payment.update({
               status: finalPaymentStatus,
               metadata: {
-                ...payment.metadata,
+                ...(payment.metadata || {}),
                 cancellation_reason: 'requested_by_customer',
                 cancelled_at: new Date(),
                 days_since_start: daysSinceStart,
                 refund_window_days: refundWindowDays,
                 is_eligible_for_refund: isEligibleForRefund,
-                refund_processed: refundResult ? true : false,
+                refund_processed: Boolean(refundResult),
                 refund_id: refundResult?.id || null,
                 refund_amount: refundResult ? currentSubscription.amount : 0
               }
             }, { transaction: t });
 
-            // Update local subscription to reflect cancellation
             await currentSubscription.update({
-              status: finalStatus,
+              status: finalSubscriptionStatus,
               endDate: new Date()
             }, { transaction: t });
 
-            // Create refund billing history record if refund was processed
-            if (refundResult && isEligibleForRefund) {
+            if (refundResult) {
               const refundInvoiceNumber = `REF-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
               await BillingHistory.create({
                 subscription_id: currentSubscription.id,
@@ -531,18 +528,9 @@ exports.cancelSubscription = async (req, res, next) => {
                 invoice_number: refundInvoiceNumber,
                 subtotal: -Number(currentSubscription.amount),
                 total: -Number(currentSubscription.amount),
-                tax_amount: 0,
-                metadata: {
-                  refund_id: refundResult.id,
-                  days_used: daysSinceStart,
-                  refund_window_days: refundWindowDays,
-                  cancellation_reason: 'requested_by_customer',
-                  refund_type: 'full_refund_within_window'
-                }
+                tax_amount: 0
               }, { transaction: t });
             }
-
-            return { payment, subscription: currentSubscription, refundResult, isEligibleForRefund };
           });
 
           // Prepare response message based on refund status
@@ -561,9 +549,9 @@ exports.cancelSubscription = async (req, res, next) => {
             data: {
               subscription: {
                 id: currentSubscription.id,
-                status: finalStatus,
+                status: finalSubscriptionStatus,
                 endDate: new Date(),
-                stripeStatus: stripePaymentIntent.status
+                stripeStatus: stripePaymentIntentStatus
               },
               refund: isEligibleForRefund ? {
                 eligible: true,
@@ -571,7 +559,7 @@ exports.cancelSubscription = async (req, res, next) => {
                 refundId: refundResult?.id || null,
                 daysUsed: daysSinceStart,
                 refundWindowDays: refundWindowDays,
-                processed: refundResult ? true : false
+                processed: Boolean(refundResult)
               } : {
                 eligible: false,
                 reason: `Refund window expired (${daysSinceStart} days > ${refundWindowDays} days)`,
@@ -587,7 +575,6 @@ exports.cancelSubscription = async (req, res, next) => {
               }
             }
           });
-
         } else {
           // Payment exists but no Stripe payment intent ID
           const cancelledSubscription = await subscriptionService.cancelSubscription(currentSubscription.id);

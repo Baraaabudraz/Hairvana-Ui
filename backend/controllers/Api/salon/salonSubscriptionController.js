@@ -533,6 +533,21 @@ exports.cancelSubscription = async (req, res, next) => {
             }
           });
 
+          // Send refund invoice email if refund was processed
+          try {
+            if (refundResult) {
+              const { User, SubscriptionPlan } = require('../../../models');
+              const emailService = require('../../../services/emailService');
+              const owner = await User.findByPk(payment.owner_id);
+              const plan = await SubscriptionPlan.findByPk(payment.plan_id);
+              if (owner && plan) {
+                await emailService.sendInvoiceEmail(owner.email, payment, currentSubscription, plan, owner);
+              }
+            }
+          } catch (emailErr) {
+            console.error('Error sending refund invoice email on cancel:', emailErr);
+          }
+
           // Prepare response message based on refund status
           let responseMessage = '';
           if (isEligibleForRefund && refundResult) {
@@ -578,6 +593,19 @@ exports.cancelSubscription = async (req, res, next) => {
         } else {
           // Payment exists but no Stripe payment intent ID
           const cancelledSubscription = await subscriptionService.cancelSubscription(currentSubscription.id);
+
+          // Send cancellation email (no refund)
+          try {
+            const { User, SubscriptionPlan } = require('../../../models');
+            const emailService = require('../../../services/emailService');
+            const owner = await User.findByPk(cancelledSubscription.ownerId || req.user.id);
+            const plan = await SubscriptionPlan.findByPk(cancelledSubscription.planId);
+            if (owner && plan) {
+              await emailService.sendCancellationEmail(owner.email, cancelledSubscription, owner, plan);
+            }
+          } catch (emailErr) {
+            console.error('Error sending cancellation email (no stripe PI):', emailErr);
+          }
           
           return res.status(200).json({
             success: true,
@@ -607,6 +635,19 @@ exports.cancelSubscription = async (req, res, next) => {
     } else {
       // No payment ID - cancel locally only
       const cancelledSubscription = await subscriptionService.cancelSubscription(currentSubscription.id);
+
+      // Send cancellation email (no refund)
+      try {
+        const { User, SubscriptionPlan } = require('../../../models');
+        const emailService = require('../../../services/emailService');
+        const owner = await User.findByPk(cancelledSubscription.ownerId || req.user.id);
+        const plan = await SubscriptionPlan.findByPk(cancelledSubscription.planId);
+        if (owner && plan) {
+          await emailService.sendCancellationEmail(owner.email, cancelledSubscription, owner, plan);
+        }
+      } catch (emailErr) {
+        console.error('Error sending cancellation email (local only):', emailErr);
+      }
       
       return res.status(200).json({
         success: true,

@@ -499,6 +499,130 @@ exports.ensureBillingHistoryForAllPayments = async () => {
 };
 
 /**
+ * Refund a subscription payment (separate from cancellation)
+ * @param {string} paymentId - Payment ID to refund
+ * @param {string} userId - Authenticated owner ID
+ * @returns {Object} Refund result and updated entities
+ */
+exports.refundSubscriptionPayment = async (paymentId, userId) => {
+  // Validate payment
+  const payment = await SubscriptionPayment.findOne({
+    where: { id: paymentId, owner_id: userId }
+  });
+
+  if (!payment) {
+    throw new Error('Payment not found or access denied');
+  }
+
+  if (payment.status !== 'paid') {
+    throw new Error('Only paid payments can be refunded');
+  }
+
+  // Get Stripe configuration
+  const { IntegrationSettings } = require('../models');
+  const settings = await IntegrationSettings.findOne({ order: [['updated_at', 'DESC']] });
+  if (!settings || settings.stripe_enabled === false) {
+    throw new Error('Payments are currently disabled by the admin.');
+  }
+  if (!settings.payment_api_key) {
+    throw new Error('Stripe API key is not configured.');
+  }
+
+  const stripe = Stripe(settings.payment_api_key);
+
+  // Try to locate the subscription linked to this payment (may not exist for upgrades)
+  let subscription = await Subscription.findOne({ where: { paymentId: payment.id } });
+
+  // Calculate refund eligibility window (10 days) based on subscription start or payment date
+  const referenceDate = subscription?.startDate || payment.payment_date || payment.createdAt;
+  const daysSinceStart = Math.floor((Date.now() - new Date(referenceDate)) / (1000 * 60 * 60 * 24));
+  const refundWindowDays = 10;
+  const isEligibleForRefund = daysSinceStart <= refundWindowDays;
+
+  if (!isEligibleForRefund) {
+    return {
+      success: false,
+      message: `Refund window expired (${daysSinceStart} days > ${refundWindowDays} days)`,
+      data: {
+        payment: { id: payment.id, status: payment.status },
+        subscription: subscription ? { id: subscription.id, status: subscription.status } : null
+      }
+    };
+  }
+
+  if (!payment.payment_intent_id) {
+    throw new Error('Stripe payment intent not found for this payment');
+  }
+
+  // Perform Stripe refund
+  const refund = await stripe.refunds.create({
+    payment_intent: payment.payment_intent_id,
+    amount: Math.round(Number(payment.amount) * 100),
+    reason: 'requested_by_customer',
+    metadata: {
+      owner_id: userId,
+      subscription_id: subscription?.id || null,
+      refund_window_days: refundWindowDays.toString(),
+      days_since_start: daysSinceStart.toString(),
+      refund_type: 'full_refund_within_window'
+    }
+  });
+
+  // Persist updates atomically
+  await SubscriptionPayment.sequelize.transaction(async (t) => {
+    await payment.update({
+      status: 'refunded',
+      refund_amount: payment.amount,
+      refund_reason: 'requested_by_customer',
+      metadata: {
+        ...(payment.metadata || {}),
+        refunded_at: new Date(),
+        refund_id: refund.id,
+        refund_window_days: refundWindowDays,
+        days_since_start: daysSinceStart
+      }
+    }, { transaction: t });
+
+    // If a subscription exists, create a refund billing record.
+    if (subscription) {
+      const refundInvoiceNumber = `REF-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      await BillingHistory.create({
+        subscription_id: subscription.id,
+        date: new Date(),
+        amount: -Number(payment.amount),
+        status: 'refunded',
+        description: `Refund for subscription payment within ${refundWindowDays}-day window`,
+        invoice_number: refundInvoiceNumber,
+        subtotal: -Number(payment.amount),
+        total: -Number(payment.amount),
+        tax_amount: 0
+      }, { transaction: t });
+    }
+  });
+
+  // Send refund invoice email if we can resolve owner and plan
+  try {
+    const owner = await User.findByPk(payment.owner_id);
+    const plan = await SubscriptionPlan.findByPk(payment.plan_id);
+    if (owner && plan && subscription) {
+      const emailService = require('./emailService');
+      await emailService.sendInvoiceEmail(owner.email, payment, subscription, plan, owner);
+    }
+  } catch (emailError) {
+    console.error('Error sending refund invoice email:', emailError);
+  }
+
+  return {
+    success: true,
+    message: `Refund processed successfully for $${Number(payment.amount).toFixed(2)}.`,
+    data: {
+      payment: { id: payment.id, status: 'refunded', refundId: refund.id },
+      subscription: subscription ? { id: subscription.id, status: subscription.status } : null
+    }
+  };
+};
+
+/**
  * Create upgrade/downgrade payment intent
  * @param {Object} data - Upgrade payment data
  * @returns {Object} Payment intent with client secret

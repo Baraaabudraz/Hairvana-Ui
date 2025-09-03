@@ -235,3 +235,25 @@ exports.backfillBillingHistory = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Refund a subscription payment (separate from cancellation)
+ * POST /backend/api/v0/salon/subscription/payment/:paymentId/refund
+ */
+exports.refundSubscriptionPayment = async (req, res, next) => {
+  try {
+    const { paymentId } = req.params;
+    const userId = req.user.id;
+
+    const result = await subscriptionPaymentService.refundSubscriptionPayment(paymentId, userId);
+
+    const statusCode = result.success ? 200 : 400;
+    return res.status(statusCode).json({
+      success: result.success,
+      message: result.message,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};

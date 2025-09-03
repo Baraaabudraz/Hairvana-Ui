@@ -104,6 +104,12 @@ router.post('/payment/:paymentId/send-invoice',
   subscriptionPaymentController.sendInvoiceEmail
 );
 
+// Refund a payment (separate from cancellation)
+router.post('/payment/:paymentId/refund',
+  authenticateOwner,
+  subscriptionPaymentController.refundSubscriptionPayment
+);
+
 // Backfill billing history for all existing payments
 router.post('/payment/backfill-billing-history',
   authenticateOwner,

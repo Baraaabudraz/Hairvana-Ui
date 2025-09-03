@@ -160,6 +160,7 @@ const { Op } = require("sequelize");
      features: s.plan?.features,
      usage,
      paymentMethod: s.payment_method,
+     paymentId: s.payment_id || null,
      billingHistory,
    };
  };
@@ -469,6 +470,7 @@ exports.getSubscriptionByOwnerId = async (ownerId) => {
     amount: s.amount,
     usage: usage,
     paymentMethod: s.payment_method,
+    paymentId: s.payment_id || null,
     createdAt: s.created_at,
     updatedAt: s.updated_at
   };

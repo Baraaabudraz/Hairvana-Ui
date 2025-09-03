@@ -224,6 +224,93 @@ This email was sent from Hairvana. Please do not reply to this email.
   }
 
   /**
+   * Send cancellation confirmation email
+   * @param {string} email
+   * @param {Object} subscription
+   * @param {Object} owner
+   * @param {Object} plan
+   * @returns {boolean}
+   */
+  async sendCancellationEmail(email, subscription, owner, plan) {
+    try {
+      if (!this.transporter) {
+        console.error('Email transporter not initialized');
+        return false;
+      }
+      const html = this.generateCancellationEmailHTML(owner.name || 'Salon Owner', subscription, plan);
+      const text = this.generateCancellationEmailText(owner.name || 'Salon Owner', subscription, plan);
+      const mailOptions = {
+        from: process.env.EMAIL_FROM || 'noreply@hairvana.com',
+        to: email,
+        subject: `Subscription Cancellation Confirmation - ${plan?.name || 'Hairvana'}`,
+        html,
+        text
+      };
+      await this.transporter.sendMail(mailOptions);
+      console.log('Cancellation confirmation email sent successfully to:', email);
+      return true;
+    } catch (error) {
+      console.error('Failed to send cancellation confirmation email:', error);
+      return false;
+    }
+  }
+
+  generateCancellationEmailHTML(ownerName, subscription, plan) {
+    const endDate = subscription?.endDate ? new Date(subscription.endDate) : new Date();
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Subscription Cancellation - Hairvana</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        </style>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; line-height: 1.6; color: #1f2937;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+          <div style="background: linear-gradient(135deg, #ef4444 0%, #f97316 50%, #f59e0b 100%); padding: 32px 20px; text-align: center;">
+            <h1 style="margin: 0; color: white; font-size: 24px; font-weight: 700;">Subscription Cancelled</h1>
+            <p style="margin: 8px 0 0; color: rgba(255, 255, 255, 0.95);">${plan?.name || 'Subscription'} plan</p>
+          </div>
+          <div style="padding: 28px 24px;">
+            <p style="margin: 0 0 12px; color: #111827; font-size: 16px;">Hello ${ownerName},</p>
+            <p style="margin: 0 0 16px; color: #6b7280; font-size: 14px;">This is a confirmation that your subscription has been cancelled. No further charges will occur.</p>
+            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;">
+              <p style="margin: 0 0 6px; color: #374151; font-size: 14px;"><strong>Plan:</strong> ${plan?.name || 'Subscription'}</p>
+              <p style="margin: 0 0 6px; color: #374151; font-size: 14px;"><strong>Status:</strong> Cancelled</p>
+              <p style="margin: 0; color: #374151; font-size: 14px;"><strong>Cancelled At:</strong> ${endDate.toISOString()}</p>
+            </div>
+            <p style="margin: 16px 0 0; color: #6b7280; font-size: 13px;">If this was a mistake or you wish to reactivate, please log in to your dashboard.</p>
+          </div>
+          <div style="background: #f9fafb; padding: 20px; text-align: center; color: #9ca3af; font-size: 12px;">© ${new Date().getFullYear()} Hairvana. All rights reserved.</div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  generateCancellationEmailText(ownerName, subscription, plan) {
+    const endDate = subscription?.endDate ? new Date(subscription.endDate).toISOString() : new Date().toISOString();
+    return `
+SUBSCRIPTION CANCELLED - HAIRVANA
+
+Hello ${ownerName},
+
+This is a confirmation that your ${plan?.name || 'Subscription'} plan has been cancelled. No further charges will occur.
+
+PLAN: ${plan?.name || 'Subscription'}
+STATUS: Cancelled
+CANCELLED AT: ${endDate}
+
+If this was a mistake or you wish to reactivate, please log in to your dashboard.
+
+© ${new Date().getFullYear()} Hairvana. All rights reserved.
+    `;
+  }
+
+  /**
    * Generate HTML email template for invoice
    * @param {string} ownerName - Owner name
    * @param {string} invoiceHTML - Invoice HTML content

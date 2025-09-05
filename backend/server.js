@@ -14,6 +14,10 @@ if (typeof PhusionPassenger !== "undefined") {
 // Initialize Express app
 const app = express();
 
+// Trust proxy so express-rate-limit can correctly use X-Forwarded-For behind proxies
+// If you're behind one proxy (e.g., Passenger/Nginx), set to 1; adjust as needed
+app.set('trust proxy', 1);
+
 // Register Stripe webhook route FIRST
 app.use(
   "/backend/api/mobile/payments",

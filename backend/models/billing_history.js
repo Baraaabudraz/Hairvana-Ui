@@ -38,6 +38,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    transaction_id: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     invoice_number: {
       type: DataTypes.STRING,
       allowNull: true

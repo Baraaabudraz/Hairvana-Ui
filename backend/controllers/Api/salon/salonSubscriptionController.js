@@ -525,6 +525,7 @@ exports.cancelSubscription = async (req, res, next) => {
                 amount: -Number(currentSubscription.amount), // Negative amount for refund
                 status: 'refunded',
                 description: `Full refund for cancelled subscription - ${daysSinceStart} days used (within ${refundWindowDays}-day refund window)`,
+                transaction_id: `TXN-${payment.id.slice(0, 8).toUpperCase()}-REF`,
                 invoice_number: refundInvoiceNumber,
                 subtotal: -Number(currentSubscription.amount),
                 total: -Number(currentSubscription.amount),
@@ -621,10 +622,10 @@ exports.cancelSubscription = async (req, res, next) => {
         console.error('Error cancelling Stripe payment intent:', stripeError);
         
         // If Stripe fails, still cancel locally but warn user
-        const cancelledSubscription = await subscriptionService.cancelSubscription(currentSubscription.id);
-        
-        return res.status(200).json({
-          success: true,
+    const cancelledSubscription = await subscriptionService.cancelSubscription(currentSubscription.id);
+    
+    return res.status(200).json({
+      success: true,
           message: 'Subscription cancelled locally, but there was an issue with Stripe. Please contact support.',
           data: {
             subscription: cancelledSubscription,

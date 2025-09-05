@@ -170,6 +170,50 @@ exports.getHairstyleGroups = async (req, res) => {
 };
 
 /**
+ * Get hairstyles inside a specific YouCam group
+ * @route GET /api/v0/customer/hairstyle-tryon/groups/:groupId/hairstyles
+ */
+exports.getHairstylesByGroupId = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const page_size = req.query.page_size;
+    const starting_token = req.query.starting_token;
+
+    if (!groupId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Group ID is required'
+      });
+    }
+
+    const result = await customerHairstyleTryOnService.getHairstylesByGroupId(groupId, {
+      page_size,
+      starting_token
+    });
+
+    if (result.success !== undefined) {
+      return res.json({
+        success: result.success,
+        message: result.message || 'Hairstyles retrieved successfully',
+        data: result.data
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Hairstyles retrieved successfully from YouCam',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error getting hairstyles by group:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to get hairstyles by group from YouCam API'
+    });
+  }
+};
+
+/**
  * Generate multiple hairstyle variations for customer
  * @route POST /api/v0/customer/hairstyle-tryon/generate-variations
  */

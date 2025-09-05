@@ -312,17 +312,17 @@ async function tryOnHairstyle(customerImagePath, hairstyleId, groupId, options =
     console.log('🎨 Step 3: Starting hairstyle task...');
 
     const taskPayload = {
-      request_id: 5055, // Use timestamp as request_id
+      request_id: Math.random() * 1000000, // Use timestamp as request_id
       payload: {
         file_sets: {
           src_ids: [uploadResponse.file_id]
         },
         actions: [
           {
-            id: 0,
+            id: Math.random() * 1000000,
             params: {
-              style_group_id: parseInt(groupId),
-              style_ids: [parseInt(hairstyleId)]
+              style_group_id: `${groupId}`,
+              style_ids: [`${hairstyleId}`]
             }
           }
         ]
@@ -785,10 +785,57 @@ async function getHairstyleGroups(pageSize = 20, startingToken = null) {
   }
 }
 
+/**
+ * Get hairstyles inside a specific YouCam group
+ * @param {string|number} groupId
+ * @param {object} options { page_size?, starting_token? }
+ */
+async function getHairstylesByGroupId(groupId, options = {}) {
+  try {
+    if (!YOUCAM_CONFIG.API_KEY) {
+      throw new Error('YouCam API key not configured');
+    }
+
+    if (!groupId) {
+      throw new Error('groupId is required');
+    }
+
+    const pageSize = parseInt(options.page_size) || 20;
+    const startingToken = options.starting_token || null;
+
+    const queryParams = new URLSearchParams();
+    if (pageSize) queryParams.append('page_size', pageSize);
+    queryParams.append('style_group_id', groupId.toString());
+    if (startingToken) queryParams.append('starting_token', startingToken);
+
+    const url = `${YOUCAM_CONFIG.BASE_URL}/s2s/v1.0/task/style/hair-style?${queryParams}`;
+
+    const response = await axios.get(url, {
+      headers: await getAuthenticatedHeaders(),
+      timeout: 30000
+    });
+
+    if (response.data.status !== 200) {
+      throw new Error(`YouCam API error: ${response.data.message || 'Unknown error'}`);
+    }
+
+    return {
+      success: true,
+      data: response.data.result,
+      message: 'Hairstyles retrieved successfully from YouCam API'
+    };
+
+  } catch (error) {
+    console.error('Failed to get hairstyles by group:', error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   getAvailableHairstyles,
   getHairstyleCategories,
   getHairstyleGroups,
+  getHairstylesByGroupId,
   tryOnHairstyle,
   generateHairstyleVariations,
   uploadImageToYouCam,

@@ -202,16 +202,35 @@ This email was sent from Hairvana. Please do not reply to this email.
       }
 
       const invoiceService = require('./invoiceService');
-      const invoiceHTML = invoiceService.generateInvoiceHTML(payment, subscription, plan, owner);
-      const invoiceText = invoiceService.generateInvoiceText(payment, subscription, plan, owner);
+
+      // Prefer transaction_id from BillingHistory over Payment
+      let paymentForEmail = payment;
+      try {
+        if (subscription && subscription.id) {
+          const { BillingHistory } = require('../models');
+          const history = await BillingHistory.findOne({
+            where: { subscription_id: subscription.id },
+            order: [['created_at', 'DESC']]
+          });
+          if (history && history.transaction_id) {
+            const base = typeof payment.toJSON === 'function' ? payment.toJSON() : payment;
+            paymentForEmail = { ...base, transaction_id: history.transaction_id };
+          }
+        }
+      } catch (txErr) {
+        console.error('Failed to resolve billing history transaction_id for email:', txErr);
+      }
+
+      const invoiceHTML = invoiceService.generateInvoiceHTML(paymentForEmail, subscription, plan, owner);
+      const invoiceText = invoiceService.generateInvoiceText(paymentForEmail, subscription, plan, owner);
       const invoiceNumber = `INV-${payment.id.slice(0, 8).toUpperCase()}`;
 
       const mailOptions = {
         from: process.env.EMAIL_FROM || 'noreply@hairvana.com',
         to: email,
         subject: `Invoice ${invoiceNumber} - ${plan.name || 'Subscription'} Payment`,
-        html: this.generateInvoiceEmailHTML(owner.name || 'Salon Owner', invoiceHTML, payment, plan),
-        text: this.generateInvoiceEmailText(owner.name || 'Salon Owner', invoiceText, payment, plan)
+        html: this.generateInvoiceEmailHTML(owner.name || 'Salon Owner', invoiceHTML, paymentForEmail, plan),
+        text: this.generateInvoiceEmailText(owner.name || 'Salon Owner', invoiceText, paymentForEmail, plan)
       };
 
       await this.transporter.sendMail(mailOptions);

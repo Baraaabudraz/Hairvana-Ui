@@ -96,47 +96,11 @@ exports.createSubscriptionPaymentIntent = async (data) => {
     transaction_id: paymentIntent.id
   });
 
-  // Send initial (pending) invoice email upon downgrade intent creation
-  try {
-    const emailService = require('./emailService');
-    await emailService.sendInvoiceEmail(
-      user.email,
-      subscriptionPayment,
-      null,
-      plan,
-      user
-    );
-  } catch (emailInitErr) {
-    console.error('Failed to send initial invoice email (downgrade create-intent):', emailInitErr);
-  }
+  // No email on downgrade intent creation; send only after successful payment via webhook
 
-  // Send initial (pending) invoice email upon upgrade intent creation
-  try {
-    const emailService = require('./emailService');
-    await emailService.sendInvoiceEmail(
-      user.email,
-      subscriptionPayment,
-      null,
-      plan,
-      user
-    );
-  } catch (emailInitErr) {
-    console.error('Failed to send initial invoice email (upgrade create-intent):', emailInitErr);
-  }
+  // No email on upgrade intent creation; send only after successful payment via webhook
 
-  // Send initial (pending) invoice email upon payment intent creation
-  try {
-    const emailService = require('./emailService');
-    await emailService.sendInvoiceEmail(
-      user.email,
-      subscriptionPayment,
-      null,
-      plan,
-      user
-    );
-  } catch (emailInitErr) {
-    console.error('Failed to send initial invoice email (subscription create-intent):', emailInitErr);
-  }
+  // No email on intent creation; send only after successful payment via webhook
 
   return {
     paymentId: subscriptionPayment.id,

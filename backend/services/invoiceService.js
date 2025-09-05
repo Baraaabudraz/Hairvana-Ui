@@ -305,7 +305,7 @@ Amount: $${subtotal.toFixed(2)}
 
 PAYMENT INFORMATION:
 Payment Method: ${payment.method || 'Credit Card'}
-Transaction ID: ${payment.transaction_id || (subscription ? `TXN-${subscription.id.slice(0, 8).toUpperCase()}` : `TXN-${payment.id.slice(0, 8).toUpperCase()}`)}
+Transaction ID: ${ (subscription ? `TXN-${subscription.id.slice(0, 8).toUpperCase()}` : `TXN-${payment.id.slice(0, 8).toUpperCase()}`)}
 Payment Date: ${format(new Date(paymentDate), "MMMM dd, yyyy")}
 
 ═══════════════════════════════════════════════════════════════

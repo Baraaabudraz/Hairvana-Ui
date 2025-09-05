@@ -221,7 +221,7 @@ class InvoiceService {
             <div class="payment-info">
               <h4>Payment Information</h4>
               <p><strong>Payment Method:</strong> ${payment.method || 'Credit Card'}</p>
-              <p><strong>Transaction ID:</strong> ${payment.transaction_id || payment.payment_intent_id || `txn_${payment.id}`}</p>
+              <p><strong>Transaction ID:</strong> ${payment.transaction_id || `TXN-${payment.id.slice(0, 8).toUpperCase()}`}</p>
               <p><strong>Payment Date:</strong> ${format(new Date(paymentDate), "MMMM dd, yyyy")}</p>
             </div>
 

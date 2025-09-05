@@ -20,6 +20,9 @@ router.get('/categories', hairstyleTryOnController.getHairstyleCategories);
 // Get hairstyle groups (temporarily public for testing)
 router.get('/groups', hairstyleTryOnController.getHairstyleGroups);
 
+// Get hairstyles inside a specific group (temporarily public for testing)
+router.get('/groups/:groupId/hairstyles', hairstyleTryOnController.getHairstylesByGroupId);
+
 // Try on a specific hairstyle
 router.post('/try-on', authenticateCustomer, uploadCustomerPhoto.single('photo'), hairstyleTryOnController.tryOnHairstyle);
 

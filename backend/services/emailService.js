@@ -18,9 +18,7 @@ class EmailService {
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS
-        },
-        logger: true,
-        debug: true
+        }
       });
 
       this.transporter.verify((error, success) => {
@@ -204,34 +202,16 @@ This email was sent from Hairvana. Please do not reply to this email.
       }
 
       const invoiceService = require('./invoiceService');
-      // Prefer our internal billing transaction_id over Stripe IDs
-      let safeTransactionId = `TXN-${payment.id.slice(0, 8).toUpperCase()}`;
-      try {
-        if (subscription && subscription.id) {
-          const { BillingHistory } = require('../models');
-          const latest = await BillingHistory.findOne({
-            where: { subscription_id: subscription.id },
-            order: [['created_at', 'DESC']]
-          });
-          if (latest && latest.transaction_id) {
-            safeTransactionId = latest.transaction_id;
-          }
-        }
-      } catch (txErr) {
-        console.warn('Unable to resolve billing transaction_id, using fallback:', txErr?.message || txErr);
-      }
-
-      const paymentForTemplate = { ...payment, transaction_id: safeTransactionId };
-      const invoiceHTML = invoiceService.generateInvoiceHTML(paymentForTemplate, subscription, plan, owner);
-      const invoiceText = invoiceService.generateInvoiceText(paymentForTemplate, subscription, plan, owner);
+      const invoiceHTML = invoiceService.generateInvoiceHTML(payment, subscription, plan, owner);
+      const invoiceText = invoiceService.generateInvoiceText(payment, subscription, plan, owner);
       const invoiceNumber = `INV-${payment.id.slice(0, 8).toUpperCase()}`;
 
       const mailOptions = {
         from: process.env.EMAIL_FROM || 'noreply@hairvana.com',
         to: email,
         subject: `Invoice ${invoiceNumber} - ${plan.name || 'Subscription'} Payment`,
-        html: this.generateInvoiceEmailHTML(owner.name || 'Salon Owner', invoiceHTML, paymentForTemplate, plan),
-        text: this.generateInvoiceEmailText(owner.name || 'Salon Owner', invoiceText, paymentForTemplate, plan)
+        html: this.generateInvoiceEmailHTML(owner.name || 'Salon Owner', invoiceHTML, payment, plan),
+        text: this.generateInvoiceEmailText(owner.name || 'Salon Owner', invoiceText, payment, plan)
       };
 
       await this.transporter.sendMail(mailOptions);

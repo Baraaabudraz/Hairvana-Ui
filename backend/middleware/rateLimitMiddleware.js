@@ -11,9 +11,9 @@ const loginRateLimit = rateLimit({
 
 // Rate limiting for registration attempts
 const registerRateLimit = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // limit each IP to 3 registration attempts per hour
-  message: 'Too many registration attempts, please try again after 1 hour',
+  windowMs: 5 * 60 * 1000, // 05 minutes
+  max: 3, // limit each IP to 3 registration attempts per 05 minutes
+  message: 'Too many registration attempts, please try again after 05 minutes',
   standardHeaders: true,
   legacyHeaders: false,
 });

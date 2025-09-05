@@ -371,6 +371,7 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
       result.plan,
       result.owner
     );
+    
     if (emailSent) {
       console.log(`Invoice email sent successfully to ${result.owner.email} for payment ${result.payment.id}`);
     } else {
@@ -378,6 +379,7 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
     }
   } catch (emailError) {
     console.error('Error sending invoice email:', emailError);
+    // Don't fail the payment process if email fails
   }
 
   return result.subscription;

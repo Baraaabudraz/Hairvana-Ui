@@ -539,7 +539,9 @@ export default function SubscriptionDetailsPage() {
             <div class="payment-info">
               <h4>Payment Information</h4>
               <p><strong>Payment Method:</strong> ${paymentMethodBrand} ending in ${paymentMethodLast4}</p>
-              <p><strong>Transaction ID:</strong> txn_${invoice.id || ""}</p>
+              <p><strong>Transaction ID:</strong> ${
+                (invoice as any).transaction_id ?? (invoice as any).transactionId ?? ""
+              }</p>
               <p><strong>Payment Date:</strong> ${
                 invoice.date && !isNaN(new Date(invoice.date).getTime())
                   ? format(new Date(invoice.date), "MMMM dd, yyyy")

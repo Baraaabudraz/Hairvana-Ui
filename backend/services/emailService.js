@@ -202,54 +202,16 @@ This email was sent from Hairvana. Please do not reply to this email.
       }
 
       const invoiceService = require('./invoiceService');
-
-      // Prefer transaction_id from BillingHistory that matches this payment's TXN prefix
-      let paymentForEmail = payment;
-      try {
-        if (subscription && subscription.id && payment && payment.id) {
-          const { BillingHistory } = require('../models');
-          const txPrefix = `TXN-${payment.id.slice(0, 8).toUpperCase()}`;
-
-          // Try exact match first (paid), then refund suffix
-          let history = await BillingHistory.findOne({
-            where: { subscription_id: subscription.id, transaction_id: txPrefix },
-            order: [['created_at', 'DESC']]
-          });
-
-          if (!history) {
-            history = await BillingHistory.findOne({
-              where: { subscription_id: subscription.id, transaction_id: `${txPrefix}-REF` },
-              order: [['created_at', 'DESC']]
-            });
-          }
-
-          // Fallback to most recent if no direct match
-          if (!history) {
-            history = await BillingHistory.findOne({
-              where: { subscription_id: subscription.id },
-              order: [['created_at', 'DESC']]
-            });
-          }
-
-          if (history && history.transaction_id) {
-            const base = typeof payment.toJSON === 'function' ? payment.toJSON() : payment;
-            paymentForEmail = { ...base, transaction_id: history.transaction_id };
-          }
-        }
-      } catch (txErr) {
-        console.error('Failed to resolve billing history transaction_id for email:', txErr);
-      }
-
-      const invoiceHTML = invoiceService.generateInvoiceHTML(paymentForEmail, subscription, plan, owner);
-      const invoiceText = invoiceService.generateInvoiceText(paymentForEmail, subscription, plan, owner);
+      const invoiceHTML = invoiceService.generateInvoiceHTML(payment, subscription, plan, owner);
+      const invoiceText = invoiceService.generateInvoiceText(payment, subscription, plan, owner);
       const invoiceNumber = `INV-${payment.id.slice(0, 8).toUpperCase()}`;
 
       const mailOptions = {
         from: process.env.EMAIL_FROM || 'noreply@hairvana.com',
         to: email,
         subject: `Invoice ${invoiceNumber} - ${plan.name || 'Subscription'} Payment`,
-        html: this.generateInvoiceEmailHTML(owner.name || 'Salon Owner', invoiceHTML, paymentForEmail, plan),
-        text: this.generateInvoiceEmailText(owner.name || 'Salon Owner', invoiceText, paymentForEmail, plan)
+        html: this.generateInvoiceEmailHTML(owner.name || 'Salon Owner', invoiceHTML, payment, plan),
+        text: this.generateInvoiceEmailText(owner.name || 'Salon Owner', invoiceText, payment, plan)
       };
 
       await this.transporter.sendMail(mailOptions);

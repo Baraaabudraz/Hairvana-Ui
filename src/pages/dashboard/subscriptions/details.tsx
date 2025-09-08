@@ -60,7 +60,7 @@ import {
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import {
-  fetchCurrentSubscription,
+  fetchSubscriptionById,
   updateSubscription,
   cancelSubscription,
   fetchSubscriptionPlans,
@@ -92,7 +92,6 @@ interface BillingHistory {
   subtotal?: number;
   tax_amount?: number;
   total?: number;
-  transaction_id?: string;
 }
 
 interface Usage {
@@ -241,9 +240,8 @@ export default function SubscriptionDetailsPage() {
       try {
         setLoading(true);
         setSubscription(null); // Reset subscription to null when starting to fetch
-        const result = await fetchCurrentSubscription();
-        const data = result?.data ?? result;
-        console.log("subscription current data", data);
+        const data = await fetchSubscriptionById(params.id as string);
+        console.log("data", data);
         setSubscription(data);
       } catch (error) {
         console.error("Error fetching subscription:", error);
@@ -258,8 +256,12 @@ export default function SubscriptionDetailsPage() {
       }
     };
 
-    // Owner-based: always fetch current subscription; ignore params.id
-    fetchSubscription();
+    if (params.id) {
+      fetchSubscription();
+    } else {
+      setLoading(false);
+      setSubscription(null);
+    }
   }, [params.id, toast]);
 
   useEffect(() => {
@@ -537,7 +539,7 @@ export default function SubscriptionDetailsPage() {
             <div class="payment-info">
               <h4>Payment Information</h4>
               <p><strong>Payment Method:</strong> ${paymentMethodBrand} ending in ${paymentMethodLast4}</p>
-              <p><strong>Transaction ID:</strong> ${invoice.transaction_id || ""}</p>
+              <p><strong>Transaction ID:</strong> txn_${invoice.id || ""}</p>
               <p><strong>Payment Date:</strong> ${
                 invoice.date && !isNaN(new Date(invoice.date).getTime())
                   ? format(new Date(invoice.date), "MMMM dd, yyyy")

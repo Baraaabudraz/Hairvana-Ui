@@ -104,7 +104,8 @@ exports.createSubscriptionPaymentIntent = async (data) => {
       subscriptionPayment,
       null,
       plan,
-      user
+      user,
+      null
     );
   } catch (emailInitErr) {
     console.error('Failed to send initial invoice email (downgrade create-intent):', emailInitErr);
@@ -118,7 +119,8 @@ exports.createSubscriptionPaymentIntent = async (data) => {
       subscriptionPayment,
       null,
       plan,
-      user
+      user,
+      null
     );
   } catch (emailInitErr) {
     console.error('Failed to send initial invoice email (upgrade create-intent):', emailInitErr);
@@ -132,7 +134,8 @@ exports.createSubscriptionPaymentIntent = async (data) => {
       subscriptionPayment,
       null,
       plan,
-      user
+      user,
+      null
     );
   } catch (emailInitErr) {
     console.error('Failed to send initial invoice email (subscription create-intent):', emailInitErr);
@@ -345,7 +348,7 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
 
     // Create billing history record
     const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-    await BillingHistory.create({
+    const billingHistoryRecord = await BillingHistory.create({
       subscription_id: subscription.id,
       date: new Date(),
       amount: payment.amount,
@@ -358,7 +361,7 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
       tax_amount: 0
     }, { transaction: t });
 
-    return { subscription, payment, plan, owner, invoiceNumber };
+    return { subscription, payment, plan, owner, invoiceNumber, billingHistory: billingHistoryRecord.toJSON() };
   });
 
   // Send invoice email after successful transaction
@@ -369,7 +372,8 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
       result.payment,
       result.subscription,
       result.plan,
-      result.owner
+      result.owner,
+      result.billingHistory
     );
     
     if (emailSent) {
@@ -466,7 +470,8 @@ exports.sendInvoiceEmailForPayment = async (paymentId, userId) => {
     payment,
     subscription,
     payment.plan,
-    payment.owner
+    payment.owner,
+    null
   );
 
   return {
@@ -1108,7 +1113,7 @@ exports.handleUpgradePayment = async (payment) => {
 
     // Create billing history record for upgrade/downgrade
     const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-    await BillingHistory.create({
+    const billingHistoryRecord = await BillingHistory.create({
       subscription_id: updatedSubscription.id,
       date: new Date(),
       amount: payment.amount,
@@ -1121,7 +1126,7 @@ exports.handleUpgradePayment = async (payment) => {
       tax_amount: 0
     }, { transaction: t });
 
-    return { subscription: updatedSubscription, payment, plan: newPlan, owner, invoiceNumber };
+    return { subscription: updatedSubscription, payment, plan: newPlan, owner, invoiceNumber, billingHistory: billingHistoryRecord.toJSON() };
   });
 
   // Send invoice email after successful transaction
@@ -1132,7 +1137,8 @@ exports.handleUpgradePayment = async (payment) => {
       result.payment,
       result.subscription,
       result.plan,
-      result.owner
+      result.owner,
+      result.billingHistory
     );
     
     if (emailSent) {

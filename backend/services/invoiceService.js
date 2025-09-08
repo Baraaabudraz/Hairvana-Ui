@@ -305,7 +305,7 @@ Amount: $${subtotal.toFixed(2)}
 
 PAYMENT INFORMATION:
 Payment Method: ${payment.method || 'Credit Card'}
-Transaction ID: ${payment.transaction_id || payment.payment_intent_id || `txn_${payment.id}`}
+Transaction ID: ${payment.transaction_id}
 Payment Date: ${format(new Date(paymentDate), "MMMM dd, yyyy")}
 
 ═══════════════════════════════════════════════════════════════

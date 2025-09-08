@@ -20,14 +20,6 @@ router.post(
   handleValidationErrors,
   billingHistoryController.createBillingHistory
 );
-
-// Get single billing history by id
-router.get(
-  "/:id",
-  authenticateToken,
-  checkPermission("billing", "view"),
-  billingHistoryController.getBillingHistoryById
-);
 router.put(
   "/:id",
   authenticateToken,

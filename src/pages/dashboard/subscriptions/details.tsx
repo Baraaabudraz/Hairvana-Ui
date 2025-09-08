@@ -92,6 +92,8 @@ interface BillingHistory {
   subtotal?: number;
   tax_amount?: number;
   total?: number;
+  transactionId?: string;
+  transaction_id?: string;
 }
 
 interface Usage {
@@ -539,7 +541,7 @@ export default function SubscriptionDetailsPage() {
             <div class="payment-info">
               <h4>Payment Information</h4>
               <p><strong>Payment Method:</strong> ${paymentMethodBrand} ending in ${paymentMethodLast4}</p>
-              <p><strong>Transaction ID:</strong> txn_${invoice.id || ""}</p>
+              <p><strong>Transaction ID:</strong> ${invoice.transactionId || invoice.transaction_id || "N/A"}</p>
               <p><strong>Payment Date:</strong> ${
                 invoice.date && !isNaN(new Date(invoice.date).getTime())
                   ? format(new Date(invoice.date), "MMMM dd, yyyy")
@@ -973,6 +975,10 @@ Hairvana Team`;
           created.invoiceNumber !== undefined
             ? created.invoiceNumber
             : created.invoice_number,
+        transactionId:
+          created.transactionId !== undefined
+            ? created.transactionId
+            : created.transaction_id,
       };
       setSubscription((prev) =>
         prev

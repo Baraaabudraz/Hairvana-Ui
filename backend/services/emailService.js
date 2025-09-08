@@ -240,9 +240,8 @@ This email was sent from Hairvana. Please do not reply to this email.
         console.error('Failed to resolve billing history transaction_id for email:', txErr);
       }
 
-      // Pass resolved BillingHistory when available so invoice service reads transaction_id from it
-      const invoiceHTML = invoiceService.generateInvoiceHTML(paymentForEmail, subscription, plan, owner, { transaction_id: paymentForEmail.transaction_id });
-      const invoiceText = invoiceService.generateInvoiceText(paymentForEmail, subscription, plan, owner, { transaction_id: paymentForEmail.transaction_id });
+      const invoiceHTML = invoiceService.generateInvoiceHTML(paymentForEmail, subscription, plan, owner);
+      const invoiceText = invoiceService.generateInvoiceText(paymentForEmail, subscription, plan, owner);
       const invoiceNumber = `INV-${payment.id.slice(0, 8).toUpperCase()}`;
 
       const mailOptions = {

@@ -41,11 +41,12 @@ export async function fetchSubscriptions(params: SubscriptionParams = {}) {
   }
 }
 
-export async function fetchSubscriptionById(id: string) {
+export async function fetchCurrentSubscription() {
   try {
-    return await apiFetch(`/subscriptions/${id}`);
+    // Owner-based: backend exposes GET /current under base subscription path
+    return await apiFetch('current');
   } catch (error) {
-    console.error(`Error fetching subscription with ID ${id}:`, error);
+    console.error('Error fetching current subscription:', error);
     throw error;
   }
 }
@@ -136,7 +137,8 @@ export async function fetchSubscriptionPlans(params: { page?: number; limit?: nu
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.status) queryParams.append('status', params.status);
     if (params.search) queryParams.append('search', params.search);
-    return await apiFetch(`/subscriptions/plans?${queryParams.toString()}`);
+    // Backend route: GET /plans
+    return await apiFetch(`plans?${queryParams.toString()}`);
   } catch (error) {
     console.error('Error fetching subscription plans:', error);
     throw error;

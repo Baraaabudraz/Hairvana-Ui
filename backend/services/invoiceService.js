@@ -12,10 +12,11 @@ class InvoiceService {
    * @param {Object} owner - Owner/User object
    * @returns {string} HTML string for the invoice
    */
-  generateInvoiceHTML(payment, subscription, plan, owner) {
+  generateInvoiceHTML(payment, subscription, plan, owner, billingHistory) {
     const invoiceNumber = `INV-${payment.id.slice(0, 8).toUpperCase()}`;
     const paymentDate = payment.payment_date || payment.created_at || new Date();
     const amount = Number(payment.amount || 0);
+    const resolvedTransactionId = (billingHistory && billingHistory.transaction_id) || payment.transaction_id || '';
     const taxAmount = Number(payment.tax_amount || 0);
     const subtotal = amount - taxAmount;
 
@@ -221,7 +222,7 @@ class InvoiceService {
             <div class="payment-info">
               <h4>Payment Information</h4>
               <p><strong>Payment Method:</strong> ${payment.method || 'Credit Card'}</p>
-              <p><strong>Transaction ID:</strong> ${payment.transaction_id || ''}</p>
+              <p><strong>Transaction ID:</strong> ${resolvedTransactionId}</p>
               <p><strong>Payment Date:</strong> ${format(new Date(paymentDate), "MMMM dd, yyyy")}</p>
             </div>
 
@@ -265,10 +266,11 @@ class InvoiceService {
    * @param {Object} owner - Owner/User object
    * @returns {string} Plain text version of the invoice
    */
-  generateInvoiceText(payment, subscription, plan, owner) {
+  generateInvoiceText(payment, subscription, plan, owner, billingHistory) {
     const invoiceNumber = `INV-${payment.id.slice(0, 8).toUpperCase()}`;
     const paymentDate = payment.payment_date || payment.created_at || new Date();
     const amount = Number(payment.amount || 0);
+    const resolvedTransactionId = (billingHistory && billingHistory.transaction_id) || payment.transaction_id || '';
     const taxAmount = Number(payment.tax_amount || 0);
     const subtotal = amount - taxAmount;
 
@@ -305,7 +307,7 @@ Amount: $${subtotal.toFixed(2)}
 
 PAYMENT INFORMATION:
 Payment Method: ${payment.method || 'Credit Card'}
-Transaction ID: ${payment.transaction_id || ''}
+Transaction ID: ${resolvedTransactionId}
 Payment Date: ${format(new Date(paymentDate), "MMMM dd, yyyy")}
 
 ═══════════════════════════════════════════════════════════════

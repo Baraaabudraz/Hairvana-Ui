@@ -66,7 +66,7 @@ import {
   fetchSubscriptionPlans,
   updatePaymentMethod,
 } from "@/api/subscriptions";
-import { createBillingHistory } from "@/api/billing-histories";
+import { createBillingHistory, fetchBillingHistoryById } from "@/api/billing-histories";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -609,6 +609,21 @@ export default function SubscriptionDetailsPage() {
       </html>`;
   };
 
+  const resolveInvoiceFromBackend = async (invoice: BillingHistory): Promise<BillingHistory> => {
+    try {
+      // If transaction_id already present, use as-is
+      if (invoice.transaction_id || (invoice as any).transactionId) {
+        return invoice;
+      }
+      // Fetch the latest record from backend to get canonical transaction_id
+      const latest = await fetchBillingHistoryById(invoice.id);
+      return { ...invoice, ...latest } as BillingHistory;
+    } catch (e) {
+      // On failure, return original invoice without fabricating any ID
+      return invoice;
+    }
+  };
+
   const handlePrintInvoice = (invoice: BillingHistory) => {
     const printWindow = window.open("", "_blank", "width=800,height=600");
     if (!printWindow) {
@@ -616,37 +631,43 @@ export default function SubscriptionDetailsPage() {
       return;
     }
 
-    const invoiceHTML = generateInvoiceHTML(invoice);
-    printWindow.document.write(invoiceHTML);
+    // Show temporary content to keep popup open while fetching
+    printWindow.document.write("<html><body><p>Preparing invoice…</p></body></html>");
     printWindow.document.close();
+
+    (async () => {
+      const resolved = await resolveInvoiceFromBackend(invoice);
+      const invoiceHTML = generateInvoiceHTML(resolved);
+      printWindow.document.open();
+      printWindow.document.write(invoiceHTML);
+      printWindow.document.close();
+    })();
   };
 
-  const handleDownloadInvoice = (invoice: BillingHistory) => {
-    // Create a blob with the HTML content
-    const invoiceHTML = generateInvoiceHTML(invoice);
+  const handleDownloadInvoice = async (invoice: BillingHistory) => {
+    const resolved = await resolveInvoiceFromBackend(invoice);
+    const invoiceHTML = generateInvoiceHTML(resolved);
     const blob = new Blob([invoiceHTML], { type: "text/html" });
     const url = URL.createObjectURL(blob);
 
-    // Create a temporary link and trigger download
     const link = document.createElement("a");
     link.href = url;
     link.download = `invoice-${
-      invoice.invoiceNumber || invoice.invoice_number
+      resolved.invoiceNumber || resolved.invoice_number
     }.html`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    // Show success message
     alert(
       `Invoice ${
-        invoice.invoiceNumber || invoice.invoice_number
+        resolved.invoiceNumber || resolved.invoice_number
       } downloaded successfully!`
     );
   };
 
-  const handleViewInvoice = (invoice: BillingHistory) => {
+  const handleViewInvoice = async (invoice: BillingHistory) => {
     const viewWindow = window.open(
       "",
       "_blank",
@@ -657,7 +678,8 @@ export default function SubscriptionDetailsPage() {
       return;
     }
 
-    const invoiceHTML = generateInvoiceHTML(invoice).replace(
+    const resolved = await resolveInvoiceFromBackend(invoice);
+    const invoiceHTML = generateInvoiceHTML(resolved).replace(
       "<script>",
       '<!-- Auto-print disabled for view mode --><script style="display:none;">'
     );

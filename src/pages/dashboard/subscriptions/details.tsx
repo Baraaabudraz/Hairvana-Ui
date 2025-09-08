@@ -92,6 +92,8 @@ interface BillingHistory {
   subtotal?: number;
   tax_amount?: number;
   total?: number;
+  transaction_id?: string;
+  transactionId?: string;
 }
 
 interface Usage {
@@ -540,7 +542,7 @@ export default function SubscriptionDetailsPage() {
               <h4>Payment Information</h4>
               <p><strong>Payment Method:</strong> ${paymentMethodBrand} ending in ${paymentMethodLast4}</p>
               <p><strong>Transaction ID:</strong> ${
-                (invoice as any).transaction_id ?? (invoice as any).transactionId ?? ""
+                invoice.transaction_id ?? invoice.transactionId ?? ""
               }</p>
               <p><strong>Payment Date:</strong> ${
                 invoice.date && !isNaN(new Date(invoice.date).getTime())

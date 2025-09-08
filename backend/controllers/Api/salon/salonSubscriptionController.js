@@ -542,7 +542,17 @@ exports.cancelSubscription = async (req, res, next) => {
               const owner = await User.findByPk(payment.owner_id);
               const plan = await SubscriptionPlan.findByPk(payment.plan_id);
               if (owner && plan) {
-                await emailService.sendInvoiceEmail(owner.email, payment, currentSubscription, plan, owner);
+                // Try to fetch the refund billing history we just created to include transaction_id
+                let refundBillingHistory = null;
+                try {
+                  refundBillingHistory = await BillingHistory.findOne({
+                    where: { subscription_id: currentSubscription.id, status: 'refunded' },
+                    order: [['created_at', 'DESC']]
+                  });
+                } catch (bhErr) {
+                  console.warn('Could not fetch refund billing history for email:', bhErr?.message || bhErr);
+                }
+                await emailService.sendInvoiceEmail(owner.email, payment, currentSubscription, plan, owner, refundBillingHistory ? refundBillingHistory.toJSON() : null);
               }
             }
           } catch (emailErr) {

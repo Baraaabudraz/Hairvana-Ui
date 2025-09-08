@@ -421,6 +421,12 @@ exports.sendInvoiceEmailForPayment = async (paymentId, userId) => {
         tax_amount: 0
       });
       console.log(`Created missing billing history record for payment ${paymentId}`);
+    } else if (!existingBillingHistory.transaction_id) {
+      // Backfill missing transaction_id
+      await existingBillingHistory.update({
+        transaction_id: `TXN-${payment.id.slice(0, 8).toUpperCase()}`
+      });
+      console.log(`Backfilled transaction_id for billing history ${existingBillingHistory.id}`);
     }
   }
 

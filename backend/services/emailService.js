@@ -194,7 +194,7 @@ This email was sent from Hairvana. Please do not reply to this email.
    * @param {Object} owner - Owner/User object
    * @returns {boolean} Success status
    */
-  async sendInvoiceEmail(email, payment, subscription, plan, owner) {
+  async sendInvoiceEmail(email, payment, subscription, plan, owner, billingHistory) {
     try {
       if (!this.transporter) {
         console.error('Email transporter not initialized');
@@ -202,9 +202,9 @@ This email was sent from Hairvana. Please do not reply to this email.
       }
 
       const invoiceService = require('./invoiceService');
-      const invoiceHTML = invoiceService.generateInvoiceHTML(payment, subscription, plan, owner);
-      const invoiceText = invoiceService.generateInvoiceText(payment, subscription, plan, owner);
-      const invoiceNumber = `INV-${payment.id.slice(0, 8).toUpperCase()}`;
+      const invoiceHTML = invoiceService.generateInvoiceHTML(payment, subscription, plan, owner, billingHistory);
+      const invoiceText = invoiceService.generateInvoiceText(payment, subscription, plan, owner, billingHistory);
+      const invoiceNumber = (billingHistory && (billingHistory.invoice_number || billingHistory.invoiceNumber)) || `INV-${payment.id.slice(0, 8).toUpperCase()}`;
 
       const mailOptions = {
         from: process.env.EMAIL_FROM || 'noreply@hairvana.com',

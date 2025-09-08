@@ -12,12 +12,13 @@ class InvoiceService {
    * @param {Object} owner - Owner/User object
    * @returns {string} HTML string for the invoice
    */
-  generateInvoiceHTML(payment, subscription, plan, owner) {
-    const invoiceNumber = `INV-${payment.id.slice(0, 8).toUpperCase()}`;
+  generateInvoiceHTML(payment, subscription, plan, owner, billingHistory) {
+    const invoiceNumber = (billingHistory && (billingHistory.invoice_number || billingHistory.invoiceNumber)) || `INV-${payment.id.slice(0, 8).toUpperCase()}`;
     const paymentDate = payment.payment_date || payment.created_at || new Date();
     const amount = Number(payment.amount || 0);
     const taxAmount = Number(payment.tax_amount || 0);
     const subtotal = amount - taxAmount;
+    const transactionId = (billingHistory && (billingHistory.transaction_id || billingHistory.transactionId)) || 'N/A';
 
     return `<!DOCTYPE html>
       <html lang="en">
@@ -221,7 +222,7 @@ class InvoiceService {
             <div class="payment-info">
               <h4>Payment Information</h4>
               <p><strong>Payment Method:</strong> ${payment.method || 'Credit Card'}</p>
-              <p><strong>Transaction ID:</strong> ${payment.transaction_id }</p>
+              <p><strong>Transaction ID:</strong> ${transactionId}</p>
               <p><strong>Payment Date:</strong> ${format(new Date(paymentDate), "MMMM dd, yyyy")}</p>
             </div>
 
@@ -265,12 +266,13 @@ class InvoiceService {
    * @param {Object} owner - Owner/User object
    * @returns {string} Plain text version of the invoice
    */
-  generateInvoiceText(payment, subscription, plan, owner) {
-    const invoiceNumber = `INV-${payment.id.slice(0, 8).toUpperCase()}`;
+  generateInvoiceText(payment, subscription, plan, owner, billingHistory) {
+    const invoiceNumber = (billingHistory && (billingHistory.invoice_number || billingHistory.invoiceNumber)) || `INV-${payment.id.slice(0, 8).toUpperCase()}`;
     const paymentDate = payment.payment_date || payment.created_at || new Date();
     const amount = Number(payment.amount || 0);
     const taxAmount = Number(payment.tax_amount || 0);
     const subtotal = amount - taxAmount;
+    const transactionId = (billingHistory && (billingHistory.transaction_id || billingHistory.transactionId)) || 'N/A';
 
     return `
 INVOICE ${invoiceNumber}
@@ -305,7 +307,7 @@ Amount: $${subtotal.toFixed(2)}
 
 PAYMENT INFORMATION:
 Payment Method: ${payment.method || 'Credit Card'}
-Transaction ID: ${payment.transaction_id}
+Transaction ID: ${transactionId}
 Payment Date: ${format(new Date(paymentDate), "MMMM dd, yyyy")}
 
 ═══════════════════════════════════════════════════════════════

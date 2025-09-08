@@ -60,7 +60,7 @@ import {
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import {
-  fetchSubscriptionById,
+  fetchCurrentSubscription,
   updateSubscription,
   cancelSubscription,
   fetchSubscriptionPlans,
@@ -241,8 +241,9 @@ export default function SubscriptionDetailsPage() {
       try {
         setLoading(true);
         setSubscription(null); // Reset subscription to null when starting to fetch
-        const data = await fetchSubscriptionById(params.id as string);
-        console.log("data", data);
+        const result = await fetchCurrentSubscription();
+        const data = result?.data ?? result;
+        console.log("subscription current data", data);
         setSubscription(data);
       } catch (error) {
         console.error("Error fetching subscription:", error);
@@ -257,12 +258,8 @@ export default function SubscriptionDetailsPage() {
       }
     };
 
-    if (params.id) {
-      fetchSubscription();
-    } else {
-      setLoading(false);
-      setSubscription(null);
-    }
+    // Owner-based: always fetch current subscription; ignore params.id
+    fetchSubscription();
   }, [params.id, toast]);
 
   useEffect(() => {

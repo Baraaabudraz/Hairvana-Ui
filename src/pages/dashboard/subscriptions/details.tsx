@@ -58,7 +58,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { format } from "date-fns";
+import { format, addMonths, addYears } from "date-fns";
 import {
   fetchSubscriptionById,
   updateSubscription,
@@ -495,18 +495,15 @@ export default function SubscriptionDetailsPage() {
                     ? format(new Date(invoice.date), "MMMM dd, yyyy")
                     : "N/A"
                 }</p>
-                <p><strong>Billing Period:</strong> ${
-                  invoice.date && !isNaN(new Date(invoice.date).getTime()) ? format(new Date(invoice.date), "MMM dd") : "N/A"
-                } - ${
-      invoice.date && !isNaN(new Date(invoice.date).getTime())
-        ? format(
-            new Date(
-              new Date(invoice.date).getTime() + 30 * 24 * 60 * 60 * 1000
-            ),
-            "MMM dd, yyyy"
-          )
-        : "N/A"
-    }</p>
+                ${(() => {
+                  const start = (invoice.date && !isNaN(new Date(invoice.date).getTime()))
+                    ? new Date(invoice.date)
+                    : (subscription?.startDate ? new Date(subscription.startDate) : null);
+                  if (!start) return `<p><strong>Billing Period:</strong> N/A</p>`;
+                  const cycle = String(billingCycle || 'monthly').toLowerCase();
+                  const end = cycle === 'yearly' ? addYears(start, 1) : addMonths(start, 1);
+                  return `<p><strong>Billing Period:</strong> ${format(start, "MMM dd, yyyy")} - ${format(end, "MMM dd, yyyy")}</p>`;
+                })()}
               </div>
             </div>
 

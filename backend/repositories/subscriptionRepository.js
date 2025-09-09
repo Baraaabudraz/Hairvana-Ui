@@ -144,6 +144,8 @@ const { Op } = require("sequelize");
          obj.total !== undefined
            ? obj.total
            : Number(obj.amount) + Number(obj.tax_amount || 0),
+       billing_period_start: s.start_date,
+       billing_period_end: s.next_billing_date,
      };
    });
    return {
@@ -157,6 +159,8 @@ const { Op } = require("sequelize");
      nextBillingDate: s.next_billing_date,
      amount: s.amount,
      billingCycle: s.billing_cycle,
+     billingPeriodStart: s.start_date,
+     billingPeriodEnd: s.next_billing_date,
      features: s.plan?.features,
      usage,
      paymentMethod: s.payment_method,

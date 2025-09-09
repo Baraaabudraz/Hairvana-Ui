@@ -96,50 +96,7 @@ exports.createSubscriptionPaymentIntent = async (data) => {
     transaction_id: paymentIntent.id
   });
 
-  // Send initial (pending) invoice email upon downgrade intent creation
-  try {
-    const emailService = require('./emailService');
-    await emailService.sendInvoiceEmail(
-      user.email,
-      subscriptionPayment,
-      null,
-      plan,
-      user,
-      null
-    );
-  } catch (emailInitErr) {
-    console.error('Failed to send initial invoice email (downgrade create-intent):', emailInitErr);
-  }
-
-  // Send initial (pending) invoice email upon upgrade intent creation
-  try {
-    const emailService = require('./emailService');
-    await emailService.sendInvoiceEmail(
-      user.email,
-      subscriptionPayment,
-      null,
-      plan,
-      user,
-      null
-    );
-  } catch (emailInitErr) {
-    console.error('Failed to send initial invoice email (upgrade create-intent):', emailInitErr);
-  }
-
-  // Send initial (pending) invoice email upon payment intent creation
-  try {
-    const emailService = require('./emailService');
-    await emailService.sendInvoiceEmail(
-      user.email,
-      subscriptionPayment,
-      null,
-      plan,
-      user,
-      null
-    );
-  } catch (emailInitErr) {
-    console.error('Failed to send initial invoice email (subscription create-intent):', emailInitErr);
-  }
+  // Do not send invoice emails on intent creation; only send after payment is paid
 
   return {
     paymentId: subscriptionPayment.id,
@@ -465,13 +422,24 @@ exports.sendInvoiceEmailForPayment = async (paymentId, userId) => {
 
   // Send invoice email
   const emailService = require('./emailService');
+  let latestBillingHistory = null;
+  try {
+    if (subscription) {
+      latestBillingHistory = await BillingHistory.findOne({
+        where: { subscription_id: subscription.id },
+        order: [['created_at', 'DESC']]
+      });
+    }
+  } catch (bhErr) {
+    console.warn('Could not fetch billing history for manual email:', bhErr?.message || bhErr);
+  }
   const emailSent = await emailService.sendInvoiceEmail(
     payment.owner.email,
     payment,
     subscription,
     payment.plan,
     payment.owner,
-    null
+    latestBillingHistory ? latestBillingHistory.toJSON() : null
   );
 
   return {
@@ -669,7 +637,16 @@ exports.refundSubscriptionPayment = async (paymentId, userId, refundReasonInput)
     const plan = await SubscriptionPlan.findByPk(payment.plan_id);
     if (owner && plan && subscription) {
       const emailService = require('./emailService');
-      await emailService.sendInvoiceEmail(owner.email, payment, subscription, plan, owner);
+      let refundBillingHistory = null;
+      try {
+        refundBillingHistory = await BillingHistory.findOne({
+          where: { subscription_id: subscription.id, status: 'refunded' },
+          order: [['created_at', 'DESC']]
+        });
+      } catch (bhErr) {
+        console.warn('Could not fetch refund billing history:', bhErr?.message || bhErr);
+      }
+      await emailService.sendInvoiceEmail(owner.email, payment, subscription, plan, owner, refundBillingHistory ? refundBillingHistory.toJSON() : null);
     }
   } catch (emailError) {
     console.error('Error sending refund invoice email:', emailError);

@@ -1,4 +1,4 @@
-const { format } = require('date-fns');
+const { format, addMonths, addYears } = require('date-fns');
 
 /**
  * Invoice Service - Handles invoice generation and related operations
@@ -19,6 +19,9 @@ class InvoiceService {
     const taxAmount = Number(payment.tax_amount || 0);
     const subtotal = amount - taxAmount;
     const transactionId = (billingHistory && (billingHistory.transaction_id || billingHistory.transactionId)) || 'N/A';
+    const billingCycle = String(payment.billing_cycle || (subscription && subscription.billingCycle) || 'monthly').toLowerCase();
+    const periodStart = new Date(paymentDate);
+    const periodEnd = billingCycle === 'yearly' ? addYears(periodStart, 1) : addMonths(periodStart, 1);
 
     return `<!DOCTYPE html>
       <html lang="en">
@@ -191,7 +194,7 @@ class InvoiceService {
                 <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
                 <p><strong>Date:</strong> ${format(new Date(paymentDate), "MMMM dd, yyyy")}</p>
                 <p><strong>Due Date:</strong> ${format(new Date(paymentDate), "MMMM dd, yyyy")}</p>
-                <p><strong>Billing Period:</strong> ${format(new Date(paymentDate), "MMM dd")} - ${format(new Date(new Date(paymentDate).getTime() + 30 * 24 * 60 * 60 * 1000), "MMM dd, yyyy")}</p>
+                <p><strong>Billing Period:</strong> ${format(periodStart, "MMM dd, yyyy")} - ${format(periodEnd, "MMM dd, yyyy")}</p>
               </div>
             </div>
 
@@ -273,6 +276,9 @@ class InvoiceService {
     const taxAmount = Number(payment.tax_amount || 0);
     const subtotal = amount - taxAmount;
     const transactionId = (billingHistory && (billingHistory.transaction_id || billingHistory.transactionId)) || 'N/A';
+    const billingCycle = String(payment.billing_cycle || (subscription && subscription.billingCycle) || 'monthly').toLowerCase();
+    const periodStart = new Date(paymentDate);
+    const periodEnd = billingCycle === 'yearly' ? addYears(periodStart, 1) : addMonths(periodStart, 1);
 
     return `
 INVOICE ${invoiceNumber}
@@ -292,7 +298,7 @@ INVOICE DETAILS:
 Invoice #: ${invoiceNumber}
 Date: ${format(new Date(paymentDate), "MMMM dd, yyyy")}
 Due Date: ${format(new Date(paymentDate), "MMMM dd, yyyy")}
-Billing Period: ${format(new Date(paymentDate), "MMM dd")} - ${format(new Date(new Date(paymentDate).getTime() + 30 * 24 * 60 * 60 * 1000), "MMM dd, yyyy")}
+Billing Period: ${format(periodStart, "MMM dd, yyyy")} - ${format(periodEnd, "MMM dd, yyyy")}
 
 ═══════════════════════════════════════════════════════════════
 

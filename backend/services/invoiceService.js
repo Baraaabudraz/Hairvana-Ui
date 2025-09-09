@@ -19,9 +19,11 @@ class InvoiceService {
     const taxAmount = Number(payment.tax_amount || 0);
     const subtotal = amount - taxAmount;
     const transactionId = (billingHistory && (billingHistory.transaction_id || billingHistory.transactionId)) || 'N/A';
-    const billingCycle = String(payment.billing_cycle || (subscription && subscription.billingCycle) || 'monthly').toLowerCase();
-    const periodStart = new Date(paymentDate);
-    const periodEnd = billingCycle === 'yearly' ? addYears(periodStart, 1) : addMonths(periodStart, 1);
+    const billingCycle = String(payment.billing_cycle || (subscription && (subscription.billingCycle || subscription.billing_cycle)) || 'monthly').toLowerCase();
+    const explicitStart = subscription && (subscription.startDate || subscription.start_date);
+    const explicitEnd = subscription && (subscription.nextBillingDate || subscription.next_billing_date);
+    const periodStart = explicitStart ? new Date(explicitStart) : new Date(paymentDate);
+    const periodEnd = explicitEnd ? new Date(explicitEnd) : (billingCycle === 'yearly' ? addYears(periodStart, 1) : addMonths(periodStart, 1));
 
     return `<!DOCTYPE html>
       <html lang="en">
@@ -276,9 +278,11 @@ class InvoiceService {
     const taxAmount = Number(payment.tax_amount || 0);
     const subtotal = amount - taxAmount;
     const transactionId = (billingHistory && (billingHistory.transaction_id || billingHistory.transactionId)) || 'N/A';
-    const billingCycle = String(payment.billing_cycle || (subscription && subscription.billingCycle) || 'monthly').toLowerCase();
-    const periodStart = new Date(paymentDate);
-    const periodEnd = billingCycle === 'yearly' ? addYears(periodStart, 1) : addMonths(periodStart, 1);
+    const billingCycle = String(payment.billing_cycle || (subscription && (subscription.billingCycle || subscription.billing_cycle)) || 'monthly').toLowerCase();
+    const explicitStart = subscription && (subscription.startDate || subscription.start_date);
+    const explicitEnd = subscription && (subscription.nextBillingDate || subscription.next_billing_date);
+    const periodStart = explicitStart ? new Date(explicitStart) : new Date(paymentDate);
+    const periodEnd = explicitEnd ? new Date(explicitEnd) : (billingCycle === 'yearly' ? addYears(periodStart, 1) : addMonths(periodStart, 1));
 
     return `
 INVOICE ${invoiceNumber}

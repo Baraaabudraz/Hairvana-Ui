@@ -812,7 +812,7 @@ export default function SubscriptionsPage() {
                       <Avatar className="h-12 w-12">
                         <AvatarImage
                           src={subscription.salonImage || "/default-salon.png"}
-                          alt={subscription.salonName}
+                          alt={subscription.salonName ?? undefined}
                         />
                         <AvatarFallback>
                           {subscription.salonName

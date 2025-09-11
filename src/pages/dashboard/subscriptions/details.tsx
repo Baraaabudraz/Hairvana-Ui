@@ -252,6 +252,12 @@ export default function SubscriptionDetailsPage() {
             start: data.billingHistory[0].billing_period_start,
             end: data.billingHistory[0].billing_period_end
           });
+          console.log("All billing history items:", data.billingHistory.map(bh => ({
+            id: bh.id,
+            date: bh.date,
+            billing_period_start: bh.billing_period_start,
+            billing_period_end: bh.billing_period_end
+          })));
         }
         setSubscription(data);
       } catch (error) {

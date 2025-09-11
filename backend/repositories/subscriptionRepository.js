@@ -136,16 +136,65 @@ const { Op } = require("sequelize");
      where: { subscription_id: s.id },
      order: [["date", "DESC"]],
    });
+   // Compute robust billing period defaults
+   const cycle = String(s.billing_cycle || s.billing_period || 'monthly').toLowerCase();
+   let periodStart = s.start_date || s.created_at || null;
+   let periodEnd = s.next_billing_date || null;
+   // If subscription has no dates, derive from billing history
+   if ((!periodStart || !periodEnd) && billingHistory.length > 0) {
+     // Find the earliest invoice date
+     const validDates = billingHistory
+       .map(bh => new Date(bh.date))
+       .filter(d => !isNaN(d.getTime()));
+     if (validDates.length > 0) {
+       const earliest = new Date(Math.min.apply(null, validDates));
+       if (!periodStart) periodStart = earliest.toISOString();
+       if (!periodEnd) {
+         const endCalc = new Date(earliest);
+         if (cycle === 'yearly') {
+           endCalc.setFullYear(endCalc.getFullYear() + 1);
+         } else {
+           endCalc.setMonth(endCalc.getMonth() + 1);
+         }
+         periodEnd = endCalc.toISOString();
+       }
+     }
+   }
+   // If still missing end, compute from start using cycle
+   if (periodStart && !periodEnd) {
+     const startObj = new Date(periodStart);
+     const endObj = new Date(startObj);
+     if (cycle === 'yearly') {
+       endObj.setFullYear(endObj.getFullYear() + 1);
+     } else {
+       endObj.setMonth(endObj.getMonth() + 1);
+     }
+     periodEnd = endObj.toISOString();
+   }
    billingHistory = billingHistory.map((bh) => {
      const obj = bh.toJSON();
+     // Per-invoice billing period from its own date
+     let invoiceStart = obj.date || periodStart;
+     let invoiceEnd = periodEnd;
+     if (obj.date) {
+       const sObj = new Date(obj.date);
+       const eObj = new Date(sObj);
+       if (cycle === 'yearly') {
+         eObj.setFullYear(eObj.getFullYear() + 1);
+       } else {
+         eObj.setMonth(eObj.getMonth() + 1);
+       }
+       invoiceStart = sObj.toISOString();
+       invoiceEnd = eObj.toISOString();
+     }
      return {
        ...obj,
        total:
          obj.total !== undefined
            ? obj.total
            : Number(obj.amount) + Number(obj.tax_amount || 0),
-       billing_period_start: s.start_date,
-       billing_period_end: s.next_billing_date,
+       billing_period_start: invoiceStart,
+       billing_period_end: invoiceEnd,
      };
    });
    return {
@@ -155,12 +204,12 @@ const { Op } = require("sequelize");
      ownerEmail: s.owner?.email,
      plan: s.plan?.name,
      status: s.status,
-     startDate: s.start_date,
-     nextBillingDate: s.next_billing_date,
+     startDate: periodStart,
+     nextBillingDate: periodEnd,
      amount: s.amount,
      billingCycle: s.billing_cycle,
-     billingPeriodStart: s.start_date,
-     billingPeriodEnd: s.next_billing_date,
+     billingPeriodStart: periodStart,
+     billingPeriodEnd: periodEnd,
      features: s.plan?.features,
      usage,
      paymentMethod: s.payment_method,

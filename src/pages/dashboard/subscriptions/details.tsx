@@ -247,18 +247,18 @@ export default function SubscriptionDetailsPage() {
         const data = await fetchSubscriptionById(params.id as string);
         console.log("Subscription data:", data);
         console.log("Billing history:", data.billingHistory);
-        if (data.billingHistory && data.billingHistory.length > 0) {
-          console.log("First invoice billing period:", {
-            start: data.billingHistory[0].billing_period_start,
-            end: data.billingHistory[0].billing_period_end
-          });
-          console.log("All billing history items:", data.billingHistory.map(bh => ({
-            id: bh.id,
-            date: bh.date,
-            billing_period_start: bh.billing_period_start,
-            billing_period_end: bh.billing_period_end
-          })));
-        }
+        // if (data.billingHistory && data.billingHistory.length > 0) {
+        //   console.log("First invoice billing period:", {
+        //     start: data.billingHistory[0].billing_period_start,
+        //     end: data.billingHistory[0].billing_period_end
+        //   });
+        //   console.log("All billing history items:", data.billingHistory.map(bh => ({
+        //     id: bh.id,
+        //     date: bh.date,
+        //     billing_period_start: bh.billing_period_start,
+        //     billing_period_end: bh.billing_period_end
+        //   })));
+        // }
         setSubscription(data);
       } catch (error) {
         console.error("Error fetching subscription:", error);

@@ -245,7 +245,14 @@ export default function SubscriptionDetailsPage() {
         setLoading(true);
         setSubscription(null); // Reset subscription to null when starting to fetch
         const data = await fetchSubscriptionById(params.id as string);
-        console.log("data", data);
+        console.log("Subscription data:", data);
+        console.log("Billing history:", data.billingHistory);
+        if (data.billingHistory && data.billingHistory.length > 0) {
+          console.log("First invoice billing period:", {
+            start: data.billingHistory[0].billing_period_start,
+            end: data.billingHistory[0].billing_period_end
+          });
+        }
         setSubscription(data);
       } catch (error) {
         console.error("Error fetching subscription:", error);

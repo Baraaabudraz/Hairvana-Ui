@@ -124,6 +124,8 @@ interface Subscription {
   billingHistory: BillingHistory[];
   salonPhone?: string;
   salonEmail?: string;
+  billingPeriodStart?: string;
+  billingPeriodEnd?: string;
 }
 
 interface Plan {
@@ -496,8 +498,8 @@ export default function SubscriptionDetailsPage() {
                     : "N/A"
                 }</p>
                 ${(() => {
-                  const start = (invoice as any).billing_period_start || subscription?.startDate;
-                  const end = (invoice as any).billing_period_end || subscription?.nextBillingDate;
+                  const start = (invoice as any).billing_period_start || (subscription as any)?.billingPeriodStart || subscription?.startDate;
+                  const end = (invoice as any).billing_period_end || (subscription as any)?.billingPeriodEnd || subscription?.nextBillingDate;
                   if (!start || !end) return `<p><strong>Billing Period:</strong> N/A</p>`;
                   try {
                     return `<p><strong>Billing Period:</strong> ${format(new Date(start as any), "MMM dd, yyyy")} - ${format(new Date(end as any), "MMM dd, yyyy")}</p>`;
@@ -975,6 +977,9 @@ Hairvana Team`;
           created.transactionId !== undefined
             ? created.transactionId
             : created.transaction_id,
+        // Ensure billing period is present from backend-provided subscription fields
+        billing_period_start: (subscription as any)?.billingPeriodStart || subscription?.startDate,
+        billing_period_end: (subscription as any)?.billingPeriodEnd || subscription?.nextBillingDate,
       };
       setSubscription((prev) =>
         prev

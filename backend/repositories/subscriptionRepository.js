@@ -138,6 +138,7 @@ const { Op } = require("sequelize");
    });
    // Compute robust billing period defaults
    const cycle = String(s.billing_cycle || s.billing_period || 'monthly').toLowerCase();
+   console.log(`[DEBUG] Subscription ${s.id}: billing_cycle="${s.billing_cycle}", billing_period="${s.billing_period}", computed cycle="${cycle}"`);
    let periodStart = s.start_date || s.created_at || null;
    let periodEnd = s.next_billing_date || null;
    // If subscription has no dates, derive from billing history
@@ -175,7 +176,7 @@ const { Op } = require("sequelize");
      const obj = bh.toJSON();
      // Per-invoice billing period from its own date
      let invoiceStart = obj.date || periodStart;
-     let invoiceEnd = periodEnd;
+     let invoiceEnd = null;
      if (obj.date) {
        const sObj = new Date(obj.date);
        const eObj = new Date(sObj);
@@ -186,7 +187,12 @@ const { Op } = require("sequelize");
        }
        invoiceStart = sObj.toISOString();
        invoiceEnd = eObj.toISOString();
+     } else {
+       // Fallback to subscription period if no invoice date
+       invoiceStart = periodStart;
+       invoiceEnd = periodEnd;
      }
+     console.log(`[DEBUG] Invoice ${obj.id}: date="${obj.date}", cycle="${cycle}", start="${invoiceStart}", end="${invoiceEnd}"`);
      return {
        ...obj,
        total:

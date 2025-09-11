@@ -137,10 +137,10 @@ const { Op } = require("sequelize");
      order: [["date", "DESC"]],
    });
    // Compute robust billing period defaults
-   const cycle = String(s.billing_cycle || s.billing_period || 'monthly').toLowerCase();
-   console.log(`[DEBUG] Subscription ${s.id}: billing_cycle="${s.billing_cycle}", billing_period="${s.billing_period}", computed cycle="${cycle}"`);
-   let periodStart = s.start_date || s.created_at || null;
-   let periodEnd = s.next_billing_date || null;
+   const cycle = String(s.billingCycle || s.billingPeriod || s.billing_cycle || s.billing_period || 'monthly').toLowerCase();
+   console.log(`[DEBUG] Subscription ${s.id}: billingCycle="${s.billingCycle}", billingPeriod="${s.billingPeriod}", billing_cycle="${s.billing_cycle}", billing_period="${s.billing_period}", computed cycle="${cycle}"`);
+   let periodStart = s.startDate || s.start_date || s.createdAt || s.created_at || null;
+   let periodEnd = s.nextBillingDate || s.next_billing_date || null;
    // If subscription has no dates, derive from billing history
    if ((!periodStart || !periodEnd) && billingHistory.length > 0) {
      // Find the earliest invoice date

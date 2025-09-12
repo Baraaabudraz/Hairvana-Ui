@@ -48,6 +48,9 @@ router.get('/usage', authenticateOwner, salonSubscriptionController.getSubscript
 // Get billing history for owner (not tied to specific salon)
 router.get('/billing-history', authenticateOwner, salonSubscriptionController.getBillingHistory);
 
+// Get subscription info including features and limits
+router.get('/info', authenticateOwner, salonSubscriptionController.getSubscriptionInfo);
+
 // ===== SUBSCRIPTION PAYMENT ENDPOINTS =====
 
 // Create subscription payment intent

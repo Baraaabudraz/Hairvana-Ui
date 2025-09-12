@@ -3,6 +3,7 @@ const router = express.Router();
 const staffController = require('../../../../controllers/Api/salon/staffController');
 const { authenticateOwner } = require('../../../../middleware/passportMiddleware');
 const { createUploadMiddleware } = require('../../../../helpers/uploadHelper');
+const { checkSubscriptionFeature, checkUsageLimit } = require('../../../../middleware/subscriptionMiddleware');
 const { 
   createStaffValidation,
   updateStaffValidation,
@@ -54,7 +55,9 @@ router.get('/:staffId',
 router.post('/', 
   uploadStaffFiles.single('avatar'),
   createStaffValidation, 
-  validate, 
+  validate,
+  checkSubscriptionFeature('staff_management'),
+  checkUsageLimit('staff'),
   staffController.createStaff
 );
 

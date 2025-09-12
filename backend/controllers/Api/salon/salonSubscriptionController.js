@@ -1,5 +1,6 @@
 const subscriptionService = require('../../../services/subscriptionService');
 const salonService = require('../../../services/salonService');
+const { getUserSubscriptionInfo } = require('../../../middleware/subscriptionMiddleware');
 
 /**
  * Get all available subscription plans
@@ -738,6 +739,26 @@ exports.getBillingHistory = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       data: billingHistory
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get user's subscription info including features and limits
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+exports.getSubscriptionInfo = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const subscriptionInfo = await getUserSubscriptionInfo(userId);
+    
+    return res.status(200).json({
+      success: true,
+      data: subscriptionInfo
     });
   } catch (error) {
     next(error);

@@ -8,6 +8,7 @@ const appointmentController = require('../../../../controllers/Api/customer/appo
 // Middleware
 const { authenticateCustomer } = require('../../../../middleware/passportMiddleware');
 const validate = require('../../../../middleware/validate');
+const { checkSubscriptionFeature, checkUsageLimit } = require('../../../../middleware/subscriptionMiddleware');
 
 // Validation schemas
 const { 
@@ -76,7 +77,9 @@ router.post(
   '/appointments', 
   authenticateCustomer, 
   bookAppointmentValidation, 
-  validate, 
+  validate,
+  checkSubscriptionFeature('basic_booking'),
+  checkUsageLimit('bookings'),
   appointmentController.bookAppointment
 );
 

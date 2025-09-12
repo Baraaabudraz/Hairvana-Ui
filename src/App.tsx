@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 import { useAuthStore } from "./stores/auth-store";
 import { PermissionProvider } from "./hooks/use-permissions";
+import { SubscriptionProvider } from "./hooks/use-subscription";
 import { ProtectedRoute } from "./components/protected-route";
 
 // Auth Pages - Keep login as static import since it's needed immediately
@@ -93,6 +94,7 @@ function App() {
 
   return (
     <PermissionProvider>
+      <SubscriptionProvider>
     <Routes>
       {/* Auth Routes */}
       <Route path="/auth/login" element={<LoginPage />} />
@@ -324,6 +326,7 @@ function App() {
         element={<Navigate to={user ? "/dashboard" : "/auth/login"} replace />}
       />
     </Routes>
+      </SubscriptionProvider>
     </PermissionProvider>
   );
 }

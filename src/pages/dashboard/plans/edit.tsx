@@ -17,10 +17,9 @@ interface Plan {
   billing_period: string;
   features: string[];
   limits: {
-    max_users?: number;
+    max_salons?: number;
     max_bookings?: number;
     max_staff?: number;
-    max_locations?: number;
   };
   status: string;
 }
@@ -38,10 +37,9 @@ const EditPlanPage = () => {
     billing_period: 'monthly',
     features: '',
     limits: {
-      max_users: '',
+      max_salons: '',
       max_bookings: '',
-      max_staff: '',
-      max_locations: ''
+      max_staff: ''
     },
     status: 'active',
   });
@@ -53,7 +51,17 @@ const EditPlanPage = () => {
     const fetchPlan = async () => {
       if (!id) return;
       try {
-        const data = await fetchSubscriptionPlanById(id);
+        const response = await fetchSubscriptionPlanById(id);
+        console.log('Plan response received:', response);
+        
+        // Handle both direct response and wrapped response formats
+        const data = response.data || response;
+        console.log('Plan data:', data);
+        console.log('Limits data:', data.limits);
+        
+        // Ensure limits is an object
+        const limits = data.limits || {};
+        
         setPlan(data);
         setForm({
           name: data.name,
@@ -63,10 +71,9 @@ const EditPlanPage = () => {
           billing_period: data.billing_period,
           features: Array.isArray(data.features) ? data.features.join(', ') : '',
           limits: {
-            max_users: data.limits?.max_users?.toString() || '',
-            max_bookings: data.limits?.max_bookings?.toString() || '',
-            max_staff: data.limits?.max_staff?.toString() || '',
-            max_locations: data.limits?.max_locations?.toString() || '',
+            max_salons: limits.max_salons === 'unlimited' ? '' : (limits.max_salons?.toString() || ''),
+            max_bookings: limits.max_bookings === 'unlimited' ? '' : (limits.max_bookings?.toString() || ''),
+            max_staff: limits.max_staff === 'unlimited' ? '' : (limits.max_staff?.toString() || ''),
           },
           status: data.status,
         });
@@ -104,10 +111,9 @@ const EditPlanPage = () => {
         yearly_price: parseFloat(form.yearly_price),
         features: form.features.split(',').map(f => f.trim()).filter(f => f),
         limits: {
-          max_users: form.limits.max_users ? parseInt(form.limits.max_users) : undefined,
-          max_bookings: form.limits.max_bookings ? parseInt(form.limits.max_bookings) : undefined,
-          max_staff: form.limits.max_staff ? parseInt(form.limits.max_staff) : undefined,
-          max_locations: form.limits.max_locations ? parseInt(form.limits.max_locations) : undefined,
+          max_salons: form.limits.max_salons ? parseInt(form.limits.max_salons) : 'unlimited',
+          max_bookings: form.limits.max_bookings ? parseInt(form.limits.max_bookings) : 'unlimited',
+          max_staff: form.limits.max_staff ? parseInt(form.limits.max_staff) : 'unlimited',
         },
       });
       toast({ title: 'Success', description: 'Plan updated successfully' });
@@ -203,22 +209,23 @@ const EditPlanPage = () => {
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label>Limits</Label>
+                {/* {process.env.NODE_ENV === 'development' && (
+                  <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                    Debug: Current limits data: {JSON.stringify(form.limits)}
+                  </div>
+                )} */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="limits.max_users">Max Users</Label>
-                    <Input id="limits.max_users" name="limits.max_users" type="number" min="0" value={form.limits.max_users} onChange={handleChange} placeholder="e.g. 10" />
+                    <Label htmlFor="limits.max_salons">Max Salons</Label>
+                    <Input id="limits.max_salons" name="limits.max_salons" type="number" min="0" value={form.limits.max_salons} onChange={handleChange} placeholder="e.g. 5 (leave empty for unlimited)" />
                   </div>
                   <div>
                     <Label htmlFor="limits.max_bookings">Max Bookings</Label>
-                    <Input id="limits.max_bookings" name="limits.max_bookings" type="number" min="0" value={form.limits.max_bookings} onChange={handleChange} placeholder="e.g. 100" />
+                    <Input id="limits.max_bookings" name="limits.max_bookings" type="number" min="0" value={form.limits.max_bookings} onChange={handleChange} placeholder="e.g. 100 (leave empty for unlimited)" />
                   </div>
                   <div>
                     <Label htmlFor="limits.max_staff">Max Staff</Label>
-                    <Input id="limits.max_staff" name="limits.max_staff" type="number" min="0" value={form.limits.max_staff} onChange={handleChange} placeholder="e.g. 5" />
-                  </div>
-                  <div>
-                    <Label htmlFor="limits.max_locations">Max Locations</Label>
-                    <Input id="limits.max_locations" name="limits.max_locations" type="number" min="0" value={form.limits.max_locations} onChange={handleChange} placeholder="e.g. 3" />
+                    <Input id="limits.max_staff" name="limits.max_staff" type="number" min="0" value={form.limits.max_staff} onChange={handleChange} placeholder="e.g. 5 (leave empty for unlimited)" />
                   </div>
                 </div>
               </div>

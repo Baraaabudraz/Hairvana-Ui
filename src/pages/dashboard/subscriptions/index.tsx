@@ -102,8 +102,6 @@ interface Usage {
 
 interface Subscription {
   id: string;
-  salonId: string | null;
-  salonName: string | null;
   ownerId: string;
   ownerName: string;
   ownerEmail: string;
@@ -117,7 +115,10 @@ interface Subscription {
   usage: Usage;
   paymentMethod: PaymentMethod | null;
   billingHistory: BillingHistory[];
-  salonImage?: string; // Added for new avatar image
+  // Salon information (owner can have multiple salons)
+  salonId: string | null;
+  salonName: string | null;
+  salonCount?: number; // Number of salons under this owner
 }
 
 interface Plan {
@@ -338,7 +339,7 @@ export default function SubscriptionsPage() {
 
       toast({
         title: "Plan upgraded successfully",
-        description: `${selectedSubscription.salonName} has been upgraded to ${selectedNewPlan.name} plan.`,
+        description: `${selectedSubscription.ownerName} has been upgraded to ${selectedNewPlan.name} plan.`,
       });
 
       setUpgradeDialogOpen(false);
@@ -376,7 +377,7 @@ export default function SubscriptionsPage() {
 
       toast({
         title: "Plan downgraded successfully",
-        description: `${selectedSubscription.salonName} has been downgraded to ${selectedNewPlan.name} plan.`,
+        description: `${selectedSubscription.ownerName} has been downgraded to ${selectedNewPlan.name} plan.`,
       });
 
       setDowngradeDialogOpen(false);
@@ -533,7 +534,7 @@ export default function SubscriptionsPage() {
             Subscription Management
           </h1>
           <p className="text-gray-600">
-            Manage salon subscriptions, billing, and plans
+            Manage salon owner subscriptions, billing, and plans
           </p>
         </div>
         <div className="flex gap-2">
@@ -628,7 +629,7 @@ export default function SubscriptionsPage() {
         <CardHeader>
           <CardTitle>Available Plans</CardTitle>
           <CardDescription>
-            Subscription plans available for salon owners
+            Subscription plans available for salon owners (covers all their salons)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -811,12 +812,12 @@ export default function SubscriptionsPage() {
                     <div className="relative">
                       <Avatar className="h-12 w-12">
                         <AvatarImage
-                          src={subscription.salonImage || "/default-salon.png"}
-                          alt={subscription.salonName ?? undefined}
+                          src="/default-owner.png"
+                          alt={subscription.ownerName}
                         />
                         <AvatarFallback>
-                          {subscription.salonName
-                            ? subscription.salonName
+                          {subscription.ownerName
+                            ? subscription.ownerName
                                 .split(" ")
                                 .map((n) => n[0])
                                 .join("")
@@ -829,14 +830,17 @@ export default function SubscriptionsPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">
-                        {subscription.salonName}
+                        {subscription.ownerName}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        {subscription.ownerName}
-                      </p>
-                      <p className="text-xs text-gray-500">
                         {subscription.ownerEmail}
                       </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Building2 className="h-3 w-3 text-gray-400" />
+                        <span className="text-xs text-gray-500">
+                          {subscription.salonCount ? `${subscription.salonCount} salon${subscription.salonCount > 1 ? 's' : ''}` : 'Salon owner'}
+                        </span>
+                      </div>
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-3 w-3 text-gray-400" />
                         <span className="text-xs text-gray-500">
@@ -925,17 +929,24 @@ export default function SubscriptionsPage() {
                             View Details
                           </Link>
                         </DropdownMenuItem>
-                        {subscription.salonId && (
-                          <DropdownMenuItem asChild>
-                            <Link
-                              to={`/dashboard/salons/${subscription.salonId}`}
-                              className="flex items-center w-full"
-                            >
-                              <Building2 className="mr-2 h-4 w-4" />
-                              View Salon
-                            </Link>
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem asChild>
+                          <Link
+                            to={`/dashboard/users/${subscription.ownerId}`}
+                            className="flex items-center w-full"
+                          >
+                            <Users className="mr-2 h-4 w-4" />
+                            View Owner Profile
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link
+                            to={`/dashboard/salons?owner=${subscription.ownerId}`}
+                            className="flex items-center w-full"
+                          >
+                            <Building2 className="mr-2 h-4 w-4" />
+                            View Owner's Salons
+                          </Link>
+                        </DropdownMenuItem>
                         {subscription.status === "active" && (
                           <>
                             <DropdownMenuItem
@@ -1022,13 +1033,13 @@ export default function SubscriptionsPage() {
             <AlertDialogTitle>Cancel Subscription</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to cancel the subscription for "
-              {selectedSubscription?.salonName}"? This action will immediately
-              revoke access to premium features and cannot be undone.
+              {selectedSubscription?.ownerName}"? This action will immediately
+              revoke access to premium features for all their salons and cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="mt-4">
             <p className="text-sm text-gray-600 mb-2">
-              The salon will lose access to:
+              The owner and all their salons will lose access to:
             </p>
             <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
               <li>Advanced booking features</li>
@@ -1055,7 +1066,7 @@ export default function SubscriptionsPage() {
           <DialogHeader>
             <DialogTitle>Upgrade Subscription Plan</DialogTitle>
             <DialogDescription>
-              Choose a higher tier plan for "{selectedSubscription?.salonName}"
+              Choose a higher tier plan for "{selectedSubscription?.ownerName}"
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1152,7 +1163,7 @@ export default function SubscriptionsPage() {
           <DialogHeader>
             <DialogTitle>Downgrade Subscription Plan</DialogTitle>
             <DialogDescription>
-              Choose a lower tier plan for "{selectedSubscription?.salonName}"
+              Choose a lower tier plan for "{selectedSubscription?.ownerName}"
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1258,7 +1269,7 @@ export default function SubscriptionsPage() {
           <DialogHeader>
             <DialogTitle>Edit Payment Method</DialogTitle>
             <DialogDescription>
-              Update the payment method for "{selectedSubscription?.salonName}"
+              Update the payment method for "{selectedSubscription?.ownerName}"
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

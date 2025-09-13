@@ -245,7 +245,7 @@ export default function SubscriptionDemoPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Bookings</span>
-                  <span>{subscriptionInfo.subscription?.usage.bookingsUsed || 0} / {subscriptionInfo.limits.bookings}</span>
+                  <span>{subscriptionInfo.subscription?.usage.bookings || 0} / {subscriptionInfo.limits.bookings}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
@@ -258,7 +258,7 @@ export default function SubscriptionDemoPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Staff</span>
-                  <span>{subscriptionInfo.subscription?.usage.staffUsed || 0} / {subscriptionInfo.limits.staff}</span>
+                  <span>{subscriptionInfo.subscription?.usage.staff || 0} / {subscriptionInfo.limits.staff}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
@@ -271,7 +271,7 @@ export default function SubscriptionDemoPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Locations</span>
-                  <span>{subscriptionInfo.subscription?.usage.locationsUsed || 0} / {subscriptionInfo.limits.locations}</span>
+                  <span>{subscriptionInfo.subscription?.usage.locations || 0} / {subscriptionInfo.limits.locations}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 

@@ -101,8 +101,8 @@ interface Usage {
   bookingsLimit: number | "unlimited";
   staff: number;
   staffLimit: number | "unlimited";
-  locations: number;
-  locationsLimit: number | "unlimited";
+  salons: number;
+  salonsLimit: number | "unlimited";
 }
 
 interface Subscription {
@@ -138,7 +138,7 @@ interface Plan {
   limits: {
     bookings: number | "unlimited";
     staff: number | "unlimited";
-    locations: number | "unlimited";
+    salons: number | "unlimited";
   };
   popular: boolean;
 }
@@ -764,7 +764,7 @@ Hairvana Team`;
                 ...prev.usage,
                 bookingsLimit: selectedNewPlan.limits.bookings,
                 staffLimit: selectedNewPlan.limits.staff,
-                locationsLimit: selectedNewPlan.limits.locations,
+                salonsLimit: selectedNewPlan.limits.salons,
               },
             }
           : prev
@@ -801,7 +801,7 @@ Hairvana Team`;
                 ...prev.usage,
                 bookingsLimit: selectedNewPlan.limits.bookings,
                 staffLimit: selectedNewPlan.limits.staff,
-                locationsLimit: selectedNewPlan.limits.locations,
+                salonsLimit: selectedNewPlan.limits.salons,
               },
             }
           : prev
@@ -1139,14 +1139,14 @@ Hairvana Team`;
 
   // Show loading spinner while loading or if subscription is null
   if (loading || !subscription) {
-    if (loading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
-        </div>
-      );
-    }
-    
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
     // If not loading but subscription is null, show not found
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1211,7 +1211,7 @@ Hairvana Team`;
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {subscription?.salonName || subscription?.ownerName || "Subscription"} Details
+              {subscription?.ownerName || subscription?.salonName || "Subscription"} Details
             </h1>
             <p className="text-gray-600">Subscription Details & Management</p>
           </div>
@@ -1256,9 +1256,9 @@ Hairvana Team`;
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {subscription?.salonName || subscription?.ownerName || "Salon"}
+                  {subscription?.ownerName || subscription?.salonName || "Owner"}
                 </h2>
-                <p className="text-gray-600">{subscription?.ownerName || "Owner"}</p>
+                <p className="text-gray-600">{subscription?.ownerEmail || "Owner Email"}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge className={planColors[subscription?.plan || "Basic"]}>
                     {subscription?.plan || "Basic"} Plan
@@ -1382,24 +1382,24 @@ Hairvana Team`;
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm font-medium text-gray-600">Locations</p>
+                <p className="text-sm font-medium text-gray-600">Salons</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {subscription?.usage?.locations || 0}
-                  {subscription?.usage?.locationsLimit !== "unlimited" &&
-                    `/${subscription?.usage?.locationsLimit}`}
+                  {subscription?.usage?.salons || 0}
+                  {subscription?.usage?.salonsLimit !== "unlimited" &&
+                    `/${subscription?.usage?.salonsLimit}`}
                 </p>
               </div>
               <Building2 className="h-8 w-8 text-purple-500" />
             </div>
-            {subscription?.usage?.locationsLimit === "unlimited" ? (
+            {subscription?.usage?.salonsLimit === "unlimited" ? (
               <p className="text-sm text-green-600 font-medium">Unlimited</p>
-                          ) : (
-                <p className="text-sm text-gray-600">
-                  {(subscription?.usage?.locationsLimit || 0) -
-                    (subscription?.usage?.locations || 0)}{" "}
-                  remaining
-                </p>
-              )}
+            ) : (
+              <p className="text-sm text-gray-600">
+                  {(subscription?.usage?.salonsLimit || 0) -
+                    (subscription?.usage?.salons || 0)}{" "}
+                remaining
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

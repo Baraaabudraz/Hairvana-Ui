@@ -17,10 +17,9 @@ const NewPlanPage = () => {
     billing_period: 'monthly',
     features: '',
     limits: {
-      max_users: '',
+      max_salons: '',
       max_bookings: '',
-      max_staff: '',
-      max_locations: ''
+      max_staff: ''
     },
     status: 'active',
   });
@@ -48,10 +47,9 @@ const NewPlanPage = () => {
         yearly_price: parseFloat(form.yearly_price),
         features: form.features.split(',').map(f => f.trim()),
         limits: {
-          max_users: form.limits.max_users ? parseInt(form.limits.max_users) : undefined,
-          max_bookings: form.limits.max_bookings ? parseInt(form.limits.max_bookings) : undefined,
-          max_staff: form.limits.max_staff ? parseInt(form.limits.max_staff) : undefined,
-          max_locations: form.limits.max_locations ? parseInt(form.limits.max_locations) : undefined,
+          max_salons: form.limits.max_salons ? parseInt(form.limits.max_salons) : 'unlimited',
+          max_bookings: form.limits.max_bookings ? parseInt(form.limits.max_bookings) : 'unlimited',
+          max_staff: form.limits.max_staff ? parseInt(form.limits.max_staff) : 'unlimited',
         },
       });
       navigate('/dashboard/plans');
@@ -120,8 +118,8 @@ const NewPlanPage = () => {
                 <Label>Limits</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="limits.max_users">Max Users</Label>
-                    <Input id="limits.max_users" name="limits.max_users" type="number" min="0" value={form.limits.max_users} onChange={handleChange} placeholder="e.g. 10" />
+                    <Label htmlFor="limits.max_salons">Max Salons</Label>
+                    <Input id="limits.max_salons" name="limits.max_salons" type="number" min="0" value={form.limits.max_salons} onChange={handleChange} placeholder="e.g. 5" />
                   </div>
                   <div>
                     <Label htmlFor="limits.max_bookings">Max Bookings</Label>
@@ -130,10 +128,6 @@ const NewPlanPage = () => {
                   <div>
                     <Label htmlFor="limits.max_staff">Max Staff</Label>
                     <Input id="limits.max_staff" name="limits.max_staff" type="number" min="0" value={form.limits.max_staff} onChange={handleChange} placeholder="e.g. 5" />
-                  </div>
-                  <div>
-                    <Label htmlFor="limits.max_locations">Max Locations</Label>
-                    <Input id="limits.max_locations" name="limits.max_locations" type="number" min="0" value={form.limits.max_locations} onChange={handleChange} placeholder="e.g. 3" />
                   </div>
                 </div>
               </div>

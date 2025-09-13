@@ -137,6 +137,32 @@ exports.updateSalonProfile = async (req, res, next) => {
         }
       }
       
+      // Sanitize hours data - clean up incomplete time formats
+      if (typeof updateData.hours === 'object' && updateData.hours !== null) {
+        const sanitizedHours = {};
+        for (const [day, time] of Object.entries(updateData.hours)) {
+          if (typeof time === 'string') {
+            const trimmedTime = time.trim();
+            // Only sanitize truly incomplete formats (just dashes or empty)
+            // Don't sanitize valid time ranges or "Closed"
+            if (trimmedTime === ' - ' || trimmedTime === '-' || trimmedTime === '' || trimmedTime === ' -') {
+              sanitizedHours[day] = 'Closed';
+              console.log(`Debug - Sanitized ${day} from "${time}" to "Closed" (incomplete format)`);
+            } else if (trimmedTime.toLowerCase() === 'closed') {
+              sanitizedHours[day] = 'Closed';
+            } else {
+              // Keep valid time ranges as-is
+              sanitizedHours[day] = trimmedTime;
+              console.log(`Debug - Keeping ${day} as "${trimmedTime}" (valid format)`);
+            }
+          } else {
+            sanitizedHours[day] = time;
+          }
+        }
+        updateData.hours = sanitizedHours;
+        console.log('Debug - Sanitized hours data:', updateData.hours);
+      }
+      
       // If hours is an array, convert it to a more structured format
       if (Array.isArray(updateData.hours)) {
         const hoursObject = {};

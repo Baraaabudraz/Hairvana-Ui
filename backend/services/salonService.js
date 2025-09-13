@@ -134,6 +134,32 @@ exports.createSalon = async (req) => {
       }
     }
     
+    // Sanitize hours data - clean up incomplete time formats
+    if (typeof cleanSalonData.hours === 'object' && cleanSalonData.hours !== null) {
+      const sanitizedHours = {};
+      for (const [day, time] of Object.entries(cleanSalonData.hours)) {
+        if (typeof time === 'string') {
+          const trimmedTime = time.trim();
+          // Only sanitize truly incomplete formats (just dashes or empty)
+          // Don't sanitize valid time ranges or "Closed"
+          if (trimmedTime === ' - ' || trimmedTime === '-' || trimmedTime === '' || trimmedTime === ' -') {
+            sanitizedHours[day] = 'Closed';
+            console.log(`Debug - Sanitized ${day} from "${time}" to "Closed" (incomplete format)`);
+          } else if (trimmedTime.toLowerCase() === 'closed') {
+            sanitizedHours[day] = 'Closed';
+          } else {
+            // Keep valid time ranges as-is
+            sanitizedHours[day] = trimmedTime;
+            console.log(`Debug - Keeping ${day} as "${trimmedTime}" (valid format)`);
+          }
+        } else {
+          sanitizedHours[day] = time;
+        }
+      }
+      cleanSalonData.hours = sanitizedHours;
+      console.log('Debug - Sanitized hours data:', cleanSalonData.hours);
+    }
+    
     // If hours is an array, convert it to a more structured format
     if (Array.isArray(cleanSalonData.hours)) {
       const hoursObject = {};
@@ -212,6 +238,32 @@ exports.updateSalon = async (id, data, req) => {
         console.error('Debug - Failed to parse hours JSON (update):', error);
         // If parsing fails, keep as string
       }
+    }
+    
+    // Sanitize hours data - clean up incomplete time formats
+    if (typeof data.hours === 'object' && data.hours !== null) {
+      const sanitizedHours = {};
+      for (const [day, time] of Object.entries(data.hours)) {
+        if (typeof time === 'string') {
+          const trimmedTime = time.trim();
+          // Only sanitize truly incomplete formats (just dashes or empty)
+          // Don't sanitize valid time ranges or "Closed"
+          if (trimmedTime === ' - ' || trimmedTime === '-' || trimmedTime === '' || trimmedTime === ' -') {
+            sanitizedHours[day] = 'Closed';
+            console.log(`Debug - Sanitized ${day} from "${time}" to "Closed" (incomplete format)`);
+          } else if (trimmedTime.toLowerCase() === 'closed') {
+            sanitizedHours[day] = 'Closed';
+          } else {
+            // Keep valid time ranges as-is
+            sanitizedHours[day] = trimmedTime;
+            console.log(`Debug - Keeping ${day} as "${trimmedTime}" (valid format)`);
+          }
+        } else {
+          sanitizedHours[day] = time;
+        }
+      }
+      data.hours = sanitizedHours;
+      console.log('Debug - Sanitized hours data (update):', data.hours);
     }
     
     // If hours is an array, convert it to a more structured format

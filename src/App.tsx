@@ -38,6 +38,9 @@ const SubscriptionDetailsPage = lazy(
 const NewSubscriptionPage = lazy(
   () => import("./pages/dashboard/subscriptions/new")
 );
+const SubscriptionDemoPage = lazy(
+  () => import("./pages/dashboard/subscription-demo")
+);
 const AnalyticsPage = lazy(() => import("./pages/dashboard/analytics"));
 const ReportsPage = lazy(() => import("./pages/dashboard/reports"));
 const NotificationsPage = lazy(() => import("./pages/dashboard/notifications"));
@@ -248,6 +251,16 @@ function App() {
             <ProtectedRoute requiredResource="subscriptions" requiredAction="add">
             <Suspense fallback={<PageLoader />}>
               <NewSubscriptionPage />
+            </Suspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="subscription-demo"
+          element={
+            <ProtectedRoute requiredResource="dashboard" requiredAction="view">
+            <Suspense fallback={<PageLoader />}>
+              <SubscriptionDemoPage />
             </Suspense>
             </ProtectedRoute>
           }

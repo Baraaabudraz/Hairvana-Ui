@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { apiFetch } from '../api/client';
+import { apiFetch } from '@/lib/api';
 
 interface SubscriptionInfo {
   hasActiveSubscription: boolean;
@@ -14,9 +14,9 @@ interface SubscriptionInfo {
     id: string;
     status: string;
     usage: {
-      bookingsUsed: number;
-      staffUsed: number;
-      locationsUsed: number;
+      bookings: number;
+      staff: number;
+      locations: number;
     };
   } | null;
 }
@@ -78,7 +78,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const limit = subscriptionInfo.limits[resourceType as keyof typeof subscriptionInfo.limits];
     if (limit === 'unlimited') return true;
     
-    const usage = subscriptionInfo.subscription?.usage[`${resourceType}Used` as keyof typeof subscriptionInfo.subscription.usage] || 0;
+    const usage = subscriptionInfo.subscription?.usage[resourceType as keyof typeof subscriptionInfo.subscription.usage] || 0;
     return usage < limit;
   };
 
@@ -88,7 +88,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const limit = subscriptionInfo.limits[resourceType as keyof typeof subscriptionInfo.limits];
     if (limit === 'unlimited') return 0;
     
-    const usage = subscriptionInfo.subscription?.usage[`${resourceType}Used` as keyof typeof subscriptionInfo.subscription.usage] || 0;
+    const usage = subscriptionInfo.subscription?.usage[resourceType as keyof typeof subscriptionInfo.subscription.usage] || 0;
     return Math.round((usage / limit) * 100);
   };
 

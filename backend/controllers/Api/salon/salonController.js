@@ -70,6 +70,46 @@ exports.createSalon = async (req, res, next) => {
       });
     }
 
+    // Check subscription limits before creating salon
+    const { Subscription, Salon, SubscriptionPlan } = require('../../../models');
+    
+    // Get user's active subscription
+    const subscription = await Subscription.findOne({
+      where: { 
+        owner_id: req.user.id,
+        status: 'active'
+      },
+      include: [
+        { model: SubscriptionPlan, as: 'plan' }
+      ]
+    });
+
+    if (!subscription) {
+      return res.status(403).json({
+        success: false,
+        message: 'No active subscription found. Please subscribe to create salons.',
+        code: 'NO_ACTIVE_SUBSCRIPTION'
+      });
+    }
+
+    // Get current salon count for this owner
+    const currentSalonCount = await Salon.count({
+      where: { owner_id: req.user.id }
+    });
+
+    // Check salon limit
+    const salonLimit = subscription.plan?.limits?.max_salons;
+    if (salonLimit !== 'unlimited' && currentSalonCount >= salonLimit) {
+      return res.status(403).json({
+        success: false,
+        message: `Salon limit reached. You can only have ${salonLimit} salon(s) with your current plan. Please upgrade your subscription to create more salons.`,
+        code: 'SALON_LIMIT_REACHED',
+        currentUsage: currentSalonCount,
+        limit: salonLimit,
+        upgradeRequired: true
+      });
+    }
+
     // Set the owner_id to the authenticated user's ID
     req.body.owner_id = req.user.id;
     

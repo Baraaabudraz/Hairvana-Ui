@@ -52,11 +52,53 @@ const { Op } = require("sequelize");
      });
    }
    
-   const formattedSubscriptions = subscriptions.map((sub) => {
+   const formattedSubscriptions = await Promise.all(subscriptions.map(async (sub) => {
      const s = sub.toJSON();
      
      // Get the first salon for this owner (assuming one owner can have multiple salons)
      const ownerSalon = s.owner?.salons && s.owner.salons.length > 0 ? s.owner.salons[0] : null;
+     
+     // Calculate actual usage from database
+     const { Salon, Staff, Appointment } = require('../models');
+     
+     // Get actual salon count for this owner
+     const salonCount = await Salon.count({ 
+       where: { owner_id: s.owner_id } 
+     });
+     
+     // Get actual staff count across all owner's salons
+     const staffCount = await Staff.count({
+       include: [{
+         model: Salon,
+         as: 'salon',
+         where: { owner_id: s.owner_id }
+       }]
+     });
+     
+     // Get actual booking count across all owner's salons
+     const bookingCount = await Appointment.count({
+       include: [{
+         model: Salon,
+         as: 'salon',
+         where: { owner_id: s.owner_id }
+       }]
+     });
+     
+     // Create usage object with actual data and plan limits
+     const usage = {
+       salons: salonCount,
+       salonsLimit: s.plan && s.plan.limits && s.plan.limits.max_salons != null
+         ? s.plan.limits.max_salons
+         : 'unlimited',
+       bookings: bookingCount,
+       bookingsLimit: s.plan && s.plan.limits && s.plan.limits.max_bookings != null
+         ? s.plan.limits.max_bookings
+         : 'unlimited',
+       staff: staffCount,
+       staffLimit: s.plan && s.plan.limits && s.plan.limits.max_staff != null
+         ? s.plan.limits.max_staff
+         : 'unlimited',
+     };
      
      return {
        id: s.id,
@@ -70,16 +112,15 @@ const { Op } = require("sequelize");
        amount: s.amount,
        billingCycle: s.billing_cycle,
        features: s.plan?.features,
-       usage: s.usage,
+       usage: usage,
        paymentMethod: s.payment_method,
        billingHistory: [],
-       // Include actual salon information
+       // Include salon information for reference (owner can have multiple salons)
        salonId: ownerSalon?.id || null,
        salonName: ownerSalon?.name || null,
-       salonPhone: ownerSalon?.phone || null,
-       salonEmail: ownerSalon?.email || null,
+       salonCount: salonCount,
      };
-   });
+   }));
   const stats = {
     total: formattedSubscriptions.length,
     active: formattedSubscriptions.filter((s) => s.status === "active").length,
@@ -112,26 +153,47 @@ const { Op } = require("sequelize");
    });
    if (!sub) return null;
    const s = sub.toJSON();
-   let usage = s.usage;
-   if (!usage) {
-     usage = {
-       bookings: 0,
-       bookingsLimit:
-         s.plan && s.plan.limits && s.plan.limits.bookings != null
-           ? s.plan.limits.bookings
-           : 0,
-       staff: 0,
-       staffLimit:
-         s.plan && s.plan.limits && s.plan.limits.staff != null
-           ? s.plan.limits.staff
-           : 0,
-       locations: 1,
-       locationsLimit:
-         s.plan && s.plan.limits && s.plan.limits.locations != null
-           ? s.plan.limits.locations
-           : 1,
-     };
-   }
+   // Calculate actual usage from database
+   const { Salon, Staff, Appointment } = require('../models');
+   
+   // Get actual salon count for this owner
+   const salonCount = await Salon.count({ 
+     where: { owner_id: s.ownerId } 
+   });
+   
+   // Get actual staff count across all owner's salons
+   const staffCount = await Staff.count({
+     include: [{
+       model: Salon,
+       as: 'salon',
+       where: { owner_id: s.ownerId }
+     }]
+   });
+   
+   // Get actual booking count across all owner's salons
+   const bookingCount = await Appointment.count({
+     include: [{
+       model: Salon,
+       as: 'salon',
+       where: { owner_id: s.ownerId }
+     }]
+   });
+   
+   // Create usage object with actual data and plan limits
+   let usage = {
+     salons: salonCount,
+     salonsLimit: s.plan && s.plan.limits && s.plan.limits.max_salons != null
+       ? s.plan.limits.max_salons
+       : 'unlimited',
+     bookings: bookingCount,
+     bookingsLimit: s.plan && s.plan.limits && s.plan.limits.max_bookings != null
+       ? s.plan.limits.max_bookings
+       : 'unlimited',
+     staff: staffCount,
+     staffLimit: s.plan && s.plan.limits && s.plan.limits.max_staff != null
+       ? s.plan.limits.max_staff
+       : 'unlimited',
+   };
    let billingHistory = await BillingHistory.findAll({
      where: { subscription_id: s.id },
      order: [["date", "DESC"]],
@@ -247,15 +309,15 @@ const { Op } = require("sequelize");
    // Get count of salons for this owner to set initial location count
    const salonCount = await Salon.count({ where: { owner_id: data.ownerId } });
    
-   // Initialize usage with plan limits
-   const usage = {
-     bookings: 0,
-     bookingsLimit: plan.limits?.bookings || 0,
-     staff: 0,
-     staffLimit: plan.limits?.staff || 0,
-     locations: Math.max(1, salonCount), // At least 1 location
-     locationsLimit: plan.limits?.locations || 1,
-   };
+  // Initialize usage with plan limits
+  const usage = {
+    salons: salonCount,
+    salonsLimit: plan.limits?.max_salons || 'unlimited',
+    bookings: 0,
+    bookingsLimit: plan.limits?.max_bookings || 'unlimited',
+    staff: 0,
+    staffLimit: plan.limits?.max_staff || 'unlimited',
+  };
    
    const newSub = await Subscription.create({
      ownerId: data.ownerId,
@@ -280,9 +342,9 @@ exports.updateSubscription = async (id, data) => {
     if (data.usage) {
       data.usage = {
         ...data.usage,
-        bookingsLimit: plan.limits.bookings,
-        staffLimit: plan.limits.staff,
-        locationsLimit: plan.limits.locations,
+        salonsLimit: plan.limits.max_salons,
+        bookingsLimit: plan.limits.max_bookings,
+        staffLimit: plan.limits.max_staff,
       };
     }
     data.amount = plan.price;
@@ -463,17 +525,18 @@ exports.deletePlan = async (id) => {
    if (!subscription) return null;
    
    const s = subscription.toJSON();
-   let usage = s.usage;
-   if (!usage) {
-     usage = {
-       bookings: 0,
-       bookingsLimit: s.plan && s.plan.limits && s.plan.limits.bookings != null ? s.plan.limits.bookings : 0,
-       staff: 0,
-       staffLimit: s.plan && s.plan.limits && s.plan.limits.staff != null ? s.plan.limits.staff : 0,
-       locations: 1,
-       locationsLimit: s.plan && s.plan.limits && s.plan.limits.locations != null ? s.plan.limits.locations : 1,
-     };
-   }
+  let usage = s.usage;
+  if (!usage) {
+    usage = {
+      salons: s.owner?.salons ? s.owner.salons.length : 0,
+      salons: s.owner?.salons ? s.owner.salons.length : 0,
+      salonsLimit: s.plan && s.plan.limits && s.plan.limits.max_salons != null ? s.plan.limits.max_salons : 'unlimited',
+      bookings: 0,
+      bookingsLimit: s.plan && s.plan.limits && s.plan.limits.max_bookings != null ? s.plan.limits.max_bookings : 'unlimited',
+      staff: 0,
+      staffLimit: s.plan && s.plan.limits && s.plan.limits.max_staff != null ? s.plan.limits.max_staff : 'unlimited',
+    };
+  }
    
    return {
      id: s.id,
@@ -505,17 +568,48 @@ exports.getSubscriptionByOwnerId = async (ownerId) => {
   if (!subscription) return null;
   
   const s = subscription.toJSON();
-  let usage = s.usage;
-  if (!usage) {
-    usage = {
-      bookings: 0,
-      bookingsLimit: s.plan && s.plan.limits && s.plan.limits.bookings != null ? s.plan.limits.bookings : 0,
-      staff: 0,
-      staffLimit: s.plan && s.plan.limits && s.plan.limits.staff != null ? s.plan.limits.staff : 0,
-      locations: 1,
-      locationsLimit: s.plan && s.plan.limits && s.plan.limits.locations != null ? s.plan.limits.locations : 1,
-    };
-  }
+  
+  // Calculate actual usage from database
+  const { Salon, Staff, Appointment } = require('../models');
+  
+  // Get actual salon count for this owner
+  const salonCount = await Salon.count({ 
+    where: { owner_id: ownerId } 
+  });
+  
+  // Get actual staff count across all owner's salons
+  const staffCount = await Staff.count({
+    include: [{
+      model: Salon,
+      as: 'salon',
+      where: { owner_id: ownerId }
+    }]
+  });
+  
+  // Get actual booking count across all owner's salons
+  const bookingCount = await Appointment.count({
+    include: [{
+      model: Salon,
+      as: 'salon',
+      where: { owner_id: ownerId }
+    }]
+  });
+  
+  // Create usage object with actual data and plan limits
+  const usage = {
+    salons: salonCount,
+    salonsLimit: s.plan && s.plan.limits && s.plan.limits.max_salons != null
+      ? s.plan.limits.max_salons
+      : 'unlimited',
+    bookings: bookingCount,
+    bookingsLimit: s.plan && s.plan.limits && s.plan.limits.max_bookings != null
+      ? s.plan.limits.max_bookings
+      : 'unlimited',
+    staff: staffCount,
+    staffLimit: s.plan && s.plan.limits && s.plan.limits.max_staff != null
+      ? s.plan.limits.max_staff
+      : 'unlimited',
+  };
   
   return {
     id: s.id,

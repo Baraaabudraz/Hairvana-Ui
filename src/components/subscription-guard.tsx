@@ -147,7 +147,7 @@ export const UsageIndicator: React.FC<UsageIndicatorProps> = ({
   }
 
   const limit = subscriptionInfo.limits[resourceType];
-  const usage = subscriptionInfo.subscription?.usage[`${resourceType}Used`] || 0;
+  const usage = subscriptionInfo.subscription?.usage[resourceType] || 0;
   const percentage = getUsagePercentage(resourceType);
 
   if (limit === 'unlimited') {

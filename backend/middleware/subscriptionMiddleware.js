@@ -35,19 +35,19 @@ const FEATURE_MATRIX = {
 // Usage limits by plan
 const USAGE_LIMITS = {
   'basic': {
-    bookings: 100,
-    staff: 3,
-    locations: 1
+    max_salons: 1,
+    max_bookings: 100,
+    max_staff: 3
   },
   'standard': {
-    bookings: 500,
-    staff: 10,
-    locations: 1
+    max_salons: 3,
+    max_bookings: 500,
+    max_staff: 10
   },
   'premium': {
-    bookings: 'unlimited',
-    staff: 'unlimited',
-    locations: 'unlimited'
+    max_salons: 'unlimited',
+    max_bookings: 'unlimited',
+    max_staff: 'unlimited'
   }
 };
 
@@ -148,15 +148,23 @@ function checkUsageLimit(resourceType) {
       const limits = USAGE_LIMITS[planName];
       const usage = subscription.usage || {};
 
-      if (!limits || !limits[resourceType]) {
+      // Map resource types to max_* field names
+      const limitFieldMap = {
+        'salons': 'max_salons',
+        'bookings': 'max_bookings',
+        'staff': 'max_staff'
+      };
+
+      const limitField = limitFieldMap[resourceType];
+      if (!limits || !limitField || !limits[limitField]) {
         return res.status(500).json({
           error: "Invalid resource type or plan configuration",
           code: 'INVALID_CONFIGURATION'
         });
       }
 
-      const limit = limits[resourceType];
-      const currentUsage = usage[`${resourceType}Used`] || 0;
+      const limit = limits[limitField];
+      const currentUsage = usage[resourceType] || 0;
 
       // Check if limit is reached
       if (limit !== 'unlimited' && currentUsage >= limit) {
@@ -255,9 +263,9 @@ async function getUserSubscriptionInfo(userId) {
         id: subscription.id,
         status: subscription.status,
         usage: subscription.usage || {
-          bookingsUsed: 0,
-          staffUsed: 0,
-          locationsUsed: 0
+          bookings: 0,
+          staff: 0,
+          locations: 0
         }
       }
     };

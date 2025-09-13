@@ -73,9 +73,9 @@ interface Plan {
   description: string;
   features: string[];
   limits: {
-    bookings: number | "unlimited";
-    staff: number | "unlimited";
-    locations: number | "unlimited";
+    max_bookings: number | "unlimited";
+    max_staff: number | "unlimited";
+    max_salons: number | "unlimited";
   };
   popular: boolean;
 }

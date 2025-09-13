@@ -146,7 +146,6 @@ function checkUsageLimit(resourceType) {
 
       const planName = subscription.plan?.name?.toLowerCase() || 'basic';
       const limits = USAGE_LIMITS[planName];
-      const usage = subscription.usage || {};
 
       // Map resource types to max_* field names
       const limitFieldMap = {
@@ -164,7 +163,41 @@ function checkUsageLimit(resourceType) {
       }
 
       const limit = limits[limitField];
-      const currentUsage = usage[resourceType] || 0;
+      
+      // Calculate actual current usage by counting database records
+      let currentUsage = 0;
+      try {
+        switch (resourceType) {
+          case 'staff':
+            currentUsage = await db.Staff.count({
+              include: [{
+                model: db.Salon,
+                as: 'salon',
+                where: { owner_id: user.id }
+              }]
+            });
+            break;
+          case 'salons':
+            currentUsage = await db.Salon.count({
+              where: { owner_id: user.id }
+            });
+            break;
+          case 'bookings':
+            currentUsage = await db.Appointment.count({
+              include: [{
+                model: db.Salon,
+                as: 'salon',
+                where: { owner_id: user.id }
+              }]
+            });
+            break;
+          default:
+            currentUsage = 0;
+        }
+      } catch (countError) {
+        console.error(`Error counting ${resourceType}:`, countError);
+        currentUsage = 0;
+      }
 
       // Check if limit is reached
       if (limit !== 'unlimited' && currentUsage >= limit) {

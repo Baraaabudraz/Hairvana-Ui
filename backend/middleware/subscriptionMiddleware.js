@@ -18,6 +18,7 @@ const FEATURE_MATRIX = {
   'advanced_reporting': ['standard', 'premium'],
   'chat_support': ['standard', 'premium'],
   'online_scheduling': ['standard', 'premium'],
+  'staff_management': ['standard', 'premium'],
   
   // Premium Plan Features (includes all features)
   'unlimited_bookings': ['premium'],
@@ -28,7 +29,6 @@ const FEATURE_MATRIX = {
   'api_access': ['premium'],
   'priority_support': ['premium'],
   'financial_reporting': ['premium'],
-  'staff_management': ['premium'],
   'inventory_tracking': ['premium']
 };
 

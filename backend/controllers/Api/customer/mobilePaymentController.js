@@ -230,12 +230,15 @@ exports.stripeWebhook = async (req, res, next) => {
     }
 
     console.log(`Processing webhook event: ${event.type}`);
+    console.log('Event data:', JSON.stringify(event.data.object, null, 2));
 
     // Handle the event
     try {
       switch (event.type) {
         case 'payment_intent.succeeded':
+          console.log('Processing payment_intent.succeeded...');
           await handlePaymentSucceeded(event.data.object);
+          console.log('Payment processing completed successfully');
           break;
         case 'payment_intent.payment_failed':
           await handlePaymentFailed(event.data.object);
@@ -265,6 +268,8 @@ async function handlePaymentSucceeded(paymentIntent) {
   const { Payment, Appointment } = require('../../../models');
   const subscriptionPaymentService = require('../../../services/subscriptionPaymentService');
   
+  console.log('handlePaymentSucceeded called with paymentIntent:', JSON.stringify(paymentIntent, null, 2));
+  
   try {
     // Check if this is a subscription payment
     if (paymentIntent.metadata && paymentIntent.metadata.subscription_payment_id) {
@@ -274,15 +279,20 @@ async function handlePaymentSucceeded(paymentIntent) {
         const subscription = await subscriptionPaymentService.handleSuccessfulSubscriptionPayment(paymentIntent.id);
         console.log(`Subscription created successfully: ${subscription.id}`);
         
-        // Send notification to salon owner
-        await notificationService.sendToUsers([
-          paymentIntent.metadata.user_id,
-          paymentIntent.metadata.owner_id
-        ], 'Subscription Activated', 'Your subscription payment was successful and your salon subscription is now active.', { 
-          subscriptionId: subscription.id,
-          salonId: paymentIntent.metadata.salon_id,
-          ownerId: paymentIntent.metadata.owner_id
-        });
+        // Send notification to salon owner (if notification service is available)
+        try {
+          const notificationService = require('../../../services/notificationService');
+          await notificationService.sendToUsers([
+            paymentIntent.metadata.user_id,
+            paymentIntent.metadata.owner_id
+          ], 'Subscription Activated', 'Your subscription payment was successful and your salon subscription is now active.', { 
+            subscriptionId: subscription.id,
+            salonId: paymentIntent.metadata.salon_id,
+            ownerId: paymentIntent.metadata.owner_id
+          });
+        } catch (notificationError) {
+          console.warn('Could not send notification:', notificationError.message);
+        }
         
         return;
       } catch (subscriptionError) {

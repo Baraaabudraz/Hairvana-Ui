@@ -71,6 +71,8 @@ import {
   SubscriptionParams,
   fetchSubscriptionPlans,
 } from "@/api/subscriptions";
+import { apiFetch } from "@/lib/api";
+import StripePayment from "@/components/stripe-payment";
 
 type SubscriptionStatus = "active" | "trial" | "cancelled" | "past_due";
 type PlanType = "Basic" | "Standard" | "Premium";
@@ -228,6 +230,9 @@ export default function SubscriptionsPage() {
     cvv: "",
     cardholderName: "",
   });
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentIntent, setPaymentIntent] = useState<any>(null);
+  const [actionType, setActionType] = useState<'upgrade' | 'downgrade' | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -316,79 +321,172 @@ export default function SubscriptionsPage() {
     }
   };
 
-  const handleUpgradePlan = async () => {
-    if (!selectedSubscription || !selectedNewPlan) return;
-
+  const createPaymentIntent = async (plan: Plan, action: 'upgrade' | 'downgrade') => {
     try {
-      await updateSubscription(selectedSubscription.id, {
-        plan_id: selectedNewPlan.id,
-        amount: selectedNewPlan.price,
+      if (!plan || !plan.id) {
+        throw new Error('Plan or Plan ID is missing');
+      }
+      
+      if (!selectedSubscription || !selectedSubscription.ownerId) {
+        throw new Error('Subscription or Owner ID is missing');
+      }
+      
+      const endpoint = action === 'upgrade' 
+        ? '/subscription-payments/upgrade/create-intent'
+        : '/subscription-payments/downgrade/create-intent';
+      
+      const requestData = {
+        planId: plan.id,
+        billingCycle: selectedSubscription?.billingCycle || 'monthly',
+        userId: selectedSubscription?.ownerId
+      };
+      
+      console.log(`Creating ${action} payment intent with data:`, requestData);
+      
+      const response = await apiFetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(requestData),
       });
 
-      setSubscriptions((prev) =>
-        prev.map((sub) =>
-          sub.id === selectedSubscription.id
-            ? {
-                ...sub,
-                plan: selectedNewPlan.name as PlanType,
-                amount: selectedNewPlan.price,
-              }
-            : sub
-        )
-      );
-
-      toast({
-        title: "Plan upgraded successfully",
-        description: `${selectedSubscription.ownerName} has been upgraded to ${selectedNewPlan.name} plan.`,
-      });
-
-      setUpgradeDialogOpen(false);
-      setSelectedSubscription(null);
-      setSelectedNewPlan(null);
-    } catch (error) {
+      if (response.success && response.data) {
+        setPaymentIntent(response.data);
+        setActionType(action); // Set the action type for the payment
+        setShowPaymentForm(true);
+        setUpgradeDialogOpen(false);
+        setDowngradeDialogOpen(false);
+        
+        toast({
+          title: "Payment Intent Created",
+          description: `Please complete the payment to ${action} your subscription.`,
+        });
+      } else {
+        throw new Error(response.message || 'Failed to create payment intent');
+      }
+    } catch (error: any) {
+      console.error(`Error creating ${action} payment intent:`, error);
       toast({
         title: "Error",
-        description: "Failed to upgrade plan. Please try again.",
+        description: error.message || `Failed to create ${action} payment intent. Please try again.`,
         variant: "destructive",
       });
     }
   };
 
+  const handleUpgradePlan = async () => {
+    if (!selectedSubscription || !selectedNewPlan) return;
+    await createPaymentIntent(selectedNewPlan, 'upgrade');
+  };
+
   const handleDowngradePlan = async () => {
     if (!selectedSubscription || !selectedNewPlan) return;
+    await createPaymentIntent(selectedNewPlan, 'downgrade');
+  };
 
+  const handlePaymentSuccess = async (paymentIntent: any) => {
+    console.log('Payment successful:', paymentIntent);
+    
+    // Automatically trigger webhook processing for upgrade/downgrade payments
+    if (actionType === 'upgrade' || actionType === 'downgrade') {
+      try {
+        console.log('Auto-triggering webhook processing for upgrade/downgrade...');
+        
+        // Extract payment intent ID from the payment intent object
+        const paymentIntentId = paymentIntent?.id || paymentIntent?.clientSecret?.split('_secret_')[0];
+        
+        if (paymentIntentId) {
+          const response = await apiFetch('/subscription-payments/test-activate', {
+            method: 'POST',
+            body: JSON.stringify({ paymentIntentId: paymentIntentId })
+          });
+
+          if (response.success) {
+            console.log('Auto-activation successful:', response);
+            toast({
+              title: "Payment Successful",
+              description: `Subscription ${actionType} completed and activated successfully!`,
+            });
+          } else {
+            console.error('Auto-activation failed:', response);
+            toast({
+              title: "Payment Successful",
+              description: `Payment completed but activation failed. Please use the manual activation button.`,
+              variant: "destructive",
+            });
+          }
+        } else {
+          console.error('Payment intent ID not found');
+          toast({
+            title: "Payment Successful",
+            description: `Payment completed but activation failed. Please use the manual activation button.`,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error in auto-activation:', error);
+        toast({
+          title: "Payment Successful",
+          description: `Payment completed but activation failed. Please use the manual activation button.`,
+          variant: "destructive",
+        });
+      }
+    } else {
+      // For new subscriptions, show regular success message
+      toast({
+        title: "Payment Successful",
+        description: `Subscription ${actionType} completed successfully!`,
+      });
+    }
+    
+    setShowPaymentForm(false);
+    setPaymentIntent(null);
+    setActionType(null);
+    
+    // Refresh the subscriptions list
+    loadSubscriptions();
+  };
+
+  const handlePaymentError = (error: string) => {
+    console.error('Payment error:', error);
+    toast({
+      title: "Payment Failed",
+      description: error,
+      variant: "destructive",
+    });
+  };
+
+  const handlePaymentCancel = () => {
+    setShowPaymentForm(false);
+    setPaymentIntent(null);
+    setActionType(null);
+  };
+
+  const checkPaymentStatus = async (paymentId: string) => {
     try {
-      await updateSubscription(selectedSubscription.id, {
-        plan_id: selectedNewPlan.id,
-        amount: selectedNewPlan.price,
+      console.log('Checking payment status for:', paymentId);
+      
+      const response = await apiFetch('/subscription-payments/test-activate', {
+        method: 'POST',
+        body: JSON.stringify({ paymentIntentId: paymentId })
       });
 
-      setSubscriptions((prev) =>
-        prev.map((sub) =>
-          sub.id === selectedSubscription.id
-            ? {
-                ...sub,
-                plan: selectedNewPlan.name as PlanType,
-                amount: selectedNewPlan.price,
-              }
-            : sub
-        )
-      );
-
-      toast({
-        title: "Plan downgraded successfully",
-        description: `${selectedSubscription.ownerName} has been downgraded to ${selectedNewPlan.name} plan.`,
-      });
-
-      setDowngradeDialogOpen(false);
-      setSelectedSubscription(null);
-      setSelectedNewPlan(null);
+      if (response.success) {
+        console.log('Payment status check successful:', response);
+        // Refresh the subscriptions list
+        loadSubscriptions();
+        // Close the payment form
+        setShowPaymentForm(false);
+        setPaymentIntent(null);
+        setActionType(null);
+        
+        // Show success message
+        alert('Subscription activated successfully!');
+      } else {
+        console.error('Payment status check failed:', response);
+        alert('Failed to activate subscription. Please try again.');
+      }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to downgrade plan. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Error checking payment status:', error);
+      alert('Error checking payment status. Please try again.');
     }
   };
 
@@ -931,6 +1029,15 @@ export default function SubscriptionsPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link
+                            to={`/dashboard/subscriptions/${subscription.id}/manage`}
+                            className="flex items-center w-full"
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Manage Subscription
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link
                             to={`/dashboard/users/${subscription.ownerId}`}
                             className="flex items-center w-full"
                           >
@@ -1384,6 +1491,80 @@ export default function SubscriptionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Form Dialog */}
+      {showPaymentForm && paymentIntent && selectedNewPlan && selectedSubscription && (
+        <Dialog open={showPaymentForm} onOpenChange={setShowPaymentForm}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                Complete {actionType === 'upgrade' ? 'Upgrade' : 'Downgrade'} Payment
+              </DialogTitle>
+              <DialogDescription>
+                Complete your payment to {actionType} {selectedSubscription.ownerName}'s subscription to {selectedNewPlan.name} plan.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h4 className="font-semibold text-blue-900">{selectedNewPlan.name} Plan</h4>
+                    <p className="text-sm text-blue-700">{selectedNewPlan.description}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-blue-900">
+                      ${selectedSubscription.billingCycle === 'yearly' ? selectedNewPlan.yearlyPrice : selectedNewPlan.price}
+                    </p>
+                    <p className="text-sm text-blue-700">
+                      per {selectedSubscription.billingCycle === 'yearly' ? 'year' : 'month'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <StripePayment
+                clientSecret={paymentIntent.clientSecret}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+                onCancel={handlePaymentCancel}
+                amount={selectedSubscription.billingCycle === 'yearly' ? selectedNewPlan.yearlyPrice.toString() : selectedNewPlan.price.toString()}
+                currency="USD"
+                planName={selectedNewPlan.name}
+                ownerName={selectedSubscription.ownerName}
+              />
+              
+              {/* Manual Activation Button */}
+              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  <h4 className="font-semibold text-yellow-800">Webhook Not Working?</h4>
+                </div>
+                <p className="text-sm text-yellow-700 mb-3">
+                  If the payment completed but the subscription wasn't updated automatically, 
+                  click the button below to manually activate the subscription.
+                </p>
+                <Button
+                  onClick={() => {
+                    // Use the payment intent ID from the client secret
+                    const paymentIntentId = paymentIntent.clientSecret?.split('_secret_')[0];
+                    if (paymentIntentId) {
+                      checkPaymentStatus(paymentIntentId);
+                    } else {
+                      alert('Payment intent ID not found. Please try again.');
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-yellow-300 text-yellow-800 hover:bg-yellow-100"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Check Payment Status & Activate
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

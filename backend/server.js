@@ -48,6 +48,7 @@ app.use("/backend/api/auth", require("./routes/auth"));
 app.use("/backend/api/users", require("./routes/users"));
 app.use("/backend/api/salons", require("./routes/salons"));
 app.use("/backend/api/subscriptions", require("./routes/subscriptions"));
+app.use("/backend/api/subscription-payments", require("./routes/subscriptionPayments"));
 app.use("/backend/api/services", require("./routes/services"));
 app.use("/backend/api/staff", require("./routes/staff"));
 app.use("/backend/api/appointments", require("./routes/appointments"));

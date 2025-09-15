@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateOwner } = require('../../../../middleware/passportMiddleware');
+const { authenticateOwner, authenticateJWT } = require('../../../../middleware/passportMiddleware');
 const salonSubscriptionController = require('../../../../controllers/Api/salon/salonSubscriptionController');
 const subscriptionPaymentController = require('../../../../controllers/Api/salon/subscriptionPaymentController');
 const { createSubscriptionValidation, updateSubscriptionValidation, createPaymentIntentValidation } = require('../../../../validation/subscriptionValidation');
@@ -49,7 +49,7 @@ router.get('/usage', authenticateOwner, salonSubscriptionController.getSubscript
 router.get('/billing-history', authenticateOwner, salonSubscriptionController.getBillingHistory);
 
 // Get subscription info including features and limits
-router.get('/info', authenticateOwner, salonSubscriptionController.getSubscriptionInfo);
+router.get('/info', authenticateJWT, salonSubscriptionController.getSubscriptionInfo);
 
 // ===== SUBSCRIPTION PAYMENT ENDPOINTS =====
 

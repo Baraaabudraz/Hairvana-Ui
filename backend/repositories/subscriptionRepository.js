@@ -488,11 +488,13 @@ exports.createPlan = async (data) => {
 };
 
 exports.getPlans = async () => {
-  return SubscriptionPlan.findAll();
+  const plans = await SubscriptionPlan.findAll();
+  return plans.map(plan => plan.toJSON());
 };
 
 exports.getPlanById = async (id) => {
-  return SubscriptionPlan.findByPk(id);
+  const plan = await SubscriptionPlan.findByPk(id);
+  return plan ? plan.toJSON() : null;
 };
 
 exports.updatePlan = async (id, data) => {

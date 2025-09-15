@@ -265,9 +265,9 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
       transaction: t
     });
 
-    if (salons.length === 0) {
-      throw new Error('No salons found for this owner');
-    }
+    // Allow subscription creation even if owner doesn't have salons yet
+    // They can create salons after subscribing
+    console.log(`Owner has ${salons.length} salons`);
 
     // Calculate next billing date
     const startDate = new Date();
@@ -282,11 +282,11 @@ exports.handleSuccessfulSubscriptionPayment = async (paymentIntentId) => {
     // Initialize usage with plan limits
     const usage = {
       bookings: 0,
-      bookingsLimit: plan.limits?.bookings || 0,
+      bookingsLimit: plan.limits?.max_bookings || plan.limits?.bookings || 0,
       staff: 0,
-      staffLimit: plan.limits?.staff || 0,
+      staffLimit: plan.limits?.max_staff || plan.limits?.staff || 0,
       locations: salons.length,
-      locationsLimit: plan.limits?.locations || 1,
+      locationsLimit: plan.limits?.max_salons || plan.limits?.locations || 1,
     };
 
     // Create subscription for the owner (not tied to a specific salon)
@@ -1040,6 +1040,7 @@ exports.createDowngradePaymentIntent = async (data) => {
 exports.handleUpgradePayment = async (payment) => {
   const { upgrade_type, current_subscription_id } = payment.metadata;
   
+  
   // Use transaction to ensure data consistency
   const result = await SubscriptionPayment.sequelize.transaction(async (t) => {
     // Update payment status
@@ -1079,12 +1080,13 @@ exports.handleUpgradePayment = async (payment) => {
       amount: payment.amount,
       billingCycle: payment.billing_cycle,
       nextBillingDate: nextBillingDate,
+      status: 'active', // Explicitly set status to active
       // Keep existing usage but update limits based on new plan
       usage: {
         ...currentSubscription.usage,
-        bookingsLimit: newPlan.limits?.bookings || currentSubscription.usage?.bookingsLimit || 0,
-        staffLimit: newPlan.limits?.staff || currentSubscription.usage?.staffLimit || 0,
-        locationsLimit: newPlan.limits?.locations || currentSubscription.usage?.locationsLimit || 1,
+        bookingsLimit: newPlan.limits?.max_bookings || newPlan.limits?.bookings || currentSubscription.usage?.bookingsLimit || 0,
+        staffLimit: newPlan.limits?.max_staff || newPlan.limits?.staff || currentSubscription.usage?.staffLimit || 0,
+        locationsLimit: newPlan.limits?.max_salons || newPlan.limits?.locations || currentSubscription.usage?.locationsLimit || 1,
       }
     }, { transaction: t });
 

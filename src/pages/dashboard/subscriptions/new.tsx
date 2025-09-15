@@ -19,7 +19,6 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Search,
-  CreditCard,
   Calendar,
   CheckCircle,
   Crown,
@@ -35,14 +34,16 @@ import {
   Phone,
   AlertTriangle,
 } from "lucide-react";
-import { fetchSalons } from "@/api/salons";
+import { fetchUsersByRole } from "@/api/users";
 import {
   createSubscription,
   fetchSubscriptionPlans,
 } from "@/api/subscriptions";
+import { apiFetch } from "@/lib/api";
+import StripePayment from "@/components/stripe-payment";
 
 const subscriptionSchema = z.object({
-  salon_id: z.string().min(1, "Please select a salon"),
+  owner_id: z.string().min(1, "Please select an owner"),
   plan_id: z.string().min(1, "Please select a plan"),
   billing_cycle: z.enum(["monthly", "yearly"]),
   start_date: z.string().min(1, "Start date is required"),
@@ -51,14 +52,6 @@ const subscriptionSchema = z.object({
   status: z
     .enum(["active", "trial", "cancelled", "past_due"])
     .default("active"),
-  payment_method: z.object({
-    type: z.literal("card"),
-    cardNumber: z.string().min(16, "Card number must be 16 digits"),
-    expiryMonth: z.string().min(1, "Expiry month is required"),
-    expiryYear: z.string().min(1, "Expiry year is required"),
-    cvv: z.string().min(3, "CVV must be at least 3 digits"),
-    cardholderName: z.string().min(2, "Cardholder name is required"),
-  }),
   trial_days: z.number().min(0).max(30).optional(),
   auto_renew: z.boolean().default(true),
 });
@@ -80,14 +73,14 @@ interface Plan {
   popular: boolean;
 }
 
-interface Salon {
+interface Owner {
   id: string;
   name: string;
-  location: string;
-  ownerName: string;
-  ownerEmail: string;
+  email: string;
+  phone: string;
   status: string;
   avatar: string;
+  salonCount?: number;
 }
 
 const planIcons: Record<string, any> = {
@@ -135,19 +128,21 @@ export default function CreateSubscriptionPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [salons, setSalons] = useState<Salon[]>([]);
-  const [filteredSalons, setFilteredSalons] = useState<Salon[]>([]);
-  const [salonSearch, setSalonSearch] = useState("");
-  const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
+  const [owners, setOwners] = useState<Owner[]>([]);
+  const [filteredOwners, setFilteredOwners] = useState<Owner[]>([]);
+  const [ownerSearch, setOwnerSearch] = useState("");
+  const [selectedOwner, setSelectedOwner] = useState<Owner | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">(
     "monthly"
   );
-  const [showSalonSearch, setShowSalonSearch] = useState(false);
+  const [showOwnerSearch, setShowOwnerSearch] = useState(false);
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
   const [plansError, setPlansError] = useState<string | null>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentIntent, setPaymentIntent] = useState<any>(null);
 
   const {
     register,
@@ -162,65 +157,57 @@ export default function CreateSubscriptionPage() {
       start_date: new Date().toISOString().split("T")[0],
       auto_renew: true,
       trial_days: 14,
-      salon_id: "",
+      owner_id: "",
       plan_id: "",
       amount: 0,
       status: "active",
-      payment_method: {
-        type: "card",
-        cardNumber: "",
-        expiryMonth: "",
-        expiryYear: "",
-        cvv: "",
-        cardholderName: "",
-      },
     },
   });
 
   useEffect(() => {
-    const loadSalons = async () => {
+    const loadOwners = async () => {
       try {
         setLoading(true);
-        const response = await fetchSalons();
-        console.log("Loaded salons:", response);
-        if (response && response.salons) {
-          setSalons(response.salons);
-          setFilteredSalons(response.salons);
+        const response = await fetchUsersByRole("salon owner");
+        console.log("Loaded owners:", response);
+        if (response && response.users) {
+          setOwners(response.users);
+          setFilteredOwners(response.users);
         } else {
-          setSalons([]);
-          setFilteredSalons([]);
+          setOwners([]);
+          setFilteredOwners([]);
         }
       } catch (error) {
-        console.error("Error loading salons:", error);
-        setSalons([]);
-        setFilteredSalons([]);
+        console.error("Error loading owners:", error);
+        setOwners([]);
+        setFilteredOwners([]);
         toast({
           title: "Error",
-          description: "Failed to load salons. Please try again.",
+          description: "Failed to load salon owners. Please try again.",
           variant: "destructive",
         });
       } finally {
         setLoading(false);
       }
     };
-    loadSalons();
+    loadOwners();
   }, [toast]);
 
   useEffect(() => {
-    const filtered = salons.filter(
-      (salon) =>
-        salon.name.toLowerCase().includes(salonSearch.toLowerCase()) ||
-        salon.location.toLowerCase().includes(salonSearch.toLowerCase()) ||
-        salon.ownerName.toLowerCase().includes(salonSearch.toLowerCase())
+    const filtered = owners.filter(
+      (owner) =>
+        owner.name.toLowerCase().includes(ownerSearch.toLowerCase()) ||
+        owner.email.toLowerCase().includes(ownerSearch.toLowerCase()) ||
+        (owner.phone && owner.phone.toLowerCase().includes(ownerSearch.toLowerCase()))
     );
-    setFilteredSalons(filtered);
-  }, [salonSearch, salons]);
+    setFilteredOwners(filtered);
+  }, [ownerSearch, owners]);
 
-  const handleSalonSelect = (salon: Salon) => {
-    setSelectedSalon(salon);
-    setValue("salon_id", salon.id);
-    setShowSalonSearch(false);
-    setSalonSearch("");
+  const handleOwnerSelect = (owner: Owner) => {
+    setSelectedOwner(owner);
+    setValue("owner_id", owner.id);
+    setShowOwnerSearch(false);
+    setOwnerSearch("");
   };
 
   const handlePlanSelect = (plan: Plan) => {
@@ -251,93 +238,56 @@ export default function CreateSubscriptionPage() {
 
   const onSubmit = async (data: SubscriptionForm) => {
     console.log("Form data:", data);
-    console.log("Selected salon:", selectedSalon);
+    console.log("Selected owner:", selectedOwner);
     console.log("Selected plan:", selectedPlan);
 
     setIsSubmitting(true);
     try {
-      // Use selected salon and plan, or fallback to first available
-      const salonToUse = selectedSalon || salons[0];
+      // Use selected owner and plan, or fallback to first available
+      const ownerToUse = selectedOwner || owners[0];
       const planToUse = selectedPlan || plans[0];
 
-      if (!salonToUse || !planToUse) {
-        throw new Error("Please select a salon and plan");
+      if (!ownerToUse || !planToUse) {
+        throw new Error("Please select an owner and plan");
       }
 
-      // Calculate next billing date
-      const startDate = new Date(data.start_date);
-      const nextBillingDate = new Date(startDate);
-
-      if (data.billing_cycle === "monthly") {
-        nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
-      } else {
-        nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
-      }
-
-      const cardNumberSanitized = data.payment_method.cardNumber.replace(
-        /\s/g,
-        ""
-      );
-      const last4 = cardNumberSanitized.slice(-4);
-      // Simple card brand detection based on first digit
-      const firstDigit = cardNumberSanitized.charAt(0);
-      let brand = "Visa";
-      if (firstDigit === "4") {
-        brand = "Visa";
-      } else if (firstDigit === "5") {
-        brand = "Mastercard";
-      } else if (firstDigit === "3") {
-        brand = "American Express";
-      } else if (firstDigit === "6") {
-        brand = "Discover";
-      }
-
-      const subscriptionData = {
-        salonId: salonToUse.id,
+      // Create payment intent instead of direct subscription
+      const paymentData = {
         planId: planToUse.id,
-        status: data.trial_days && data.trial_days > 0 ? "trial" : "active",
-        startDate: data.start_date,
-        nextBillingDate: nextBillingDate.toISOString(),
-        amount: calculatePrice(),
         billingCycle: data.billing_cycle,
-        paymentMethod: {
-          type: "card",
-          cardNumber: cardNumberSanitized,
-          last4,
-          brand,
-          expiryMonth: Number(data.payment_method.expiryMonth),
-          expiryYear: Number(data.payment_method.expiryYear),
-          cvv: data.payment_method.cvv,
-          cardholderName: data.payment_method.cardholderName,
-        },
-        usage: {
-          bookings: 0,
-          staff: 0,
-          salons: 0,
-          bookingsLimit: planToUse.limits.max_bookings || 0,
-          staffLimit: planToUse.limits.max_staff || 0,
-          salonsLimit: planToUse.limits.max_salons || 0,
-        },
-        trialDays: data.trial_days || 0,
-        autoRenew: data.auto_renew,
+        userId: ownerToUse.id,
       };
 
-      console.log("Sending subscription data:", subscriptionData);
+      console.log("Creating payment intent:", paymentData);
 
-      await createSubscription(subscriptionData);
-
-      toast({
-        title: "Subscription created successfully",
-        description: `${salonToUse.name} has been subscribed to the ${planToUse.name} plan.`,
+      // Call the payment intent creation endpoint using the proper API client
+      const responseData = await apiFetch('/subscription-payments/create-intent', {
+        method: 'POST',
+        body: JSON.stringify(paymentData),
       });
+      console.log("Payment intent created:", responseData);
 
-      navigate("/dashboard/subscriptions");
+      if (responseData.success && responseData.data) {
+        const paymentIntentData = responseData.data;
+        
+        // Store payment intent data and show payment form
+        setPaymentIntent(paymentIntentData);
+        setShowPaymentForm(true);
+        
+        toast({
+          title: "Payment Form Ready",
+          description: `Please complete payment for ${planToUse.name} plan.`,
+        });
+      } else {
+        throw new Error(responseData.message || 'Failed to create payment intent');
+      }
+
     } catch (error) {
-      console.error("Error creating subscription:", error);
+      console.error("Error creating payment intent:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Please try again later.";
       toast({
-        title: "Error creating subscription",
+        title: "Error creating payment intent",
         description: errorMessage,
         variant: "destructive",
       });
@@ -349,6 +299,119 @@ export default function CreateSubscriptionPage() {
   useEffect(() => {
     loadPlans();
   }, []);
+
+  const handlePaymentSuccess = async (paymentIntent: any) => {
+    console.log('Payment successful:', paymentIntent);
+    
+    // Automatically trigger webhook processing for new subscriptions
+    try {
+      console.log('Auto-triggering webhook processing for new subscription...');
+      
+      // Extract payment intent ID from client secret
+      const paymentIntentId = paymentIntent?.clientSecret?.split('_secret_')[0] || paymentIntent?.id;
+      
+      if (paymentIntentId) {
+        const response = await apiFetch('/subscription-payments/test-activate', {
+          method: 'POST',
+          body: JSON.stringify({ paymentIntentId: paymentIntentId })
+        });
+
+        if (response.success) {
+          console.log('Auto-activation successful:', response);
+          toast({
+            title: "Payment Successful",
+            description: "Subscription has been created and activated successfully!",
+          });
+        } else {
+          console.error('Auto-activation failed:', response);
+          toast({
+            title: "Payment Successful",
+            description: "Payment completed but activation failed. Please use the manual activation button.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        console.error('Payment intent ID not found');
+        toast({
+          title: "Payment Successful",
+          description: "Payment completed but activation failed. Please use the manual activation button.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error in auto-activation:', error);
+      toast({
+        title: "Payment Successful",
+        description: "Payment completed but activation failed. Please use the manual activation button.",
+        variant: "destructive",
+      });
+    }
+    
+    setShowPaymentForm(false);
+    setPaymentIntent(null);
+    
+    navigate("/dashboard/subscriptions", {
+      state: { 
+        message: "Subscription created and activated successfully!",
+      }
+    });
+  };
+
+  const checkPaymentStatus = async () => {
+    if (!paymentIntent) return;
+    
+    try {
+      // Call the test activation endpoint to manually activate if webhook didn't work
+      const response = await apiFetch('/subscription-payments/test-activate', {
+        method: 'POST',
+        body: JSON.stringify({
+          paymentIntentId: paymentIntent.clientSecret.split('_secret_')[0] // Extract payment intent ID
+        }),
+      });
+
+      if (response.success) {
+        toast({
+          title: "Subscription Activated",
+          description: "Your subscription has been successfully activated!",
+        });
+        
+        navigate("/dashboard/subscriptions", {
+          state: { 
+            message: "Subscription activated successfully!",
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+      toast({
+        title: "Payment Status Check Failed",
+        description: "Please contact support if your subscription is not active.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePaymentError = (error: string) => {
+    console.error('Payment failed:', error);
+    setShowPaymentForm(false);
+    setPaymentIntent(null);
+    
+    toast({
+      title: "Payment Failed",
+      description: error,
+      variant: "destructive",
+    });
+  };
+
+  const handlePaymentCancel = () => {
+    setShowPaymentForm(false);
+    setPaymentIntent(null);
+    
+    toast({
+      title: "Payment Cancelled",
+      description: "Payment was cancelled. You can try again later.",
+    });
+  };
 
   const loadPlans = async () => {
     try {
@@ -383,6 +446,54 @@ export default function CreateSubscriptionPage() {
     );
   }
 
+  // Show payment form if payment intent is created
+  if (showPaymentForm && paymentIntent) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={handlePaymentCancel}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Complete Payment</h1>
+            <p className="text-gray-600">Complete your subscription payment to activate the plan</p>
+          </div>
+        </div>
+        
+        <div className="max-w-2xl mx-auto">
+          <StripePayment
+            clientSecret={paymentIntent.clientSecret}
+            onSuccess={handlePaymentSuccess}
+            onError={handlePaymentError}
+            onCancel={handlePaymentCancel}
+            amount={paymentIntent.amount}
+            currency={paymentIntent.currency}
+            planName={paymentIntent.plan.name}
+            ownerName={paymentIntent.owner.name}
+          />
+          
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800 mb-3">
+              If your payment was successful but the subscription isn't active yet, click the button below to check the status.
+            </p>
+            <Button 
+              onClick={checkPaymentStatus}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              Check Payment Status & Activate
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -396,44 +507,44 @@ export default function CreateSubscriptionPage() {
             Create New Subscription
           </h1>
           <p className="text-gray-600">
-            Set up a new subscription plan for a salon
+            Set up a new subscription plan for a salon owner with payment gateway integration
           </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Salon Selection */}
+        {/* Owner Selection */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle>Select Salon</CardTitle>
+            <CardTitle>Select Salon Owner</CardTitle>
             <CardDescription>
-              Choose the salon that will receive this subscription
+              Choose the salon owner that will receive this subscription
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!selectedSalon ? (
+            {!selectedOwner ? (
               <div className="space-y-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Search salons by name, location, or owner..."
-                    value={salonSearch}
-                    onChange={(e) => setSalonSearch(e.target.value)}
+                    placeholder="Search owners by name, email, or phone..."
+                    value={ownerSearch}
+                    onChange={(e) => setOwnerSearch(e.target.value)}
                     className="pl-10"
                   />
                 </div>
 
                 <div className="max-h-64 overflow-y-auto space-y-2">
-                  {filteredSalons.map((salon) => (
+                  {filteredOwners.map((owner) => (
                     <div
-                      key={salon.id}
-                      onClick={() => handleSalonSelect(salon)}
+                      key={owner.id}
+                      onClick={() => handleOwnerSelect(owner)}
                       className="flex items-center gap-4 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                     >
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={salon.avatar} alt={salon.name} />
+                        <AvatarImage src={owner.avatar} alt={owner.name} />
                         <AvatarFallback>
-                          {salon.name
+                          {owner.name
                             .split(" ")
                             .map((n) => n[0])
                             .join("")}
@@ -441,13 +552,13 @@ export default function CreateSubscriptionPage() {
                       </Avatar>
                       <div className="flex-1">
                         <h4 className="font-semibold text-gray-900">
-                          {salon.name}
+                          {owner.name}
                         </h4>
                         <p className="text-sm text-gray-600">
-                          {salon.location}
+                          {owner.email}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {salon.ownerName} • {salon.ownerEmail}
+                          {owner.phone} • {owner.salonCount || 0} salon(s)
                         </p>
                       </div>
                       <Badge variant="outline">Available</Badge>
@@ -455,12 +566,12 @@ export default function CreateSubscriptionPage() {
                   ))}
                 </div>
 
-                {filteredSalons.length === 0 && (
+                {filteredOwners.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
-                    <Building2 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p>No available salons found</p>
+                    <User className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p>No available salon owners found</p>
                     <p className="text-sm">
-                      All salons may already have active subscriptions
+                      All owners may already have active subscriptions
                     </p>
                   </div>
                 )}
@@ -470,11 +581,11 @@ export default function CreateSubscriptionPage() {
                 <div className="flex items-center gap-4">
                   <Avatar className="h-12 w-12">
                     <AvatarImage
-                      src={selectedSalon.avatar}
-                      alt={selectedSalon.name}
+                      src={selectedOwner.avatar}
+                      alt={selectedOwner.name}
                     />
                     <AvatarFallback>
-                      {selectedSalon.name
+                      {selectedOwner.name
                         .split(" ")
                         .map((n) => n[0])
                         .join("")}
@@ -482,13 +593,13 @@ export default function CreateSubscriptionPage() {
                   </Avatar>
                   <div>
                     <h4 className="font-semibold text-gray-900">
-                      {selectedSalon.name}
+                      {selectedOwner.name}
                     </h4>
                     <p className="text-sm text-gray-600">
-                      {selectedSalon.location}
+                      {selectedOwner.email}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {selectedSalon.ownerName} • {selectedSalon.ownerEmail}
+                      {selectedOwner.phone} • {selectedOwner.salonCount || 0} salon(s)
                     </p>
                   </div>
                 </div>
@@ -496,16 +607,16 @@ export default function CreateSubscriptionPage() {
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    setSelectedSalon(null);
-                    setValue("salon_id", "");
+                    setSelectedOwner(null);
+                    setValue("owner_id", "");
                   }}
                 >
-                  Change Salon
+                  Change Owner
                 </Button>
               </div>
             )}
-            {errors.salon_id && (
-              <p className="text-sm text-red-500">{errors.salon_id.message}</p>
+            {errors.owner_id && (
+              <p className="text-sm text-red-500">{errors.owner_id.message}</p>
             )}
           </CardContent>
         </Card>
@@ -515,7 +626,7 @@ export default function CreateSubscriptionPage() {
           <CardHeader>
             <CardTitle>Choose Subscription Plan</CardTitle>
             <CardDescription>
-              Select the plan that best fits the salon's needs
+              Select the plan that best fits the owner's needs
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -706,104 +817,17 @@ export default function CreateSubscriptionPage() {
           </CardContent>
         </Card>
 
-        {/* Payment Information */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Payment Information
-            </CardTitle>
-            <CardDescription>
-              Enter the payment details for this subscription
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="cardholderName">Cardholder Name *</Label>
-              <Input
-                id="cardholderName"
-                placeholder="John Doe"
-                {...register("payment_method.cardholderName")}
-              />
-              {errors.payment_method?.cardholderName && (
-                <p className="text-sm text-red-500">
-                  {errors.payment_method.cardholderName.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="cardNumber">Card Number *</Label>
-              <Input
-                id="cardNumber"
-                placeholder="1234 5678 9012 3456"
-                maxLength={19}
-                {...register("payment_method.cardNumber")}
-              />
-              {errors.payment_method?.cardNumber && (
-                <p className="text-sm text-red-500">
-                  {errors.payment_method.cardNumber.message}
-                </p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="expiryMonth">Month *</Label>
-                <Input
-                  id="expiryMonth"
-                  placeholder="MM"
-                  maxLength={2}
-                  {...register("payment_method.expiryMonth")}
-                />
-                {errors.payment_method?.expiryMonth && (
-                  <p className="text-sm text-red-500">
-                    {errors.payment_method.expiryMonth.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="expiryYear">Year *</Label>
-                <Input
-                  id="expiryYear"
-                  placeholder="YYYY"
-                  maxLength={4}
-                  {...register("payment_method.expiryYear")}
-                />
-                {errors.payment_method?.expiryYear && (
-                  <p className="text-sm text-red-500">
-                    {errors.payment_method.expiryYear.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cvv">CVV *</Label>
-                <Input
-                  id="cvv"
-                  placeholder="123"
-                  maxLength={4}
-                  {...register("payment_method.cvv")}
-                />
-                {errors.payment_method?.cvv && (
-                  <p className="text-sm text-red-500">
-                    {errors.payment_method.cvv.message}
-                  </p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Summary */}
-        {selectedSalon && selectedPlan && (
+        {selectedOwner && selectedPlan && (
           <Card className="border-0 shadow-sm bg-gradient-to-r from-purple-50 to-pink-50">
             <CardHeader>
               <CardTitle>Subscription Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Salon:</span>
-                <span className="font-semibold">{selectedSalon.name}</span>
+                <span className="text-gray-600">Owner:</span>
+                <span className="font-semibold">{selectedOwner.name}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Plan:</span>
@@ -846,7 +870,7 @@ export default function CreateSubscriptionPage() {
             onClick={async () => {
               try {
                 const testData = {
-                  salonId: "1",
+                  ownerId: "1",
                   planId: "basic",
                   status: "active",
                   startDate: new Date().toISOString().split("T")[0],
@@ -901,7 +925,7 @@ export default function CreateSubscriptionPage() {
             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
           >
             <Save className="h-4 w-4 mr-2" />
-            {isSubmitting ? "Creating Subscription..." : "Create Subscription"}
+            {isSubmitting ? "Creating Payment Intent..." : "Create Payment Intent"}
           </Button>
         </div>
       </form>

@@ -48,7 +48,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const fetchSubscriptionInfo = async () => {
     try {
       setLoading(true);
-      const response = await apiFetch('/api/v0/salon/subscription/info');
+      const response = await apiFetch('/v0/salon/subscription/info');
       if (response.success) {
         setSubscriptionInfo(response.data);
       } else {

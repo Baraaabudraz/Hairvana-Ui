@@ -18,6 +18,12 @@ const uploadSalonFiles = createUploadMiddleware({
 // Get all salons for the authenticated owner
 router.get('/salons', authenticateOwner, salonController.getAllSalonsForOwner);
 
+// Get all clients/customers who have appointments for a specific salon
+router.get('/clients/:salonId', authenticateOwner, salonController.getClients);
+
+// Get earnings summary for the authenticated salon owner
+router.get('/earnings', authenticateOwner, salonController.getEarnings);
+
 // Get salon by ID for the authenticated owner
 router.get('/:id', authenticateOwner, salonController.getSalonById);
 

@@ -14,6 +14,7 @@ import {
   Scissors,
   X,
   Menu,
+  Headphones,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -58,6 +59,12 @@ const navigation = [
     href: "/dashboard/roles",
     icon: Shield,
     resource: "roles",
+  },
+  {
+    name: "Support",
+    href: "/dashboard/support",
+    icon: Headphones,
+    resource: "support",
   },
   { name: "Settings", href: "/dashboard/settings", icon: Settings, resource: "settings" },
 ];

@@ -55,6 +55,7 @@ const NewPlanPage = lazy(() => import("./pages/dashboard/plans/new"));
 const RolesPermissionsMatrixPage = lazy(
   () => import("./pages/dashboard/roles")
 );
+const SupportPage = lazy(() => import("./pages/dashboard/support"));
 
 // Loading component for lazy-loaded routes
 const PageLoader = () => (
@@ -314,6 +315,16 @@ function App() {
             <ProtectedRoute requiredResource="roles" requiredAction="view">
             <Suspense fallback={<PageLoader />}>
               <RolesPermissionsMatrixPage />
+            </Suspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="support"
+          element={
+            <ProtectedRoute requiredResource="support" requiredAction="view">
+            <Suspense fallback={<PageLoader />}>
+              <SupportPage />
             </Suspense>
             </ProtectedRoute>
           }

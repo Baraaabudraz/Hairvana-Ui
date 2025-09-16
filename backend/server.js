@@ -61,6 +61,7 @@ app.use("/backend/api/report-templates", require("./routes/reportTemplates"));
 app.use("/backend/api/reports", require("./routes/reports"));
 app.use("/backend/api/payments", require("./routes/payments"));
 app.use("/backend/api/roles", require("./routes/roles"));
+app.use("/backend/api/support", require("./routes/support"));
 
 // AR Filter Routes
 
@@ -141,6 +142,10 @@ app.use(
 app.use(
   "/backend/api/v0/salon/subscription",
   require("./routes/Api/v0/salon/subscription")
+);
+app.use(
+  "/backend/api/v0/salon/support",
+  require("./routes/Api/v0/salon/support")
 );
 // Mount general salon routes last (has /:id parameter that could conflict)
 app.use(

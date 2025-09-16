@@ -68,8 +68,24 @@ const authenticateOwner = (req, res, next) => {
     return res.status(403).json({ error: 'Only salon owners can access this endpoint.' });
   });
 };
+
+// Add authenticateJWT middleware (alias for protect)
+const authenticateJWT = protect;
+
+// Add authenticateAdmin middleware
+const authenticateAdmin = (req, res, next) => {
+  protect(req, res, function() {
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'super admin')) {
+      return next();
+    }
+    return res.status(403).json({ error: 'Only admins can access this endpoint.' });
+  });
+};
+
 module.exports = {
   authenticateToken: protect,
+  authenticateJWT,
+  authenticateAdmin,
   authorize,
   isSuperAdmin,
   isAdmin,

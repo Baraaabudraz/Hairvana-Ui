@@ -15,6 +15,7 @@ const RESOURCES = [
   "reviews",
   "analytics",
   "roles", // Added roles as a resource
+  "support", // Added support as a resource
 ];
 const ACTIONS = ["view", "add", "edit", "delete"];
 

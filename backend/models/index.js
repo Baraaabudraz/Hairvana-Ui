@@ -50,6 +50,8 @@ const TokenBlacklist = require('./token_blacklist');
 const Role = require('./role');
 const Permission = require('./permission');
 const SubscriptionPayment = require('./subscription_payment');
+const SupportTicket = require('./support_ticket');
+const SupportMessage = require('./support_message');
 
 // Initialize models in dependency order
 const models = {
@@ -85,7 +87,9 @@ const models = {
   MobileDevice: MobileDevice(sequelize, Sequelize.DataTypes),
   OwnerDocument: OwnerDocument(sequelize, Sequelize.DataTypes),
   TokenBlacklist: TokenBlacklist(sequelize, Sequelize.DataTypes),
-  SubscriptionPayment: SubscriptionPayment(sequelize, Sequelize.DataTypes)
+  SubscriptionPayment: SubscriptionPayment(sequelize, Sequelize.DataTypes),
+  SupportTicket: SupportTicket(sequelize, Sequelize.DataTypes),
+  SupportMessage: SupportMessage(sequelize, Sequelize.DataTypes)
 };
 
 // Initialize associations

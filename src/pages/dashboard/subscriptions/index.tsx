@@ -37,7 +37,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search,
@@ -46,7 +45,6 @@ import {
   Edit,
   XCircle,
   Plus,
-  CreditCard,
   Building2,
   DollarSign,
   Calendar,
@@ -66,8 +64,6 @@ import {
   fetchSubscriptions,
   cancelSubscription,
   updateSubscription,
-  updatePaymentMethod,
-  syncBilling,
   SubscriptionParams,
   fetchSubscriptionPlans,
 } from "@/api/subscriptions";
@@ -219,17 +215,9 @@ export default function SubscriptionsPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
-  const [editBillingDialogOpen, setEditBillingDialogOpen] = useState(false);
   const [selectedSubscription, setSelectedSubscription] =
     useState<Subscription | null>(null);
   const [selectedNewPlan, setSelectedNewPlan] = useState<Plan | null>(null);
-  const [newPaymentMethod, setNewPaymentMethod] = useState({
-    cardNumber: "",
-    expiryMonth: "",
-    expiryYear: "",
-    cvv: "",
-    cardholderName: "",
-  });
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentIntent, setPaymentIntent] = useState<any>(null);
   const [actionType, setActionType] = useState<'upgrade' | 'downgrade' | null>(null);
@@ -352,7 +340,7 @@ export default function SubscriptionsPage() {
         setPaymentIntent(response.data);
         setActionType(action); // Set the action type for the payment
         setShowPaymentForm(true);
-        setUpgradeDialogOpen(false);
+      setUpgradeDialogOpen(false);
         setDowngradeDialogOpen(false);
         
         toast({
@@ -415,20 +403,20 @@ export default function SubscriptionsPage() {
           }
         } else {
           console.error('Payment intent ID not found');
-          toast({
+      toast({
             title: "Payment Successful",
             description: `Payment completed but activation failed. Please use the manual activation button.`,
             variant: "destructive",
-          });
+      });
         }
-      } catch (error) {
+    } catch (error) {
         console.error('Error in auto-activation:', error);
-        toast({
+      toast({
           title: "Payment Successful",
           description: `Payment completed but activation failed. Please use the manual activation button.`,
-          variant: "destructive",
-        });
-      }
+        variant: "destructive",
+      });
+    }
     } else {
       // For new subscriptions, show regular success message
       toast({
@@ -447,11 +435,11 @@ export default function SubscriptionsPage() {
 
   const handlePaymentError = (error: string) => {
     console.error('Payment error:', error);
-    toast({
+      toast({
       title: "Payment Failed",
       description: error,
-      variant: "destructive",
-    });
+        variant: "destructive",
+      });
   };
 
   const handlePaymentCancel = () => {
@@ -490,76 +478,7 @@ export default function SubscriptionsPage() {
     }
   };
 
-  const handleUpdatePaymentMethod = async () => {
-    if (!selectedSubscription) return;
 
-    try {
-      const paymentData = {
-        type: "card",
-        last4: newPaymentMethod.cardNumber.slice(-4),
-        brand: "Visa", // In real app, detect from card number
-        expiryMonth: parseInt(newPaymentMethod.expiryMonth),
-        expiryYear: parseInt(newPaymentMethod.expiryYear),
-      };
-
-      await updatePaymentMethod(selectedSubscription.id, paymentData);
-
-      setSubscriptions((prev) =>
-        prev.map((sub) =>
-          sub.id === selectedSubscription.id
-            ? {
-                ...sub,
-                paymentMethod: paymentData as PaymentMethod,
-              }
-            : sub
-        )
-      );
-
-      toast({
-        title: "Payment method updated",
-        description: "The payment method has been updated successfully.",
-      });
-
-      setEditBillingDialogOpen(false);
-      setSelectedSubscription(null);
-      setNewPaymentMethod({
-        cardNumber: "",
-        expiryMonth: "",
-        expiryYear: "",
-        cvv: "",
-        cardholderName: "",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update payment method. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSyncBilling = async () => {
-    try {
-      toast({
-        title: "Syncing billing data",
-        description: "Please wait while we sync with the payment gateway...",
-      });
-
-      // In a real app, you would call the API to sync billing data
-      await syncBilling();
-
-      toast({
-        title: "Billing data synced",
-        description: "Billing data has been synchronized successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to sync billing data. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const openCancelDialog = (subscription: Subscription) => {
     setSelectedSubscription(subscription);
@@ -576,10 +495,6 @@ export default function SubscriptionsPage() {
     setDowngradeDialogOpen(true);
   };
 
-  const openEditBillingDialog = (subscription: Subscription) => {
-    setSelectedSubscription(subscription);
-    setEditBillingDialogOpen(true);
-  };
 
   const confirmCancel = () => {
     if (selectedSubscription) {
@@ -636,10 +551,6 @@ export default function SubscriptionsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleSyncBilling}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Sync Billing
-          </Button>
           <Link to="/dashboard/subscriptions/new">
             <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
               <Plus className="h-4 w-4 mr-2" />
@@ -662,7 +573,7 @@ export default function SubscriptionsPage() {
                   {stats.total}
                 </p>
               </div>
-              <CreditCard className="h-8 w-8 text-blue-500" />
+              <Building2 className="h-8 w-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>
@@ -1072,13 +983,6 @@ export default function SubscriptionsPage() {
                             </DropdownMenuItem>
                           </>
                         )}
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={() => openEditBillingDialog(subscription)}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit Billing
-                        </DropdownMenuItem>
                         {subscription.status === "active" && (
                           <DropdownMenuItem
                             className="text-red-600 cursor-pointer"
@@ -1367,144 +1271,20 @@ export default function SubscriptionsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Billing Dialog */}
-      <Dialog
-        open={editBillingDialogOpen}
-        onOpenChange={setEditBillingDialogOpen}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Payment Method</DialogTitle>
-            <DialogDescription>
-              Update the payment method for "{selectedSubscription?.ownerName}"
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {selectedSubscription?.paymentMethod && (
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-800">
-                  <strong>Current:</strong>{" "}
-                  {selectedSubscription.paymentMethod.brand} ending in{" "}
-                  {selectedSubscription.paymentMethod.last4}
-                </p>
-                <p className="text-xs text-gray-600">
-                  Expires {selectedSubscription.paymentMethod.expiryMonth}/
-                  {selectedSubscription.paymentMethod.expiryYear}
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="cardholderName">Cardholder Name</Label>
-                <Input
-                  id="cardholderName"
-                  placeholder="John Doe"
-                  value={newPaymentMethod.cardholderName}
-                  onChange={(e) =>
-                    setNewPaymentMethod((prev) => ({
-                      ...prev,
-                      cardholderName: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cardNumber">Card Number</Label>
-                <Input
-                  id="cardNumber"
-                  placeholder="1234 5678 9012 3456"
-                  value={newPaymentMethod.cardNumber}
-                  onChange={(e) =>
-                    setNewPaymentMethod((prev) => ({
-                      ...prev,
-                      cardNumber: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="expiryMonth">Month</Label>
-                  <Input
-                    id="expiryMonth"
-                    placeholder="MM"
-                    value={newPaymentMethod.expiryMonth}
-                    onChange={(e) =>
-                      setNewPaymentMethod((prev) => ({
-                        ...prev,
-                        expiryMonth: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expiryYear">Year</Label>
-                  <Input
-                    id="expiryYear"
-                    placeholder="YYYY"
-                    value={newPaymentMethod.expiryYear}
-                    onChange={(e) =>
-                      setNewPaymentMethod((prev) => ({
-                        ...prev,
-                        expiryYear: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cvv">CVV</Label>
-                  <Input
-                    id="cvv"
-                    placeholder="123"
-                    value={newPaymentMethod.cvv}
-                    onChange={(e) =>
-                      setNewPaymentMethod((prev) => ({
-                        ...prev,
-                        cvv: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEditBillingDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleUpdatePaymentMethod}
-              disabled={
-                !newPaymentMethod.cardNumber || !newPaymentMethod.cardholderName
-              }
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <CreditCard className="h-4 w-4 mr-2" />
-              Update Payment Method
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Payment Form Dialog */}
       {showPaymentForm && paymentIntent && selectedNewPlan && selectedSubscription && (
         <Dialog open={showPaymentForm} onOpenChange={setShowPaymentForm}>
           <DialogContent className="max-w-2xl">
-            <DialogHeader>
+          <DialogHeader>
               <DialogTitle>
                 Complete {actionType === 'upgrade' ? 'Upgrade' : 'Downgrade'} Payment
               </DialogTitle>
-              <DialogDescription>
+            <DialogDescription>
                 Complete your payment to {actionType} {selectedSubscription.ownerName}'s subscription to {selectedNewPlan.name} plan.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex justify-between items-center">
                   <div>
@@ -1517,11 +1297,11 @@ export default function SubscriptionsPage() {
                     </p>
                     <p className="text-sm text-blue-700">
                       per {selectedSubscription.billingCycle === 'yearly' ? 'year' : 'month'}
-                    </p>
-                  </div>
-                </div>
+                </p>
               </div>
-              
+              </div>
+              </div>
+
               <StripePayment
                 clientSecret={paymentIntent.clientSecret}
                 onSuccess={handlePaymentSuccess}
@@ -1543,7 +1323,7 @@ export default function SubscriptionsPage() {
                   If the payment completed but the subscription wasn't updated automatically, 
                   click the button below to manually activate the subscription.
                 </p>
-                <Button
+            <Button
                   onClick={() => {
                     // Use the payment intent ID from the client secret
                     const paymentIntentId = paymentIntent.clientSecret?.split('_secret_')[0];
@@ -1553,17 +1333,17 @@ export default function SubscriptionsPage() {
                       alert('Payment intent ID not found. Please try again.');
                     }
                   }}
-                  variant="outline"
+              variant="outline"
                   size="sm"
                   className="w-full border-yellow-300 text-yellow-800 hover:bg-yellow-100"
-                >
+            >
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Check Payment Status & Activate
-                </Button>
+            </Button>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+        </DialogContent>
+      </Dialog>
       )}
     </div>
   );

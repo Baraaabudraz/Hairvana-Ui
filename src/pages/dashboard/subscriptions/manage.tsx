@@ -241,17 +241,13 @@ export default function ManageSubscriptionPage() {
         : '/subscription-payments/downgrade/create-intent';
       
       const requestData = {
-        planId: plan.id || plan.planId || plan.plan_id,
+        planId: plan.id,
         billingCycle: subscription?.billingCycle || 'monthly',
         userId: subscription?.ownerId
       };
       
       console.log('Request data before sending:', requestData);
-      console.log('Plan ID sources:', {
-        'plan.id': plan.id,
-        'plan.planId': plan.planId,
-        'plan.plan_id': plan.plan_id
-      });
+      console.log('Plan ID:', plan.id);
       
       console.log(`Creating ${action} payment intent with data:`, requestData);
       console.log('Plan object:', plan);

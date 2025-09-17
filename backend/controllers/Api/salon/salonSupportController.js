@@ -1,4 +1,5 @@
 const { SupportTicket, SupportMessage, User, Subscription, Salon } = require('../../../models');
+const notificationService = require('../../../services/notificationService');
 const { validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 
@@ -210,6 +211,14 @@ class SalonSupportController {
         ]
       });
 
+      // Send notification to admins about new ticket
+      try {
+        await notificationService.createSupportNotification(createdTicket, null, 'new_ticket');
+      } catch (notificationError) {
+        console.error('Failed to send notification for new support ticket:', notificationError);
+        // Don't fail the request if notification fails
+      }
+
       res.status(201).json({
         success: true,
         message: 'Support ticket created successfully',
@@ -261,6 +270,14 @@ class SalonSupportController {
           }
         ]
       });
+
+      // Send notification to admins about new message
+      try {
+        await notificationService.createSupportNotification(ticket, createdMessage, 'new_message');
+      } catch (notificationError) {
+        console.error('Failed to send notification for new support message:', notificationError);
+        // Don't fail the request if notification fails
+      }
 
       res.status(201).json({
         success: true,

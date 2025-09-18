@@ -14,17 +14,35 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useNavigate, Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 
+// Helper function to safely format dates
+const formatNotificationDate = (dateString: string | null | undefined): string => {
+  try {
+    if (!dateString) return 'Just now';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Just now';
+    return formatDistanceToNow(date, { addSuffix: true });
+  } catch (error) {
+    console.warn('Date formatting error:', error, 'Date value:', dateString);
+    return 'Just now';
+  }
+};
+import { useNotifications } from "@/hooks/use-notifications";
+
 export function Header() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications(5);
 
   const handleLogout = () => {
     logout();
     navigate("/auth/login");
   };
 
-  // TODO: Replace with real notifications from API
-  const notifications: any[] = [];
+  const handleNotificationClick = async (notification: any) => {
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
+  };
 
   return (
     <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
@@ -43,40 +61,59 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
-                    {notifications.filter((n) => !n.read).length}
-                  </span>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-80" align="end">
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium">Notifications</p>
-                    <Link
-                      to="/dashboard/notifications"
-                      className="text-xs text-purple-600 hover:text-purple-800"
-                    >
-                      View all
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      {unreadCount > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-purple-600 hover:text-purple-800 h-auto p-0"
+                          onClick={markAllAsRead}
+                        >
+                          Mark all read
+                        </Button>
+                      )}
+                      <Link
+                        to="/dashboard/notifications"
+                        className="text-xs text-purple-600 hover:text-purple-800"
+                      >
+                        View all
+                      </Link>
+                    </div>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {notifications.length > 0 ? (
+                {loading ? (
+                  <div className="py-6 text-center">
+                    <p className="text-sm text-gray-500">Loading notifications...</p>
+                  </div>
+                ) : notifications.length > 0 ? (
                   <>
                     {notifications.map((notification) => (
                       <DropdownMenuItem
                         key={notification.id}
                         className="p-0 focus:bg-transparent"
+                        onClick={() => handleNotificationClick(notification)}
                       >
                         <div
-                          className={`w-full p-3 hover:bg-gray-50 ${
-                            !notification.read ? "bg-blue-50" : ""
+                          className={`w-full p-3 hover:bg-gray-50 cursor-pointer ${
+                            !notification.is_read ? "bg-blue-50" : ""
                           }`}
                         >
                           <div className="flex justify-between items-start">
                             <p
                               className={`text-sm font-medium ${
-                                !notification.read
+                                !notification.is_read
                                   ? "text-blue-900"
                                   : "text-gray-900"
                               }`}
@@ -84,14 +121,15 @@ export function Header() {
                               {notification.title}
                             </p>
                             <span className="text-xs text-gray-500">
-                              {formatDistanceToNow(notification.time, {
-                                addSuffix: true,
-                              })}
+                              {formatNotificationDate(notification.created_at)}
                             </span>
                           </div>
                           <p className="text-xs text-gray-600 mt-1">
-                            {notification.description}
+                            {notification.message}
                           </p>
+                          {!notification.is_read && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                          )}
                         </div>
                       </DropdownMenuItem>
                     ))}

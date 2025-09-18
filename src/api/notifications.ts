@@ -106,3 +106,55 @@ export async function fetchNotificationTemplates() {
     throw error;
   }
 }
+
+// User dashboard notifications (for header dropdown)
+export interface UserNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error' | 'announcement' | 'promotion';
+  priority?: 'low' | 'medium' | 'high' | 'urgent'; // Optional since column doesn't exist in DB
+  is_read: boolean;
+  created_at: string;
+  updated_at: string;
+  data?: any; // Optional since column doesn't exist in DB
+}
+
+export async function fetchUserNotifications(params: {
+  limit?: number;
+  unread_only?: boolean;
+} = {}) {
+  try {
+    const queryParams = new URLSearchParams();
+    
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.unread_only) queryParams.append('unread_only', 'true');
+    
+    return await apiFetch(`/user/notifications?${queryParams.toString()}`);
+  } catch (error) {
+    console.error('Error fetching user notifications:', error);
+    throw error;
+  }
+}
+
+export async function markNotificationAsRead(notificationId: string) {
+  try {
+    return await apiFetch(`/user/notifications/${notificationId}/read`, {
+      method: 'POST',
+    });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    throw error;
+  }
+}
+
+export async function markAllNotificationsAsRead() {
+  try {
+    return await apiFetch('/user/notifications/mark-all-read', {
+      method: 'POST',
+    });
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    throw error;
+  }
+}

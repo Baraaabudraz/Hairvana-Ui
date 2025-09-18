@@ -62,6 +62,7 @@ app.use("/backend/api/reports", require("./routes/reports"));
 app.use("/backend/api/payments", require("./routes/payments"));
 app.use("/backend/api/roles", require("./routes/roles"));
 app.use("/backend/api/support", require("./routes/support"));
+app.use("/backend/api/user/notifications", require("./routes/Api/user/notifications"));
 
 // AR Filter Routes
 

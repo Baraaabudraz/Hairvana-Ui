@@ -1,4 +1,5 @@
 const { SupportTicket, SupportMessage, User, Subscription } = require('../models');
+const notificationService = require('../services/notificationService');
 const { validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 
@@ -260,6 +261,40 @@ class SupportController {
         ]
       });
 
+      // Send notification to salon owner about status change
+      if (status && status !== ticket.status) {
+        try {
+          await notificationService.createUserNotification({
+            title: 'Support Ticket Status Updated',
+            message: `Your support ticket "${ticket.subject}" status has been changed to ${status}`,
+            type: 'info',
+            priority: 'medium',
+            data: {
+              ticketId: ticket.id,
+              ticketNumber: ticket.ticket_number,
+              category: ticket.category,
+              action: 'status_change',
+              oldStatus: ticket.status,
+              newStatus: status,
+              updatedBy: req.user.name
+            },
+            targetUserIds: [ticket.user_id]
+          });
+
+          // Also send specialized FCM notification for status change
+          const ticketWithOldStatus = { ...updatedTicket.toJSON(), oldStatus: ticket.status };
+          await notificationService.sendSupportFCMNotification(
+            [ticket.user_id],
+            ticketWithOldStatus,
+            null,
+            'status_change'
+          );
+        } catch (notificationError) {
+          console.error('Failed to send notification for status change:', notificationError);
+          // Don't fail the request if notification fails
+        }
+      }
+
       res.json({
         success: true,
         message: 'Support ticket updated successfully',
@@ -310,6 +345,39 @@ class SupportController {
           }
         ]
       });
+
+      // Send notification to salon owner if admin replied (not internal note)
+      if (!is_internal && (req.user.role === 'admin' || req.user.role === 'super admin')) {
+        try {
+          // Create a notification for the salon owner about admin reply
+          await notificationService.createUserNotification({
+            title: 'Admin Reply to Support Ticket',
+            message: `Admin ${req.user.name} replied to your support ticket "${ticket.subject}"`,
+            type: 'info',
+            priority: 'medium',
+            data: {
+              ticketId: ticket.id,
+              ticketNumber: ticket.ticket_number,
+              category: ticket.category,
+              action: 'admin_reply',
+              messageId: createdMessage.id,
+              adminName: req.user.name
+            },
+            targetUserIds: [ticket.user_id] // Target specific user
+          });
+
+          // Also send specialized FCM notification for admin reply
+          await notificationService.sendSupportFCMNotification(
+            [ticket.user_id],
+            ticket,
+            createdMessage,
+            'admin_reply'
+          );
+        } catch (notificationError) {
+          console.error('Failed to send notification for admin reply:', notificationError);
+          // Don't fail the request if notification fails
+        }
+      }
 
       res.status(201).json({
         success: true,

@@ -51,14 +51,10 @@ export class ReportExporter {
       const workbook = new ExcelJS.Workbook();
     
     // Set workbook properties
-    workbook.creator = "Hairvana Admin Dashboard";
+    workbook.creator = "Hairvana Reports";
     workbook.lastModifiedBy = "Hairvana Reports";
     workbook.created = new Date();
     workbook.modified = new Date();
-    workbook.properties.title = this.reportData.title;
-    workbook.properties.description = this.reportData.description;
-    workbook.properties.keywords = "Hairvana, Reports, Analytics, Financial, Subscription";
-    workbook.properties.category = "Business Reports";
 
     // Create main summary sheet
     const summarySheet = workbook.addWorksheet("Report Summary", {

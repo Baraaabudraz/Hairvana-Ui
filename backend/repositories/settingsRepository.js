@@ -82,8 +82,122 @@ exports.updateProfileSettings = async (userId, profileData) => {
   };
 };
 
-exports.updateSecuritySettings = async () => {
-  throw new Error("Not implemented: updateSecuritySettings");
+exports.getSecuritySettings = async (userId) => {
+  if (!userId) throw new Error('User ID is required');
+  
+  try {
+    const { SecuritySettings } = require('../models');
+    
+    let securitySettings = await SecuritySettings.findOne({
+      where: { user_id: userId }
+    });
+
+    if (!securitySettings) {
+      // Create default security settings if they don't exist
+      securitySettings = await SecuritySettings.create({
+        user_id: userId,
+        two_factor_enabled: false,
+        password_last_changed: null,
+        login_attempts: 0,
+        last_login_ip: null,
+        allowed_ips: [],
+        session_timeout: 30,
+        ssl_enabled: true,
+        encryption_level: 'AES-256',
+        audit_logging: true,
+        data_retention_period: 365,
+        backup_frequency: 'daily',
+        backup_retention: 30,
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+    }
+
+    // Map database field names to frontend field names
+    const settings = securitySettings.get({ plain: true });
+    return {
+      twoFactorRequired: settings.two_factor_enabled,
+      passwordExpiry: settings.password_last_changed,
+      maxLoginAttempts: settings.login_attempts,
+      lockoutDuration: settings.session_timeout,
+      ipWhitelist: settings.allowed_ips || [],
+      sslEnabled: settings.ssl_enabled,
+      encryptionLevel: settings.encryption_level,
+      auditLogging: settings.audit_logging,
+      dataRetentionPeriod: settings.data_retention_period,
+      backupFrequency: settings.backup_frequency,
+      backupRetention: settings.backup_retention
+    };
+  } catch (error) {
+    console.error('Error getting security settings:', error);
+    throw new Error('Failed to get security settings: ' + error.message);
+  }
+};
+
+exports.updateSecuritySettings = async (userId, securityData) => {
+  if (!userId) throw new Error('User ID is required');
+  if (!securityData || typeof securityData !== 'object') {
+    throw new Error('Security settings data is required');
+  }
+
+  try {
+    // Import SecuritySettings model
+    const { SecuritySettings } = require('../models');
+    
+    // Check if security settings exist for this user
+    let securitySettings = await SecuritySettings.findOne({
+      where: { user_id: userId }
+    });
+
+    // Prepare update data with validation
+    const updateData = { ...securityData };
+    
+    // Map frontend field names to database field names
+    const fieldMapping = {
+      twoFactorRequired: 'two_factor_enabled',
+      passwordExpiry: 'password_last_changed',
+      maxLoginAttempts: 'login_attempts',
+      lockoutDuration: 'session_timeout',
+      ipWhitelist: 'allowed_ips',
+      sslEnabled: 'ssl_enabled',
+      encryptionLevel: 'encryption_level',
+      auditLogging: 'audit_logging',
+      dataRetentionPeriod: 'data_retention_period',
+      backupFrequency: 'backup_frequency',
+      backupRetention: 'backup_retention'
+    };
+
+    // Map the data
+    const mappedData = {};
+    Object.keys(updateData).forEach(key => {
+      if (fieldMapping[key]) {
+        mappedData[fieldMapping[key]] = updateData[key];
+      }
+    });
+
+    // Add updated_at timestamp
+    mappedData.updated_at = new Date();
+
+    if (securitySettings) {
+      // Update existing settings
+      await securitySettings.update(mappedData);
+    } else {
+      // Create new settings if they don't exist
+      securitySettings = await SecuritySettings.create({
+        user_id: userId,
+        ...mappedData,
+        created_at: new Date()
+      });
+    }
+
+    return {
+      message: 'Security settings updated successfully',
+      settings: securitySettings.get({ plain: true })
+    };
+  } catch (error) {
+    console.error('Error updating security settings:', error);
+    throw new Error('Failed to update security settings: ' + error.message);
+  }
 };
 
 exports.getNotificationPreferences = async (userId) => {

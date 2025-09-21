@@ -4,6 +4,8 @@ const {
   BillingSettings,
   IntegrationSettings,
   Role,
+  NotificationPreferences,
+  PlatformSettings,
 } = require("../models");
 
 exports.getUserSettings = async (userId) => {
@@ -84,8 +86,72 @@ exports.updateSecuritySettings = async () => {
   throw new Error("Not implemented: updateSecuritySettings");
 };
 
-exports.updateNotificationPreferences = async () => {
-  throw new Error("Not implemented: updateNotificationPreferences");
+exports.getNotificationPreferences = async (userId) => {
+  if (!userId) throw new Error('User ID is required');
+
+  try {
+    let notificationPreferences = await NotificationPreferences.findOne({
+      where: { user_id: userId }
+    });
+
+    if (!notificationPreferences) {
+      // Create default preferences if they don't exist
+      notificationPreferences = await NotificationPreferences.create({
+        user_id: userId,
+        email: true,
+        push: true,
+        sms: false,
+        desktop: true,
+        marketing_emails: true,
+        system_notifications: true,
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+    }
+
+    return notificationPreferences.get({ plain: true });
+  } catch (error) {
+    console.error('Error getting notification preferences:', error);
+    throw new Error('Failed to get notification preferences: ' + error.message);
+  }
+};
+
+exports.updateNotificationPreferences = async (userId, preferencesData) => {
+  if (!userId) throw new Error('User ID is required');
+  if (!preferencesData || typeof preferencesData !== 'object') {
+    throw new Error('Notification preferences data is required');
+  }
+
+  try {
+    // Check if notification preferences exist for this user
+    let notificationPreferences = await NotificationPreferences.findOne({
+      where: { user_id: userId }
+    });
+
+    if (notificationPreferences) {
+      // Update existing preferences
+      await notificationPreferences.update({
+        ...preferencesData,
+        updated_at: new Date()
+      });
+    } else {
+      // Create new preferences if they don't exist
+      notificationPreferences = await NotificationPreferences.create({
+        user_id: userId,
+        ...preferencesData,
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+    }
+
+    return {
+      message: 'Notification preferences updated successfully',
+      preferences: notificationPreferences.get({ plain: true })
+    };
+  } catch (error) {
+    console.error('Error updating notification preferences:', error);
+    throw new Error('Failed to update notification preferences: ' + error.message);
+  }
 };
 
 exports.updateBillingSettings = async (userId, data) => {
@@ -141,11 +207,100 @@ exports.updateBackupSettings = async () => {
 };
 
 exports.getPlatformSettings = async () => {
-  throw new Error("Not implemented: getPlatformSettings");
+  try {
+    let platformSettings = await PlatformSettings.findOne();
+    
+    if (!platformSettings) {
+      // Create default platform settings if none exist
+      platformSettings = await PlatformSettings.create({
+        site_name: 'Hairvana',
+        site_description: 'Professional Salon Management Platform',
+        primary_color: '#8b5cf6',
+        secondary_color: '#ec4899',
+        timezone: 'UTC',
+        currency: 'USD',
+        language: 'en',
+        maintenance_mode: false,
+        registration_enabled: true,
+        email_verification_required: true,
+        max_file_upload_size: 10,
+        allowed_file_types: ['jpg', 'jpeg', 'png', 'gif', 'pdf'],
+        session_timeout: 30,
+        password_policy: {
+          min_length: 8,
+          require_uppercase: true,
+          require_lowercase: true,
+          require_numbers: true,
+          require_special_chars: true
+        },
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+    }
+
+    return platformSettings.get({ plain: true });
+  } catch (error) {
+    console.error('Error getting platform settings:', error);
+    throw new Error('Failed to get platform settings: ' + error.message);
+  }
 };
 
-exports.updatePlatformSettings = async () => {
-  throw new Error("Not implemented: updatePlatformSettings");
+exports.updatePlatformSettings = async (data) => {
+  if (!data || typeof data !== 'object') {
+    throw new Error('Platform settings data is required');
+  }
+
+  try {
+    let platformSettings = await PlatformSettings.findOne();
+    
+    // Prepare update data with validation
+    const updateData = { ...data };
+    
+    // File paths are now stored as filenames only
+    // No validation needed since we store just the filename
+    
+    // Validate color codes if provided
+    if (updateData.primary_color && !/^#[0-9A-Fa-f]{6}$/.test(updateData.primary_color)) {
+      throw new Error('Primary color must be a valid hex color code (e.g., #8b5cf6)');
+    }
+    
+    if (updateData.secondary_color && !/^#[0-9A-Fa-f]{6}$/.test(updateData.secondary_color)) {
+      throw new Error('Secondary color must be a valid hex color code (e.g., #ec4899)');
+    }
+    
+    // Validate file upload size
+    if (updateData.max_file_upload_size && (isNaN(updateData.max_file_upload_size) || updateData.max_file_upload_size < 1)) {
+      throw new Error('Max file upload size must be a positive number');
+    }
+    
+    // Validate session timeout
+    if (updateData.session_timeout && (isNaN(updateData.session_timeout) || updateData.session_timeout < 5)) {
+      throw new Error('Session timeout must be at least 5 minutes');
+    }
+    
+    if (platformSettings) {
+      // Update existing settings
+      await platformSettings.update({
+        ...updateData,
+        updated_at: new Date()
+      });
+    } else {
+      // Create new settings if none exist
+      platformSettings = await PlatformSettings.create({
+        ...updateData,
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+    }
+
+    return {
+      message: 'Platform settings updated successfully',
+      settings: platformSettings.get({ plain: true })
+    };
+  } catch (error) {
+    console.error('Error updating platform settings:', error);
+    throw new Error('Failed to update platform settings: ' + error.message);
+  }
 };
 
 exports.getIntegrationSettings = async () => {

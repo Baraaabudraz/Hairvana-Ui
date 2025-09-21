@@ -15,6 +15,13 @@ const uploadUserFiles = createUploadMiddleware({
   maxSize: 5 * 1024 * 1024 // 5MB per image
 });
 
+// Configure upload middleware for platform assets (logo, favicon)
+const uploadPlatformAssets = createUploadMiddleware({
+  uploadDir: '/platform',
+  allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/x-icon'],
+  maxSize: 2 * 1024 * 1024 // 2MB per image
+});
+
 // Protect all routes
 router.use(authenticateToken);
 
@@ -25,6 +32,7 @@ router.put("/profile",
   settingsController.updateProfileSettings
 );
 router.put("/security", settingsController.updateSecuritySettings);
+router.get("/notifications", settingsController.getNotificationPreferences);
 router.put("/notifications", settingsController.updateNotificationPreferences);
 router.put("/billing", settingsController.updateBillingSettings);
 router.put("/backup", settingsController.updateBackupSettings);
@@ -38,6 +46,10 @@ router.get(
 router.put(
   "/platform",
   checkPermission("settings", "edit"),
+  uploadPlatformAssets.fields([
+    { name: 'logo', maxCount: 1 },
+    { name: 'favicon', maxCount: 1 }
+  ]),
   settingsController.updatePlatformSettings
 );
 

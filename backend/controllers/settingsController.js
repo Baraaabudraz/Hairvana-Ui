@@ -44,6 +44,15 @@ exports.updateSecuritySettings = async (req, res, next) => {
   }
 };
 
+exports.getNotificationPreferences = async (req, res, next) => {
+  try {
+    const preferences = await settingsService.getNotificationPreferences(req.user.id);
+    res.json(preferences);
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.updateNotificationPreferences = async (req, res, next) => {
   try {
     const result = await settingsService.updateNotificationPreferences(req.user.id, req.body);
@@ -82,9 +91,77 @@ exports.getPlatformSettings = async (req, res, next) => {
 
 exports.updatePlatformSettings = async (req, res, next) => {
   try {
-    const result = await settingsService.updatePlatformSettings(req.body);
+    console.log('Platform settings update request received');
+    console.log('Request body:', req.body);
+    console.log('Request files:', req.files);
+    
+    // Handle file uploads
+    let platformData = { ...req.body };
+    
+    // Process allowed_file_types - convert string to array
+    if (platformData.allowed_file_types && typeof platformData.allowed_file_types === 'string') {
+      platformData.allowed_file_types = platformData.allowed_file_types.split(',').map(type => type.trim());
+    }
+    
+    // Process password_policy - parse JSON string
+    if (platformData.password_policy && typeof platformData.password_policy === 'string') {
+      try {
+        platformData.password_policy = JSON.parse(platformData.password_policy);
+      } catch (error) {
+        console.error('Error parsing password_policy:', error);
+        platformData.password_policy = {
+          min_length: 8,
+          require_uppercase: true,
+          require_lowercase: true,
+          require_numbers: true,
+          require_special_chars: true
+        };
+      }
+    }
+    
+    // Process boolean values - convert string to boolean
+    if (platformData.maintenance_mode && typeof platformData.maintenance_mode === 'string') {
+      platformData.maintenance_mode = platformData.maintenance_mode === 'true';
+    }
+    if (platformData.registration_enabled && typeof platformData.registration_enabled === 'string') {
+      platformData.registration_enabled = platformData.registration_enabled === 'true';
+    }
+    if (platformData.email_verification_required && typeof platformData.email_verification_required === 'string') {
+      platformData.email_verification_required = platformData.email_verification_required === 'true';
+    }
+    
+    // Process numeric values - convert string to number
+    if (platformData.max_file_upload_size && typeof platformData.max_file_upload_size === 'string') {
+      platformData.max_file_upload_size = parseInt(platformData.max_file_upload_size);
+    }
+    if (platformData.session_timeout && typeof platformData.session_timeout === 'string') {
+      platformData.session_timeout = parseInt(platformData.session_timeout);
+    }
+    
+    // Process logo upload
+    if (req.files && req.files.logo && req.files.logo[0]) {
+      const logoFile = req.files.logo[0];
+      console.log('Processing logo file:', logoFile);
+      platformData.logo = logoFile.filename; // Store only filename
+    } else {
+      console.log('No logo file received');
+    }
+    
+    // Process favicon upload
+    if (req.files && req.files.favicon && req.files.favicon[0]) {
+      const faviconFile = req.files.favicon[0];
+      console.log('Processing favicon file:', faviconFile);
+      platformData.favicon = faviconFile.filename; // Store only filename
+    } else {
+      console.log('No favicon file received');
+    }
+    
+    console.log('Final platform data:', platformData);
+    
+    const result = await settingsService.updatePlatformSettings(platformData);
     res.json(result);
   } catch (error) {
+    console.error('Error updating platform settings:', error);
     next(error);
   }
 };

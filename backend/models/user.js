@@ -22,10 +22,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "owner_id",
         as: "salons",
       });
-      // User.hasMany(models.Subscription, {
-      //   foreignKey: 'user_id',
-      //   as: 'subscriptions'
-      // });
+      User.hasMany(models.Subscription, {
+        foreignKey: 'owner_id',
+        as: 'subscriptions'
+      });
       User.hasOne(models.UserSettings, {
         foreignKey: "user_id",
         as: "userSettings",

@@ -19,4 +19,11 @@ router.get(
   dashboardController.getDashboardStats
 );
 
+// GET recent activity - admin only
+router.get(
+  "/recent-activity",
+  checkPermission("analytics", "view"),
+  dashboardController.getRecentActivity
+);
+
 module.exports = router;

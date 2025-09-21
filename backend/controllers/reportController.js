@@ -4,7 +4,15 @@ const reportService = require('../services/reportService');
 // List all reports
 exports.getAllReports = async (req, res, next) => {
   try {
-    const reports = await reportService.getAllReports();
+    const { page, limit, status, search, sortBy, sortOrder } = req.query;
+    const reports = await reportService.getAllReports({
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 10,
+      status,
+      search,
+      sortBy,
+      sortOrder
+    });
     res.json(reports);
   } catch (error) {
     next(error);

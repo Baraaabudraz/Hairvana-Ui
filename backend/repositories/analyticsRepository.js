@@ -1,4 +1,4 @@
-const { User, Salon, Appointment, Service, BillingHistory } = require('../models');
+const { User, Salon, Appointment, Service, BillingHistory, Subscription, SubscriptionPlan, SubscriptionPayment } = require('../models');
 const { Op, Sequelize } = require('sequelize');
 
 function getStartDateForPeriod(period = '30d') {
@@ -25,90 +25,114 @@ exports.getAnalyticsData = async (query) => {
     try { return await model.findAll(options); } catch { return []; }
   };
 
-  // Overview
-  const totalSalons = await safeCount(Salon);
-  const activeSalons = await safeCount(Salon, { status: 'active' });
-  const totalUsers = await safeCount(User);
-  const activeUsers = await safeCount(User, { status: 'active' });
-  const totalBookings = await safeCount(Appointment);
-  const completedBookings = await safeCount(Appointment, { status: 'completed' });
-
-  // Revenue
-  const revenueCurrent = await safeSum(BillingHistory, 'amount', { date: { [Op.gte]: startDate } });
+  // Subscription Overview
+  const totalSubscriptions = await safeCount(Subscription);
+  const activeSubscriptions = await safeCount(Subscription, { status: 'active' });
+  const cancelledSubscriptions = await safeCount(Subscription, { status: 'cancelled' });
+  const expiredSubscriptions = await safeCount(Subscription, { status: 'expired' });
+  
+  // Subscription Revenue (Total Revenue is subscription-only)
+  const subscriptionRevenueCurrent = await safeSum(Subscription, 'amount', { 
+    status: 'active'
+  });
   const prevStartDate = getStartDateForPeriod(period === '7d' ? '14d' : period === '30d' ? '60d' : period === '90d' ? '180d' : '2y');
-  const revenuePrevious = await safeSum(BillingHistory, 'amount', { date: { [Op.gte]: prevStartDate, [Op.lt]: startDate } });
-  const revenueGrowth = revenuePrevious && revenuePrevious > 0 ? ((revenueCurrent - revenuePrevious) / revenuePrevious) * 100 : 0;
+  const subscriptionRevenuePrevious = await safeSum(Subscription, 'amount', { 
+    status: 'active',
+    createdAt: { [Op.lt]: startDate }
+  });
+  const subscriptionRevenueGrowth = subscriptionRevenuePrevious && subscriptionRevenuePrevious > 0 
+    ? ((subscriptionRevenueCurrent - subscriptionRevenuePrevious) / subscriptionRevenuePrevious) * 100 
+    : 0;
 
-  // Bookings
-  const bookingsTotal = await safeCount(Appointment, { date: { [Op.gte]: startDate } });
-  const bookingsCompleted = await safeCount(Appointment, { status: 'completed', date: { [Op.gte]: startDate } });
-  const bookingsCancelled = await safeCount(Appointment, { status: 'cancelled', date: { [Op.gte]: startDate } });
-  const bookingsNoShow = await safeCount(Appointment, { status: 'no_show', date: { [Op.gte]: startDate } });
+  // Monthly Recurring Revenue (MRR)
+  const mrr = await safeSum(Subscription, 'amount', { 
+    status: 'active',
+    billingCycle: 'monthly'
+  });
+  const annualRecurringRevenue = await safeSum(Subscription, 'amount', { 
+    status: 'active',
+    billingCycle: 'yearly'
+  });
 
-  // User Growth
-  const newUsers = await safeCount(User, { join_date: { [Op.gte]: startDate } });
-  const returningUsers = 0; // Not implemented
-
-  // Top Services
-  let topServices = [];
+  // Subscription Plans Distribution
+  let planDistribution = [];
   try {
-    const topServicesRaw = await Appointment.findAll({
-      attributes: ['service_id', [Sequelize.fn('COUNT', Sequelize.col('service_id')), 'bookings']],
-      where: { date: { [Op.gte]: startDate } },
-      group: ['service_id'],
-      order: [[Sequelize.fn('COUNT', Sequelize.col('service_id')), 'DESC']],
-      limit: 5
-    });
-    topServices = await Promise.all(topServicesRaw.map(async (row) => {
-      try {
-        const service = await Service.findByPk(row.service_id);
-        return {
-          name: service ? service.name : 'Unknown Service',
-          bookings: row.get('bookings') || 0,
-          revenue: 0,
-          growth: 0
-        };
-      } catch {
-        return { name: 'Unknown Service', bookings: row.get('bookings') || 0, revenue: 0, growth: 0 };
-      }
-    }));
-  } catch { topServices = []; }
-
-  // Geographic Data
-  let geographicData = [];
-  try {
-    const salons = await Salon.findAll({
+    const plans = await SubscriptionPlan.findAll({
       include: [{
-        model: require('../models').Address,
-        as: 'address',
-        attributes: ['city', 'state']
+        model: Subscription,
+        as: 'subscriptions',
+        where: { status: 'active' },
+        required: false
       }]
     });
+    planDistribution = plans.map(plan => ({
+      name: plan.name,
+      price: plan.price,
+      subscribers: plan.subscriptions ? plan.subscriptions.length : 0,
+      revenue: (plan.subscriptions ? plan.subscriptions.length : 0) * plan.price,
+      growth: 0 // Could be calculated based on previous period
+    }));
+  } catch { planDistribution = []; }
+
+  // Churn Analysis
+  const churnedThisPeriod = await safeCount(Subscription, {
+    status: 'cancelled',
+    updatedAt: { [Op.gte]: startDate }
+  });
+  const churnRate = totalSubscriptions > 0 ? (churnedThisPeriod / totalSubscriptions) * 100 : 0;
+
+  // New Subscriptions
+  const newSubscriptions = await safeCount(Subscription, { 
+    createdAt: { [Op.gte]: startDate } 
+  });
+
+  // Geographic Distribution of Subscriptions
+  let geographicData = [];
+  try {
+    const subscriptions = await Subscription.findAll({
+      include: [{
+        model: User,
+        as: 'owner',
+        include: [{
+          model: Salon,
+          as: 'salons',
+          include: [{
+            model: require('../models').Address,
+            as: 'address',
+            attributes: ['city', 'state']
+          }]
+        }]
+      }]
+    });
+    
     const geoMap = {};
-    salons.forEach(salon => {
-      const loc = salon.address ? `${salon.address.city}, ${salon.address.state}` : 'Unknown Location';
-      if (!geoMap[loc]) geoMap[loc] = { location: loc, salons: 0, users: 0, revenue: 0 };
-      geoMap[loc].salons += 1;
-      geoMap[loc].revenue += Number(salon.revenue || 0);
+    subscriptions.forEach(sub => {
+      const salon = sub.owner?.salons?.[0];
+      const loc = salon?.address ? `${salon.address.city}, ${salon.address.state}` : 'Unknown Location';
+      if (!geoMap[loc]) {
+        geoMap[loc] = { 
+          location: loc, 
+          subscriptions: 0, 
+          revenue: 0,
+          activeSubscriptions: 0
+        };
+      }
+      geoMap[loc].subscriptions += 1;
+      geoMap[loc].revenue += Number(sub.amount || 0);
+      if (sub.status === 'active') {
+        geoMap[loc].activeSubscriptions += 1;
+      }
     });
     geographicData = Object.values(geoMap);
   } catch { geographicData = []; }
 
   // Performance Metrics
-  const averageBookingValue = bookingsTotal > 0 ? (revenueCurrent / bookingsTotal) : 0;
-  const customerRetentionRate = 0;
-  const salonUtilizationRate = 0;
-  let averageRating = 0;
-  try {
-    const salons = await safeFindAll(Salon);
-    if (salons.length > 0) {
-      const totalRating = salons.reduce((sum, s) => sum + Number(s.rating || 0), 0);
-      averageRating = totalRating / salons.length;
-    }
-  } catch { averageRating = 0; }
+  const averageRevenuePerUser = activeSubscriptions > 0 ? (mrr / activeSubscriptions) : 0;
+  const customerLifetimeValue = 0; // Would need historical data to calculate
+  const subscriptionRetentionRate = 100 - churnRate;
 
-  // Chart Data
-  const generateChartData = async () => {
+  // Chart Data for Subscription Trends
+  const generateSubscriptionChartData = async () => {
     try {
       const months = [];
       const now = new Date();
@@ -117,52 +141,69 @@ exports.getAnalyticsData = async (query) => {
         const monthName = date.toLocaleString('default', { month: 'short' });
         const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
         const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-        const monthlyRevenue = await BillingHistory.sum('amount', { where: { date: { [Op.between]: [startOfMonth, endOfMonth] } } }) || 0;
-        const monthlyBookings = await Appointment.count({ where: { date: { [Op.between]: [startOfMonth, endOfMonth] } } }) || 0;
-        const monthlyNewUsers = await User.count({ where: { createdAt: { [Op.between]: [startOfMonth, endOfMonth] } } }) || 0;
-        months.push({ month: monthName, revenue: monthlyRevenue, bookings: monthlyBookings, newUsers: monthlyNewUsers, date: startOfMonth.toISOString().split('T')[0] });
+        
+        const monthlyRevenue = await safeSum(Subscription, 'amount', { 
+          status: 'active',
+          createdAt: { [Op.between]: [startOfMonth, endOfMonth] }
+        });
+        const monthlyNewSubs = await safeCount(Subscription, { 
+          createdAt: { [Op.between]: [startOfMonth, endOfMonth] }
+        });
+        const monthlyChurned = await safeCount(Subscription, { 
+          status: 'cancelled',
+          updatedAt: { [Op.between]: [startOfMonth, endOfMonth] }
+        });
+        
+        months.push({ 
+          month: monthName, 
+          revenue: monthlyRevenue, 
+          newSubscriptions: monthlyNewSubs, 
+          churned: monthlyChurned,
+          netGrowth: monthlyNewSubs - monthlyChurned,
+          date: startOfMonth.toISOString().split('T')[0] 
+        });
       }
       return months;
     } catch { return []; }
   };
-  const chartData = await generateChartData();
+  const subscriptionChartData = await generateSubscriptionChartData();
 
   return {
     overview: {
-      totalSalons,
-      activeSalons,
-      totalUsers,
-      activeUsers,
-      totalBookings,
-      completedBookings,
-      totalRevenue: revenueCurrent,
-      monthlyGrowth: revenueGrowth
+      totalSubscriptions,
+      activeSubscriptions,
+      cancelledSubscriptions,
+      expiredSubscriptions,
+      totalRevenue: subscriptionRevenueCurrent,
+      monthlyGrowth: subscriptionRevenueGrowth,
+      mrr,
+      annualRecurringRevenue
     },
     revenue: {
-      current: revenueCurrent,
-      previous: revenuePrevious,
-      growth: revenueGrowth,
-      data: chartData
+      current: subscriptionRevenueCurrent,
+      previous: subscriptionRevenuePrevious,
+      growth: subscriptionRevenueGrowth,
+      data: subscriptionChartData
     },
-    bookings: {
-      total: bookingsTotal,
-      completed: bookingsCompleted,
-      cancelled: bookingsCancelled,
-      noShow: bookingsNoShow,
-      data: chartData
+    subscriptions: {
+      total: totalSubscriptions,
+      active: activeSubscriptions,
+      cancelled: cancelledSubscriptions,
+      churned: churnedThisPeriod,
+      data: subscriptionChartData
     },
     userGrowth: {
-      newUsers,
-      returningUsers,
-      data: chartData
+      newUsers: newSubscriptions,
+      returningUsers: 0, // Not applicable for subscriptions
+      data: subscriptionChartData
     },
-    topServices,
+    topServices: planDistribution, // Using plan distribution instead of services
     geographicData,
     performanceMetrics: {
-      averageBookingValue,
-      customerRetentionRate,
-      salonUtilizationRate,
-      averageRating
+      averageRevenuePerUser,
+      customerLifetimeValue,
+      subscriptionRetentionRate,
+      churnRate
     }
   };
 }; 

@@ -57,7 +57,7 @@ export async function fetchNotifications(params: {
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     
-    return await apiFetch(`/notifications?${queryParams.toString()}`);
+    return await apiFetch(`/notifications/admin?${queryParams.toString()}`);
   } catch (error) {
     console.error('Error fetching notifications:', error);
     throw error;
@@ -130,7 +130,7 @@ export async function fetchUserNotifications(params: {
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.unread_only) queryParams.append('unread_only', 'true');
     
-    return await apiFetch(`/user/notifications?${queryParams.toString()}`);
+    return await apiFetch(`/notifications?${queryParams.toString()}`);
   } catch (error) {
     console.error('Error fetching user notifications:', error);
     throw error;
@@ -139,7 +139,7 @@ export async function fetchUserNotifications(params: {
 
 export async function markNotificationAsRead(notificationId: string) {
   try {
-    return await apiFetch(`/user/notifications/${notificationId}/read`, {
+    return await apiFetch(`/notifications/${notificationId}/read`, {
       method: 'POST',
     });
   } catch (error) {
@@ -150,7 +150,7 @@ export async function markNotificationAsRead(notificationId: string) {
 
 export async function markAllNotificationsAsRead() {
   try {
-    return await apiFetch('/user/notifications/mark-all-read', {
+    return await apiFetch('/notifications/mark-all-read', {
       method: 'POST',
     });
   } catch (error) {

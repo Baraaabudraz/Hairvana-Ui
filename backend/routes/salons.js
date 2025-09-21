@@ -12,10 +12,8 @@ const {
 } = require("../middleware/authMiddleware");
 const checkPermission = require("../middleware/permissionMiddleware");
 const { createUploadMiddleware } = require("../helpers/uploadHelper");
-const path = require("path");
-const uploadDir = path.join(__dirname, "../public/uploads/salons");
 const upload = createUploadMiddleware({
-  uploadDir,
+  uploadDir: '/salons',
   maxSize: 5 * 1024 * 1024,
   allowedTypes: ["image/jpeg", "image/png", "image/gif"],
 });

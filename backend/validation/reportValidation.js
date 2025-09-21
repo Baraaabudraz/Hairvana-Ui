@@ -32,11 +32,36 @@ const validateReport = [
   body('parameters.fields.*')
     .optional()
     .isIn([
+      // Financial fields
       'Total Revenue', 'Subscription Revenue', 'Commission Revenue', 'Growth Rate',
-      'Geographic Breakdown', 'Active Salons', 'Booking Volume', 'Average Rating',
-      'Utilization Rate', 'Top Performers', 'New Users', 'Active Users',
-      'Retention Rate', 'User Journey', 'Demographics', 'System Uptime',
-      'Response Times', 'Error Rates', 'User Sessions'
+      'Revenue', 'Expenses', 'Profit Margin', 'Cash Flow', 'Financial Ratios',
+      'Cost Analysis', 'Budget vs Actual', 'Revenue per Salon', 'Revenue per Service',
+      'Monthly Trends', 'Year-over-Year Comparison', 'Regional Revenue',
+      
+      // Salon fields
+      'Active Salons', 'Booking Volume', 'Average Rating', 'Utilization Rate',
+      'Top Performers', 'Customer Satisfaction', 'Service Popularity',
+      'Service Duration', 'Service Quality', 'Pricing Analysis', 'Service Trends',
+      'Location Performance', 'Territory Analysis',
+      
+      // User fields
+      'New Users', 'Active Users', 'Retention Rate', 'User Journey', 'Demographics',
+      'Engagement Metrics', 'Churn Analysis', 'Customer Segments', 'Purchase Patterns',
+      'Satisfaction Scores', 'Feedback Analysis', 'Lifetime Value', 'Preference Trends',
+      'Service Ratings',
+      
+      // Operational fields
+      'System Uptime', 'Response Times', 'Error Rates', 'User Sessions',
+      'Platform Health', 'Performance Metrics', 'Infrastructure Status',
+      'Completion Rate', 'Popular Services', 'Peak Times', 'Cancellation Analysis',
+      'Seasonal Patterns', 'Service Preferences', 'Campaign Performance',
+      'Customer Acquisition Cost', 'Conversion Rates', 'Marketing ROI',
+      'Channel Effectiveness', 'Lead Generation', 'Brand Awareness',
+      'Market Penetration', 'Geographic Growth', 'Regional Preferences',
+      'Market Opportunities',
+      
+      // Geographic fields
+      'Geographic Breakdown'
     ])
     .withMessage('Invalid field in parameters.fields array')
 ];
@@ -68,11 +93,36 @@ const validateGenerateReport = [
   body('parameters.fields.*')
     .optional()
     .isIn([
+      // Financial fields
       'Total Revenue', 'Subscription Revenue', 'Commission Revenue', 'Growth Rate',
-      'Geographic Breakdown', 'Active Salons', 'Booking Volume', 'Average Rating',
-      'Utilization Rate', 'Top Performers', 'New Users', 'Active Users',
-      'Retention Rate', 'User Journey', 'Demographics', 'System Uptime',
-      'Response Times', 'Error Rates', 'User Sessions'
+      'Revenue', 'Expenses', 'Profit Margin', 'Cash Flow', 'Financial Ratios',
+      'Cost Analysis', 'Budget vs Actual', 'Revenue per Salon', 'Revenue per Service',
+      'Monthly Trends', 'Year-over-Year Comparison', 'Regional Revenue',
+      
+      // Salon fields
+      'Active Salons', 'Booking Volume', 'Average Rating', 'Utilization Rate',
+      'Top Performers', 'Customer Satisfaction', 'Service Popularity',
+      'Service Duration', 'Service Quality', 'Pricing Analysis', 'Service Trends',
+      'Location Performance', 'Territory Analysis',
+      
+      // User fields
+      'New Users', 'Active Users', 'Retention Rate', 'User Journey', 'Demographics',
+      'Engagement Metrics', 'Churn Analysis', 'Customer Segments', 'Purchase Patterns',
+      'Satisfaction Scores', 'Feedback Analysis', 'Lifetime Value', 'Preference Trends',
+      'Service Ratings',
+      
+      // Operational fields
+      'System Uptime', 'Response Times', 'Error Rates', 'User Sessions',
+      'Platform Health', 'Performance Metrics', 'Infrastructure Status',
+      'Completion Rate', 'Popular Services', 'Peak Times', 'Cancellation Analysis',
+      'Seasonal Patterns', 'Service Preferences', 'Campaign Performance',
+      'Customer Acquisition Cost', 'Conversion Rates', 'Marketing ROI',
+      'Channel Effectiveness', 'Lead Generation', 'Brand Awareness',
+      'Market Penetration', 'Geographic Growth', 'Regional Preferences',
+      'Market Opportunities',
+      
+      // Geographic fields
+      'Geographic Breakdown'
     ])
     .withMessage('Invalid field in parameters.fields array')
 ];
@@ -103,11 +153,36 @@ const validateReportTemplate = [
   body('fields.*')
     .optional()
     .isIn([
+      // Financial fields
       'Total Revenue', 'Subscription Revenue', 'Commission Revenue', 'Growth Rate',
-      'Geographic Breakdown', 'Active Salons', 'Booking Volume', 'Average Rating',
-      'Utilization Rate', 'Top Performers', 'New Users', 'Active Users',
-      'Retention Rate', 'User Journey', 'Demographics', 'System Uptime',
-      'Response Times', 'Error Rates', 'User Sessions'
+      'Revenue', 'Expenses', 'Profit Margin', 'Cash Flow', 'Financial Ratios',
+      'Cost Analysis', 'Budget vs Actual', 'Revenue per Salon', 'Revenue per Service',
+      'Monthly Trends', 'Year-over-Year Comparison', 'Regional Revenue',
+      
+      // Salon fields
+      'Active Salons', 'Booking Volume', 'Average Rating', 'Utilization Rate',
+      'Top Performers', 'Customer Satisfaction', 'Service Popularity',
+      'Service Duration', 'Service Quality', 'Pricing Analysis', 'Service Trends',
+      'Location Performance', 'Territory Analysis',
+      
+      // User fields
+      'New Users', 'Active Users', 'Retention Rate', 'User Journey', 'Demographics',
+      'Engagement Metrics', 'Churn Analysis', 'Customer Segments', 'Purchase Patterns',
+      'Satisfaction Scores', 'Feedback Analysis', 'Lifetime Value', 'Preference Trends',
+      'Service Ratings',
+      
+      // Operational fields
+      'System Uptime', 'Response Times', 'Error Rates', 'User Sessions',
+      'Platform Health', 'Performance Metrics', 'Infrastructure Status',
+      'Completion Rate', 'Popular Services', 'Peak Times', 'Cancellation Analysis',
+      'Seasonal Patterns', 'Service Preferences', 'Campaign Performance',
+      'Customer Acquisition Cost', 'Conversion Rates', 'Marketing ROI',
+      'Channel Effectiveness', 'Lead Generation', 'Brand Awareness',
+      'Market Penetration', 'Geographic Growth', 'Regional Preferences',
+      'Market Opportunities',
+      
+      // Geographic fields
+      'Geographic Breakdown'
     ])
     .withMessage('Invalid field in fields array'),
   

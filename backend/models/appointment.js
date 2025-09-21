@@ -43,6 +43,12 @@ module.exports = (sequelize, DataTypes) => {
         otherKey: 'service_id',
         as: 'services'
       });
+      
+      // Appointment has many Reviews (one-to-many)
+      Appointment.hasMany(models.Review, {
+        foreignKey: 'appointment_id',
+        as: 'reviews'
+      });
     }
   }
   Appointment.init({

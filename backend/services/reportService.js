@@ -1,7 +1,7 @@
 const reportRepository = require('../repositories/reportRepository');
 
-exports.getAllReports = async () => {
-  return reportRepository.findAll();
+exports.getAllReports = async (params = {}) => {
+  return reportRepository.findAll(params);
 };
 
 exports.getReportById = async (id) => {

@@ -59,6 +59,7 @@ import {
   Play,
   Loader2,
 } from "lucide-react";
+import { exportReportToExcel, exportReportToPDF, ReportData } from "@/lib/report-export";
 import { format, subDays, subMonths, subYears } from "date-fns";
 import { generateReport } from "@/api/analytics";
 import {
@@ -193,6 +194,8 @@ export default function ReportsPage() {
           limit,
           status: statusFilter !== "all" ? statusFilter : undefined,
           search: searchTerm || undefined,
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
         }),
       ]);
       setReportTemplates(
@@ -332,7 +335,7 @@ export default function ReportsPage() {
   };
 
   const handleDownloadReport = (report: Report) => {
-    if (report.status !== "completed" || !report.downloadUrl) {
+    if (report.status !== "completed") {
       toast({
         title: "Report not available",
         description: "This report is not ready for download yet.",
@@ -341,11 +344,33 @@ export default function ReportsPage() {
       return;
     }
 
-    // In a real app, you would trigger the actual download
-    toast({
-      title: "Download started",
-      description: `Downloading ${report.name}...`,
-    });
+    // Open the report viewer for download options
+    setViewingReport(report);
+  };
+
+  const handleExportReport = async (report: Report, format: 'excel' | 'pdf') => {
+    try {
+      if (format === 'excel') {
+        await exportReportToExcel(report as ReportData);
+        toast({
+          title: "Excel Export Complete",
+          description: `${report.name} has been exported to Excel format.`,
+        });
+      } else if (format === 'pdf') {
+        await exportReportToPDF(report as ReportData);
+        toast({
+          title: "PDF Export Complete",
+          description: `${report.name} has been exported to PDF format.`,
+        });
+      }
+    } catch (error) {
+      console.error(`Error exporting ${format}:`, error);
+      toast({
+        title: "Export Failed",
+        description: `Failed to export ${report.name} to ${format.toUpperCase()}. Please try again.`,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteReport = async (reportId: string) => {
@@ -849,84 +874,64 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Report Templates */}
-      <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <CardTitle>Quick Report Templates</CardTitle>
-          <CardDescription>
-            Generate instant reports with pre-configured templates
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {reportTemplates.map((template) => {
-              const Icon = template.icon;
-              const isGenerating = Array.from(generatingReports).some((id) =>
-                id.includes(template.id)
-              );
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Reports
+                </p>
+                <p className="text-2xl font-bold text-gray-900">{total}</p>
+              </div>
+              <FileText className="h-8 w-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
 
-              return (
-                <div
-                  key={template.id}
-                  className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  {template.popular && (
-                    <Badge className="mb-2 bg-blue-600 text-white">
-                      Popular
-                    </Badge>
-                  )}
-                  <div className="flex items-center gap-3 mb-3">
-                    <div
-                      className={`p-2 rounded-lg bg-gradient-to-r ${template.color}`}
-                    >
-                      <Icon className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">
-                        {template.name}
-                      </h3>
-                      <Badge className={typeColors[template.type]}>
-                        {template.type}
-                      </Badge>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-4">
-                    {template.description}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleShowReport(template)}
-                      disabled={isGenerating}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-4 w-4 mr-2" />
-                          Show Report
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedTemplate(template);
-                        setCreateDialogOpen(true);
-                      }}
-                    >
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Completed</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {reports.filter((r) => r.status === "completed").length}
+                </p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Generating</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {reports.filter((r) => r.status === "generating").length}
+                </p>
+              </div>
+              <Clock className="h-8 w-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Scheduled</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {reports.filter((r) => r.status === "scheduled").length}
+                </p>
+              </div>
+              <Calendar className="h-8 w-8 text-yellow-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Filters */}
       <Card className="border-0 shadow-sm">
@@ -1049,8 +1054,27 @@ export default function ReportsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDownloadReport(report)}
+                          onClick={() => handleExportReport(report, 'excel')}
                           className="hover:bg-green-50 hover:text-green-600"
+                          title="Export to Excel"
+                        >
+                          <FileSpreadsheet className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleExportReport(report, 'pdf')}
+                          className="hover:bg-red-50 hover:text-red-600"
+                          title="Export to PDF"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadReport(report)}
+                          className="hover:bg-purple-50 hover:text-purple-600"
+                          title="View Export Options"
                         >
                           <Download className="h-4 w-4" />
                         </Button>
@@ -1059,6 +1083,7 @@ export default function ReportsPage() {
                           size="sm"
                           className="hover:bg-blue-50 hover:text-blue-600"
                           onClick={() => handleViewReport(report.id)}
+                          title="View Report"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -1158,64 +1183,6 @@ export default function ReportsPage() {
         <span className="ml-2 text-sm text-gray-500">per page</span>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Total Reports
-                </p>
-                <p className="text-2xl font-bold text-gray-900">{total}</p>
-              </div>
-              <FileText className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Completed</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {reports.filter((r) => r.status === "completed").length}
-                </p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Generating</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {reports.filter((r) => r.status === "generating").length}
-                </p>
-              </div>
-              <Clock className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Scheduled</p>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {reports.filter((r) => r.status === "scheduled").length}
-                </p>
-              </div>
-              <Calendar className="h-8 w-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Report Viewer Modal */}
       {viewingReport && (

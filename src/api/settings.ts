@@ -122,10 +122,23 @@ export async function fetchPlatformSettings() {
 
 export async function updatePlatformSettings(platformData: any) {
   try {
-    return await apiFetch('/settings/platform', {
-      method: 'PUT',
-      body: JSON.stringify(platformData),
-    });
+    // Check if platformData is FormData (for file uploads)
+    if (platformData instanceof FormData) {
+      return await apiFetch('/settings/platform', {
+        method: 'PUT',
+        body: platformData,
+        // Don't set Content-Type header, let browser set it with boundary
+      });
+    } else {
+      // Regular JSON data
+      return await apiFetch('/settings/platform', {
+        method: 'PUT',
+        body: JSON.stringify(platformData),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    }
   } catch (error) {
     console.error('Error updating platform settings:', error);
     throw error;

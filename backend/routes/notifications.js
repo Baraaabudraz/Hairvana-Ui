@@ -17,9 +17,10 @@ const checkPermission = require("../middleware/permissionMiddleware");
 router.use(authenticateToken);
 router.use(blockUserDashboard());
 
+// Admin routes
 // GET all notifications - admin only
 router.get(
-  "/",
+  "/admin",
   checkPermission("notifications", "view"),
   notificationController.getAllNotifications
 );
@@ -53,5 +54,18 @@ router.post(
   authorize("admin", "super admin"),
   notificationController.sendNotification
 );
+
+// User routes
+// GET / — List user notifications
+router.get('/', notificationController.getUserNotifications);
+
+// GET /unread-count — Get count of unread notifications
+router.get('/unread-count', notificationController.getUnreadCount);
+
+// POST /:id/read — Mark a specific notification as read
+router.post('/:id/read', notificationController.markNotificationAsRead);
+
+// POST /mark-all-read — Mark all notifications as read
+router.post('/mark-all-read', notificationController.markAllNotificationsAsRead);
 
 module.exports = router;

@@ -110,8 +110,8 @@ interface UserProfile {
 interface PlatformSettings {
   siteName: string;
   siteDescription: string;
-  logo: string;
-  favicon: string;
+  logo: string | File;
+  favicon: string | File;
   primaryColor: string;
   secondaryColor: string;
   timezone: string;
@@ -252,6 +252,21 @@ const settingsSections: SettingsSection[] = [
     category: 'system'
   }
 ];
+
+// Helper function to get full image URL
+const getImageUrl = (filename: string | File | undefined): string => {
+  if (!filename) return '';
+  if (filename instanceof File) return URL.createObjectURL(filename);
+  if (typeof filename === 'string') {
+    // If it's already a full URL, return as is
+    if (filename.startsWith('http') || filename.startsWith('/uploads/')) {
+      return filename;
+    }
+    // If it's just a filename, construct the full URL
+    return `/uploads/platform/${filename}`;
+  }
+  return '';
+};
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('profile');
@@ -541,7 +556,56 @@ export default function SettingsPage() {
           break;
         case 'Platform':
           if (platformSettings) {
-            await updatePlatformSettings(platformSettings);
+            // Create FormData for file upload
+            const formData = new FormData();
+            
+            // Add form fields
+            formData.append('site_name', platformSettings.siteName || 'Hairvana');
+            formData.append('site_description', platformSettings.siteDescription || 'Professional Salon Management Platform');
+            formData.append('primary_color', platformSettings.primaryColor || '#8b5cf6');
+            formData.append('secondary_color', platformSettings.secondaryColor || '#ec4899');
+            formData.append('timezone', platformSettings.timezone || 'UTC');
+            formData.append('currency', platformSettings.currency || 'USD');
+            formData.append('language', platformSettings.language || 'en');
+            formData.append('maintenance_mode', platformSettings.maintenanceMode ? 'true' : 'false');
+            formData.append('registration_enabled', platformSettings.registrationEnabled ? 'true' : 'false');
+            formData.append('email_verification_required', platformSettings.emailVerificationRequired ? 'true' : 'false');
+            formData.append('max_file_upload_size', (platformSettings.maxFileUploadSize || 10).toString());
+            formData.append('session_timeout', (platformSettings.sessionTimeout || 30).toString());
+            formData.append('allowed_file_types', (platformSettings.allowedFileTypes || ['jpg', 'jpeg', 'png', 'gif', 'pdf']).join(','));
+            
+            // Add password policy
+            formData.append('password_policy', JSON.stringify(platformSettings.passwordPolicy || {
+              min_length: 8,
+              require_uppercase: true,
+              require_lowercase: true,
+              require_numbers: true,
+              require_special_chars: true
+            }));
+            
+            // Add logo file if selected
+            if (platformSettings.logo && typeof platformSettings.logo !== 'string') {
+              console.log('Adding logo file:', platformSettings.logo);
+              formData.append('logo', platformSettings.logo);
+            } else {
+              console.log('No logo file to upload:', platformSettings.logo);
+            }
+            
+            // Add favicon file if selected
+            if (platformSettings.favicon && typeof platformSettings.favicon !== 'string') {
+              console.log('Adding favicon file:', platformSettings.favicon);
+              formData.append('favicon', platformSettings.favicon);
+            } else {
+              console.log('No favicon file to upload:', platformSettings.favicon);
+            }
+
+            // Debug: Log FormData contents
+            console.log('FormData contents:');
+            for (let [key, value] of formData.entries()) {
+              console.log(key, value);
+            }
+
+            await updatePlatformSettings(formData);
           }
           break;
         case 'Integrations':
@@ -1482,9 +1546,13 @@ export default function SettingsPage() {
 
   const renderPlatformSettings = () => (
     <div className="space-y-6">
+      {/* Basic Information */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle>General Settings</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Basic Information
+          </CardTitle>
           <CardDescription>
             Configure basic platform settings and branding
           </CardDescription>
@@ -1497,6 +1565,7 @@ export default function SettingsPage() {
                 id="siteName"
                 value={platformSettings?.siteName || 'Hairvana'}
                 onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, siteName: e.target.value } : null)}
+                placeholder="Enter site name"
               />
             </div>
             <div className="space-y-2">
@@ -1513,6 +1582,8 @@ export default function SettingsPage() {
                   <SelectItem value="EUR">EUR - Euro</SelectItem>
                   <SelectItem value="GBP">GBP - British Pound</SelectItem>
                   <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
+                  <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
+                  <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1526,7 +1597,101 @@ export default function SettingsPage() {
               className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               value={platformSettings?.siteDescription || 'Professional Salon Management Platform'}
               onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, siteDescription: e.target.value } : null)}
+              placeholder="Enter site description"
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Branding & Assets */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" />
+            Branding & Assets
+          </CardTitle>
+          <CardDescription>
+            Upload logo, favicon, and configure brand colors
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="logo">Logo</Label>
+              <div className="space-y-2">
+                <Input
+                  id="logo"
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/svg+xml"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setPlatformSettings(prev => prev ? { ...prev, logo: file } : null);
+                    }
+                  }}
+                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                />
+                {platformSettings?.logo && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Upload className="h-4 w-4" />
+                      {typeof platformSettings.logo === 'string' ? platformSettings.logo : platformSettings.logo.name}
+                    </div>
+                    {typeof platformSettings.logo === 'string' && (
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src={getImageUrl(platformSettings.logo)} 
+                          alt="Current logo" 
+                          className="w-16 h-16 object-cover rounded border"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                        <span className="text-xs text-gray-500">Current logo preview</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="favicon">Favicon</Label>
+              <div className="space-y-2">
+                <Input
+                  id="favicon"
+                  type="file"
+                  accept="image/x-icon,image/png,image/svg+xml"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setPlatformSettings(prev => prev ? { ...prev, favicon: file } : null);
+                    }
+                  }}
+                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                />
+                {platformSettings?.favicon && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Upload className="h-4 w-4" />
+                      {typeof platformSettings.favicon === 'string' ? platformSettings.favicon : platformSettings.favicon.name}
+                    </div>
+                    {typeof platformSettings.favicon === 'string' && (
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src={getImageUrl(platformSettings.favicon)} 
+                          alt="Current favicon" 
+                          className="w-8 h-8 object-cover rounded border"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                        <span className="text-xs text-gray-500">Current favicon preview</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1537,12 +1702,13 @@ export default function SettingsPage() {
                   id="primaryColor"
                   value={platformSettings?.primaryColor || '#8b5cf6'}
                   onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, primaryColor: e.target.value } : null)}
+                  placeholder="#8b5cf6"
                 />
                 <input
                   type="color"
                   value={platformSettings?.primaryColor || '#8b5cf6'}
                   onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, primaryColor: e.target.value } : null)}
-                  className="w-12 h-10 rounded border"
+                  className="w-12 h-10 rounded border cursor-pointer"
                 />
               </div>
             </div>
@@ -1553,17 +1719,91 @@ export default function SettingsPage() {
                   id="secondaryColor"
                   value={platformSettings?.secondaryColor || '#ec4899'}
                   onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, secondaryColor: e.target.value } : null)}
+                  placeholder="#ec4899"
                 />
                 <input
                   type="color"
                   value={platformSettings?.secondaryColor || '#ec4899'}
                   onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, secondaryColor: e.target.value } : null)}
-                  className="w-12 h-10 rounded border"
+                  className="w-12 h-10 rounded border cursor-pointer"
                 />
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
+      {/* Localization */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Languages className="h-5 w-5" />
+            Localization
+          </CardTitle>
+          <CardDescription>
+            Configure timezone, language, and regional settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Timezone</Label>
+              <Select 
+                value={platformSettings?.timezone || 'UTC'} 
+                onValueChange={(value) => setPlatformSettings(prev => prev ? { ...prev, timezone: value } : null)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UTC">UTC - Coordinated Universal Time</SelectItem>
+                  <SelectItem value="America/New_York">EST - Eastern Time</SelectItem>
+                  <SelectItem value="America/Chicago">CST - Central Time</SelectItem>
+                  <SelectItem value="America/Denver">MST - Mountain Time</SelectItem>
+                  <SelectItem value="America/Los_Angeles">PST - Pacific Time</SelectItem>
+                  <SelectItem value="Europe/London">GMT - London</SelectItem>
+                  <SelectItem value="Europe/Paris">CET - Central European Time</SelectItem>
+                  <SelectItem value="Asia/Tokyo">JST - Japan Standard Time</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="language">Language</Label>
+              <Select 
+                value={platformSettings?.language || 'en'} 
+                onValueChange={(value) => setPlatformSettings(prev => prev ? { ...prev, language: value } : null)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="es">Español</SelectItem>
+                  <SelectItem value="fr">Français</SelectItem>
+                  <SelectItem value="de">Deutsch</SelectItem>
+                  <SelectItem value="it">Italiano</SelectItem>
+                  <SelectItem value="pt">Português</SelectItem>
+                  <SelectItem value="ja">日本語</SelectItem>
+                  <SelectItem value="ko">한국어</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* System Settings */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Server className="h-5 w-5" />
+            System Settings
+          </CardTitle>
+          <CardDescription>
+            Configure system behavior and access controls
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -1602,7 +1842,170 @@ export default function SettingsPage() {
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
 
+      {/* File Upload Settings */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5" />
+            File Upload Settings
+          </CardTitle>
+          <CardDescription>
+            Configure file upload limits and allowed types
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="maxFileUploadSize">Max File Size (MB)</Label>
+              <Input
+                id="maxFileUploadSize"
+                type="number"
+                min="1"
+                max="100"
+                value={platformSettings?.maxFileUploadSize || 10}
+                onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, maxFileUploadSize: parseInt(e.target.value) } : null)}
+                placeholder="10"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
+              <Input
+                id="sessionTimeout"
+                type="number"
+                min="5"
+                max="1440"
+                value={platformSettings?.sessionTimeout || 30}
+                onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, sessionTimeout: parseInt(e.target.value) } : null)}
+                placeholder="30"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="allowedFileTypes">Allowed File Types</Label>
+            <Input
+              id="allowedFileTypes"
+              value={platformSettings?.allowedFileTypes?.join(', ') || 'jpg, jpeg, png, gif, pdf'}
+              onChange={(e) => setPlatformSettings(prev => prev ? { ...prev, allowedFileTypes: e.target.value.split(',').map(type => type.trim()) } : null)}
+              placeholder="jpg, jpeg, png, gif, pdf"
+            />
+            <p className="text-sm text-gray-600">Separate file types with commas</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Password Policy */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lock className="h-5 w-5" />
+            Password Policy
+          </CardTitle>
+          <CardDescription>
+            Configure password requirements and security settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="minPasswordLength">Minimum Password Length</Label>
+              <Input
+                id="minPasswordLength"
+                type="number"
+                min="6"
+                max="32"
+                value={platformSettings?.passwordPolicy?.minLength || 8}
+                onChange={(e) => setPlatformSettings(prev => prev ? { 
+                  ...prev, 
+                  passwordPolicy: { 
+                    ...prev.passwordPolicy, 
+                    minLength: parseInt(e.target.value) 
+                  } 
+                } : null)}
+                placeholder="8"
+              />
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Require Uppercase Letters</p>
+                <p className="text-sm text-gray-600">Password must contain uppercase letters</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={platformSettings?.passwordPolicy?.requireUppercase || true}
+                onChange={(e) => setPlatformSettings(prev => prev ? { 
+                  ...prev, 
+                  passwordPolicy: { 
+                    ...prev.passwordPolicy, 
+                    requireUppercase: e.target.checked 
+                  } 
+                } : null)}
+                className="rounded"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Require Lowercase Letters</p>
+                <p className="text-sm text-gray-600">Password must contain lowercase letters</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={platformSettings?.passwordPolicy?.requireLowercase || true}
+                onChange={(e) => setPlatformSettings(prev => prev ? { 
+                  ...prev, 
+                  passwordPolicy: { 
+                    ...prev.passwordPolicy, 
+                    requireLowercase: e.target.checked 
+                  } 
+                } : null)}
+                className="rounded"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Require Numbers</p>
+                <p className="text-sm text-gray-600">Password must contain numbers</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={platformSettings?.passwordPolicy?.requireNumbers || true}
+                onChange={(e) => setPlatformSettings(prev => prev ? { 
+                  ...prev, 
+                  passwordPolicy: { 
+                    ...prev.passwordPolicy, 
+                    requireNumbers: e.target.checked 
+                  } 
+                } : null)}
+                className="rounded"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Require Special Characters</p>
+                <p className="text-sm text-gray-600">Password must contain special characters</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={platformSettings?.passwordPolicy?.requireSpecialChars || true}
+                onChange={(e) => setPlatformSettings(prev => prev ? { 
+                  ...prev, 
+                  passwordPolicy: { 
+                    ...prev.passwordPolicy, 
+                    requireSpecialChars: e.target.checked 
+                  } 
+                } : null)}
+                className="rounded"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Save Button */}
           <div className="flex justify-end">
             <Button 
               onClick={() => handleSaveSettings('Platform')}
@@ -1613,8 +2016,6 @@ export default function SettingsPage() {
               {loading ? 'Saving...' : 'Save Platform Settings'}
             </Button>
           </div>
-        </CardContent>
-      </Card>
     </div>
   );
 

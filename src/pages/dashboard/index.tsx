@@ -4,6 +4,7 @@ import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { TopSalons } from "@/components/dashboard/top-salons";
 import { useAuthStore } from "@/stores/auth-store";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
@@ -42,18 +43,26 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
         <p className="text-gray-600">
           {greeting}, {user?.name || "Welcome back"}! Here's what's happening
-          with your platform.
+          with your subscription business.
         </p>
       </div>
 
-      <StatsCards />
+      <ErrorBoundary>
+        <StatsCards />
+      </ErrorBoundary>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RevenueChart />
-        <TopSalons />
+        <ErrorBoundary>
+          <RevenueChart />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <TopSalons />
+        </ErrorBoundary>
       </div>
 
-      <RecentActivity />
+      <ErrorBoundary>
+        <RecentActivity />
+      </ErrorBoundary>
     </div>
   );
 }

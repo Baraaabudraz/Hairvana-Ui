@@ -273,7 +273,7 @@ class MobileReviewController {
           {
             model: Salon,
             as: 'salon',
-            attributes: ['id', 'name', 'address']
+            attributes: ['id', 'name']
           },
           {
             model: Appointment,

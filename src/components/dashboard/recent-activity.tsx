@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -83,9 +83,18 @@ function RecentActivityContent() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const loadingRef = useRef(false);
+  const hasInitialized = useRef(false);
 
   const loadRecentActivity = async (page: number = 1) => {
+    // Prevent duplicate calls
+    if (loadingRef.current) {
+      console.log('🔍 Recent activity already loading, skipping duplicate call');
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
       setLoading(true);
       setError(false);
       const data = await fetchRecentActivity(page, 10);
@@ -96,12 +105,17 @@ function RecentActivityContent() {
       setError(true);
       setActivities([]);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadRecentActivity(1);
+    // Only load once on mount
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      loadRecentActivity(1);
+    }
   }, []);
 
   const handlePageChange = (newPage: number) => {

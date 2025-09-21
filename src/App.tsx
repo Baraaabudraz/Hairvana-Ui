@@ -71,11 +71,13 @@ function App() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    // Check for existing session on app load
-    checkSession().then(() => {
-      setIsInitialized(true);
-    });
-  }, [checkSession]);
+    // Check for existing session on app load (only once)
+    if (!isInitialized) {
+      checkSession().then(() => {
+        setIsInitialized(true);
+      });
+    }
+  }, [checkSession, isInitialized]);
 
   useEffect(() => {
     if (!isLoading && isInitialized) {

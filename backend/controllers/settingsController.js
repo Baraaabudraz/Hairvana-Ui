@@ -37,18 +37,53 @@ exports.updateProfileSettings = async (req, res, next) => {
 
 exports.getSecuritySettings = async (req, res, next) => {
   try {
+    console.log('🔍 Security settings get request:', {
+      userId: req.user?.id,
+      userRole: req.user?.role,
+      userEmail: req.user?.email,
+      headers: req.headers
+    });
+    
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ 
+        message: 'User not authenticated or missing user ID',
+        user: req.user 
+      });
+    }
+    
+    console.log('🔍 Calling repository with user ID:', req.user.id);
     const settings = await settingsService.getSecuritySettings(req.user.id);
+    console.log('🔍 Security settings get result:', settings);
     res.json(settings);
   } catch (error) {
+    console.error('❌ Security settings get error:', error);
     next(error);
   }
 };
 
 exports.updateSecuritySettings = async (req, res, next) => {
   try {
+    console.log('Security settings update request:', {
+      userId: req.user?.id,
+      userRole: req.user?.role,
+      body: req.body,
+      headers: req.headers
+    });
+    
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ 
+        message: 'User not authenticated or missing user ID',
+        user: req.user 
+      });
+    }
+    
     const result = await settingsService.updateSecuritySettings(req.user.id, req.body);
+    
+    console.log('Security settings update result:', result);
+    
     res.json(result);
   } catch (error) {
+    console.error('Security settings update error:', error);
     next(error);
   }
 };

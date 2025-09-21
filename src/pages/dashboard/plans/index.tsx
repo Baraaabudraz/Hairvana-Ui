@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth-store";
 import {
@@ -54,11 +54,27 @@ export default function PlansPage() {
   const navigate = useNavigate();
   const token = useAuthStore((state) => state.token);
   const { toast } = useToast();
+  
+  // Use refs to prevent duplicate calls
+  const loadingRef = useRef(false);
+  const lastParamsRef = useRef<string>('');
 
   const fetchPlans = async () => {
-    setLoading(true);
-    setError("");
+    // Create a unique key for the current request parameters
+    const currentParams = JSON.stringify({ statusFilter, searchTerm, page, limit });
+    
+    // Prevent duplicate calls with same parameters
+    if (loadingRef.current || lastParamsRef.current === currentParams) {
+      console.log('🔍 Plans already loading or same params, skipping duplicate call');
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
+      lastParamsRef.current = currentParams;
+      setLoading(true);
+      setError("");
+      
       const params: any = { page, limit };
       if (statusFilter !== "all") params.status = statusFilter;
       if (searchTerm) params.search = searchTerm;
@@ -71,13 +87,18 @@ export default function PlansPage() {
     } catch (err: any) {
       setError(err.message || "Error fetching plans");
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPlans();
-    // eslint-disable-next-line
+    // Add debounce for search term to prevent rapid API calls
+    const timeoutId = setTimeout(() => {
+      fetchPlans();
+    }, searchTerm ? 300 : 0); // 300ms debounce for search, no delay for other changes
+    
+    return () => clearTimeout(timeoutId);
   }, [statusFilter, searchTerm, page, limit]);
 
   const handleDelete = async (id: string) => {

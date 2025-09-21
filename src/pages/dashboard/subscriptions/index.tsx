@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -222,37 +222,69 @@ export default function SubscriptionsPage() {
   const [paymentIntent, setPaymentIntent] = useState<any>(null);
   const [actionType, setActionType] = useState<'upgrade' | 'downgrade' | null>(null);
   const { toast } = useToast();
+  
+  // Use refs to prevent duplicate calls
+  const loadingRef = useRef(false);
+  const lastParamsRef = useRef<string>('');
+  const plansLoadingRef = useRef(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    loadPlans();
+    const loadPlans = async () => {
+      if (plansLoadingRef.current) {
+        console.log('🔍 Plans already loading, skipping duplicate call');
+        return;
+      }
+      
+      try {
+        plansLoadingRef.current = true;
+        setPlansLoading(true);
+        setPlansError(null);
+        const data = await fetchSubscriptionPlans();
+        setPlans(data);
+      } catch (error: any) {
+        setPlansError("Failed to load plans");
+        toast({
+          title: "Error",
+          description: "Failed to load subscription plans. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        plansLoadingRef.current = false;
+        setPlansLoading(false);
+      }
+    };
+
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      loadPlans();
+    }
   }, []);
 
-  const loadPlans = async () => {
-    try {
-      setPlansLoading(true);
-      setPlansError(null);
-      const data = await fetchSubscriptionPlans();
-      setPlans(data);
-    } catch (error: any) {
-      setPlansError("Failed to load plans");
-      toast({
-        title: "Error",
-        description: "Failed to load subscription plans. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setPlansLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadSubscriptions();
-    // eslint-disable-next-line
+    // Add debounce for search term to prevent rapid API calls
+    const timeoutId = setTimeout(() => {
+      loadSubscriptions();
+    }, searchTerm ? 300 : 0); // 300ms debounce for search, no delay for other changes
+    
+    return () => clearTimeout(timeoutId);
   }, [statusFilter, planFilter, searchTerm, page, limit]);
 
   const loadSubscriptions = async () => {
+    // Create a unique key for the current request parameters
+    const currentParams = JSON.stringify({ statusFilter, planFilter, searchTerm, page, limit });
+    
+    // Prevent duplicate calls with same parameters
+    if (loadingRef.current || lastParamsRef.current === currentParams) {
+      console.log('🔍 Subscriptions already loading or same params, skipping duplicate call');
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
+      lastParamsRef.current = currentParams;
       setLoading(true);
+      
       const params: SubscriptionParams = { page, limit };
       if (statusFilter !== "all") {
         params.status = statusFilter;
@@ -280,6 +312,7 @@ export default function SubscriptionsPage() {
         variant: "destructive",
       });
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   };

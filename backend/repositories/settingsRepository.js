@@ -86,13 +86,17 @@ exports.getSecuritySettings = async (userId) => {
   if (!userId) throw new Error('User ID is required');
   
   try {
+    console.log('🔍 Getting security settings for user:', userId);
     const { SecuritySettings } = require('../models');
     
     let securitySettings = await SecuritySettings.findOne({
       where: { user_id: userId }
     });
 
+    console.log('🔍 Found existing security settings:', securitySettings ? 'Yes' : 'No');
+
     if (!securitySettings) {
+      console.log('🔍 Creating default security settings for user:', userId);
       // Create default security settings if they don't exist
       securitySettings = await SecuritySettings.create({
         user_id: userId,
@@ -102,22 +106,26 @@ exports.getSecuritySettings = async (userId) => {
         last_login_ip: null,
         allowed_ips: [],
         session_timeout: 30,
+        password_expiry_days: 90,
+        data_retention_period: 365,
         ssl_enabled: true,
         encryption_level: 'AES-256',
         audit_logging: true,
-        data_retention_period: 365,
         backup_frequency: 'daily',
         backup_retention: 30,
         created_at: new Date(),
         updated_at: new Date()
       });
+      console.log('✅ Default security settings created');
     }
 
     // Map database field names to frontend field names
     const settings = securitySettings.get({ plain: true });
-    return {
+    console.log('🔍 Raw database settings:', settings);
+    
+    const mappedSettings = {
       twoFactorRequired: settings.two_factor_enabled,
-      passwordExpiry: settings.password_last_changed,
+      passwordExpiry: settings.password_expiry_days,
       maxLoginAttempts: settings.login_attempts,
       lockoutDuration: settings.session_timeout,
       ipWhitelist: settings.allowed_ips || [],
@@ -128,8 +136,11 @@ exports.getSecuritySettings = async (userId) => {
       backupFrequency: settings.backup_frequency,
       backupRetention: settings.backup_retention
     };
+    
+    console.log('🔍 Mapped security settings:', mappedSettings);
+    return mappedSettings;
   } catch (error) {
-    console.error('Error getting security settings:', error);
+    console.error('❌ Error getting security settings:', error);
     throw new Error('Failed to get security settings: ' + error.message);
   }
 };
@@ -155,7 +166,7 @@ exports.updateSecuritySettings = async (userId, securityData) => {
     // Map frontend field names to database field names
     const fieldMapping = {
       twoFactorRequired: 'two_factor_enabled',
-      passwordExpiry: 'password_last_changed',
+      passwordExpiry: 'password_expiry_days',
       maxLoginAttempts: 'login_attempts',
       lockoutDuration: 'session_timeout',
       ipWhitelist: 'allowed_ips',
@@ -177,17 +188,27 @@ exports.updateSecuritySettings = async (userId, securityData) => {
 
     // Add updated_at timestamp
     mappedData.updated_at = new Date();
+    
+    console.log('Security settings mapped data:', {
+      originalData: updateData,
+      mappedData: mappedData,
+      fieldMapping: fieldMapping
+    });
 
     if (securitySettings) {
       // Update existing settings
+      console.log('Updating existing security settings for user:', userId);
       await securitySettings.update(mappedData);
+      console.log('Security settings updated successfully');
     } else {
       // Create new settings if they don't exist
+      console.log('Creating new security settings for user:', userId);
       securitySettings = await SecuritySettings.create({
         user_id: userId,
         ...mappedData,
         created_at: new Date()
       });
+      console.log('Security settings created successfully');
     }
 
     return {

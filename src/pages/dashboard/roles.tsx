@@ -40,23 +40,45 @@ export default function RolesPermissionsMatrixPage() {
     color: "#7c3aed",
   });
   const createRoleNameRef = useRef<HTMLInputElement>(null);
+  
+  // Use refs to prevent duplicate calls
+  const loadingRef = useRef(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    fetchRoles();
+    const fetchRoles = async () => {
+      if (loadingRef.current) {
+        console.log('🔍 Roles already loading, skipping duplicate call');
+        return;
+      }
+      
+      try {
+        loadingRef.current = true;
+        setLoading(true);
+        console.log('🔍 Roles page: Making API call for roles');
+        const res = await apiFetch("/roles");
+        setRoles(res);
+        // Build a map: roleId -> permissions[]
+        const map: Record<string, any[]> = {};
+        res.forEach((role: any) => {
+          map[role.id] = role.permissions;
+        });
+        setPermissionsMap(map);
+        console.log('🔍 Roles page: API call completed');
+      } catch (error) {
+        console.error('Error fetching roles:', error);
+      } finally {
+        loadingRef.current = false;
+        setLoading(false);
+      }
+    };
+
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      fetchRoles();
+    }
   }, []);
 
-  const fetchRoles = async () => {
-    setLoading(true);
-    const res = await apiFetch("/roles");
-    setRoles(res);
-    // Build a map: roleId -> permissions[]
-    const map: Record<string, any[]> = {};
-    res.forEach((role: any) => {
-      map[role.id] = role.permissions;
-    });
-    setPermissionsMap(map);
-    setLoading(false);
-  };
 
   const handleToggle = (roleId: string, resource: string, action: string) => {
     setPermissionsMap((prev) => {
@@ -86,7 +108,25 @@ export default function RolesPermissionsMatrixPage() {
         })
       )
     );
-    await fetchRoles();
+    
+    // Refresh roles data
+    if (!loadingRef.current) {
+      try {
+        loadingRef.current = true;
+        const res = await apiFetch("/roles");
+        setRoles(res);
+        const map: Record<string, any[]> = {};
+        res.forEach((role: any) => {
+          map[role.id] = role.permissions;
+        });
+        setPermissionsMap(map);
+      } catch (error) {
+        console.error('Error refreshing roles:', error);
+      } finally {
+        loadingRef.current = false;
+      }
+    }
+    
     setSaving(false);
     alert("Permissions updated!");
   };
@@ -101,13 +141,47 @@ export default function RolesPermissionsMatrixPage() {
     });
     setShowCreateModal(false);
     setNewRole({ name: "", description: "", color: "#7c3aed" });
-    await fetchRoles();
+    
+    // Refresh roles data
+    if (!loadingRef.current) {
+      try {
+        loadingRef.current = true;
+        const res = await apiFetch("/roles");
+        setRoles(res);
+        const map: Record<string, any[]> = {};
+        res.forEach((role: any) => {
+          map[role.id] = role.permissions;
+        });
+        setPermissionsMap(map);
+      } catch (error) {
+        console.error('Error refreshing roles:', error);
+      } finally {
+        loadingRef.current = false;
+      }
+    }
   };
 
   const handleDeleteRole = async (roleId: string) => {
     await apiFetch(`/roles/${roleId}`, { method: "DELETE" });
     setDeletingRoleId(null);
-    await fetchRoles();
+    
+    // Refresh roles data
+    if (!loadingRef.current) {
+      try {
+        loadingRef.current = true;
+        const res = await apiFetch("/roles");
+        setRoles(res);
+        const map: Record<string, any[]> = {};
+        res.forEach((role: any) => {
+          map[role.id] = role.permissions;
+        });
+        setPermissionsMap(map);
+      } catch (error) {
+        console.error('Error refreshing roles:', error);
+      } finally {
+        loadingRef.current = false;
+      }
+    }
   };
 
   const handleEditRole = (role: any) => {
@@ -125,7 +199,24 @@ export default function RolesPermissionsMatrixPage() {
       body: JSON.stringify(editRole),
     });
     setEditingRoleId(null);
-    await fetchRoles();
+    
+    // Refresh roles data
+    if (!loadingRef.current) {
+      try {
+        loadingRef.current = true;
+        const res = await apiFetch("/roles");
+        setRoles(res);
+        const map: Record<string, any[]> = {};
+        res.forEach((role: any) => {
+          map[role.id] = role.permissions;
+        });
+        setPermissionsMap(map);
+      } catch (error) {
+        console.error('Error refreshing roles:', error);
+      } finally {
+        loadingRef.current = false;
+      }
+    }
   };
 
   return (

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Current User Test</title>
+</head>
+<body>
+    <h1>Current User Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        function testCurrentUser() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                // Get token from localStorage
+                const token = localStorage.getItem('token');
+                console.log('Token from localStorage:', token);
+                
+                if (!token) {
+                    resultsDiv.innerHTML = '<p style="color: red;">No token found in localStorage. Please login first.</p>';
+                    return;
+                }
+                
+                // Decode JWT token
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    console.log('JWT payload:', payload);
+                    
+                    resultsDiv.innerHTML = `
+                        <h2>Current User Information</h2>
+                        <p><strong>User ID:</strong> ${payload.id}</p>
+                        <p><strong>Email:</strong> ${payload.email}</p>
+                        <p><strong>Role:</strong> ${payload.role}</p>
+                        <p><strong>Role ID:</strong> ${payload.role_id}</p>
+                        <p><strong>Token Expires:</strong> ${new Date(payload.exp * 1000).toLocaleString()}</p>
+                        
+                        <h2>Expected Security Settings</h2>
+                        <p>Based on the database, user <strong>00000000-0000-0000-0000-000000000007</strong> has updated security settings.</p>
+                        <p>If your User ID above is different, that's why you're seeing default values.</p>
+                    `;
+                } catch (e) {
+                    resultsDiv.innerHTML = `<p style="color: red;">Error decoding JWT token: ${e.message}</p>`;
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Run the test when page loads
+        window.onload = testCurrentUser;
+    </script>
+</body>
+</html>

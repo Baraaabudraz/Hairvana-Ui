@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Building2, Users, CreditCard, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { fetchDashboardStats, DashboardStats } from '@/api/dashboard';
@@ -9,10 +9,19 @@ export function StatsCards() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const loadingRef = useRef(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
     const loadStats = async () => {
+      // Prevent duplicate calls
+      if (loadingRef.current) {
+        console.log('🔍 Stats already loading, skipping duplicate call');
+        return;
+      }
+      
       try {
+        loadingRef.current = true;
         setLoading(true);
         setError(false);
         const data = await fetchDashboardStats();
@@ -22,11 +31,16 @@ export function StatsCards() {
         setError(true);
         setStats(null);
       } finally {
+        loadingRef.current = false;
         setLoading(false);
       }
     };
 
-    loadStats();
+    // Only load once
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      loadStats();
+    }
   }, []);
 
   if (loading) {

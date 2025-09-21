@@ -75,6 +75,14 @@ export const useAuthStore = create<AuthState>()(
       },
       
       checkSession: async () => {
+        const state = get();
+        
+        // Prevent duplicate calls
+        if (state.isLoading) {
+          console.log('🔍 Session check already in progress, skipping duplicate call');
+          return;
+        }
+        
         set({ isLoading: true });
         try {
           const token = localStorage.getItem('token');

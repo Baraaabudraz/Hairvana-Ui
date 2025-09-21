@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, createContext } from 'react';
+import { useState, useEffect, useContext, createContext, useRef } from 'react';
 import { apiFetch } from '../lib/api';
 
 interface Permission {
@@ -34,10 +34,19 @@ export const usePermissions = () => {
 export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [permissions, setPermissions] = useState<UserPermissions | null>(null);
   const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
     const fetchPermissions = async () => {
+      // Prevent duplicate calls
+      if (loadingRef.current) {
+        console.log('🔍 Permissions already loading, skipping duplicate call');
+        return;
+      }
+      
       try {
+        loadingRef.current = true;
         const response = await apiFetch('/auth/permissions');
         if (response.success) {
           setPermissions(response.data);
@@ -47,11 +56,16 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       } catch (error) {
         console.error('Error fetching permissions:', error);
       } finally {
+        loadingRef.current = false;
         setLoading(false);
       }
     };
 
-    fetchPermissions();
+    // Only fetch once
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      fetchPermissions();
+    }
   }, []);
 
   const hasPermission = (resource: string, action: string): boolean => {

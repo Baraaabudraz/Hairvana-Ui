@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, UserNotification } from '@/api/notifications';
 import { useToast } from '@/hooks/use-toast';
 
@@ -17,9 +17,20 @@ export function useNotifications(limit: number = 10): UseNotificationsReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Use ref to prevent duplicate calls
+  const loadingRef = useRef(false);
+  const hasInitialized = useRef(false);
 
   const fetchNotifications = useCallback(async () => {
+    // Prevent duplicate calls
+    if (loadingRef.current) {
+      console.log('🔍 Notifications already loading, skipping duplicate call');
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
       setLoading(true);
       setError(null);
       const response = await fetchUserNotifications({ limit });
@@ -34,6 +45,7 @@ export function useNotifications(limit: number = 10): UseNotificationsReturn {
       setError(errorMessage);
       console.error('Error fetching notifications:', err);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   }, [limit]);
@@ -90,9 +102,12 @@ export function useNotifications(limit: number = 10): UseNotificationsReturn {
   // Calculate unread count
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
-  // Fetch notifications on mount
+  // Fetch notifications on mount (only once)
   useEffect(() => {
-    fetchNotifications();
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      fetchNotifications();
+    }
   }, [fetchNotifications]);
 
   // Set up polling for new notifications (every 30 seconds)

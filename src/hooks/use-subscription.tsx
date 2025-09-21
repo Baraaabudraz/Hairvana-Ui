@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 
 interface SubscriptionInfo {
@@ -44,9 +44,18 @@ export const useSubscription = () => {
 export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(false);
+  const hasInitialized = useRef(false);
 
   const fetchSubscriptionInfo = async () => {
+    // Prevent duplicate calls
+    if (loadingRef.current) {
+      console.log('🔍 Subscription info already loading, skipping duplicate call');
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
       setLoading(true);
       const response = await apiFetch('/v0/salon/subscription/info');
       if (response.success) {
@@ -59,12 +68,17 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.error('Error fetching subscription info:', error);
       setSubscriptionInfo(null);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSubscriptionInfo();
+    // Only fetch once
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      fetchSubscriptionInfo();
+    }
   }, []);
 
   const hasFeature = (feature: string): boolean => {

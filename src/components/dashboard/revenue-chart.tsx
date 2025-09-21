@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 // Optimize Recharts imports - only import what we use
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -9,21 +9,37 @@ import { fetchAnalytics } from '@/api/analytics';
 export function RevenueChart() {
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
     const loadRevenueData = async () => {
+      // Prevent duplicate calls
+      if (loadingRef.current) {
+        console.log('🔍 Revenue data already loading, skipping duplicate call');
+        return;
+      }
+      
       try {
+        loadingRef.current = true;
         setLoading(true);
+        console.log('🔍 RevenueChart: Making API call with period=30d');
         const data = await fetchAnalytics('30d');
         setRevenueData(data.revenue.data || []);
+        console.log('🔍 RevenueChart: API call completed');
       } catch (error) {
         console.error('Error loading revenue data:', error);
       } finally {
+        loadingRef.current = false;
         setLoading(false);
       }
     };
 
-    loadRevenueData();
+    // Only load once
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      loadRevenueData();
+    }
   }, []);
 
   if (loading) {

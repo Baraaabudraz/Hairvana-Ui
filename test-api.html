@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>Security Settings API Test</h1>
+    <button onclick="testAPI()">Test Security Settings API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                // Test login first
+                const loginResponse = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@hairvana.com',
+                        password: 'admin123'
+                    })
+                });
+                
+                if (!loginResponse.ok) {
+                    throw new Error('Login failed: ' + loginResponse.status);
+                }
+                
+                const loginData = await loginResponse.json();
+                const token = loginData.token;
+                
+                resultDiv.innerHTML += '<br>✅ Login successful, token: ' + token.substring(0, 20) + '...';
+                
+                // Test get security settings
+                const getResponse = await fetch('/api/settings/security', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!getResponse.ok) {
+                    throw new Error('Get security settings failed: ' + getResponse.status);
+                }
+                
+                const getData = await getResponse.json();
+                resultDiv.innerHTML += '<br>✅ Get security settings successful: ' + JSON.stringify(getData, null, 2);
+                
+                // Test update security settings
+                const updateData = {
+                    twoFactorRequired: true,
+                    passwordExpiry: 120,
+                    maxLoginAttempts: 3,
+                    lockoutDuration: 20,
+                    dataRetentionPeriod: 180,
+                    sslEnabled: true,
+                    auditLogging: true,
+                    ipWhitelist: ['192.168.1.1'],
+                    encryptionLevel: 'AES-256',
+                    backupFrequency: 'weekly',
+                    backupRetention: 60
+                };
+                
+                const updateResponse = await fetch('/api/settings/security', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (!updateResponse.ok) {
+                    throw new Error('Update security settings failed: ' + updateResponse.status);
+                }
+                
+                const updateResult = await updateResponse.json();
+                resultDiv.innerHTML += '<br>✅ Update security settings successful: ' + JSON.stringify(updateResult, null, 2);
+                
+            } catch (error) {
+                resultDiv.innerHTML += '<br>❌ Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

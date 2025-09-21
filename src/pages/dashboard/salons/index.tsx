@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -96,15 +96,35 @@ export default function SalonsPage() {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const ownerId = params.get('ownerId');
+  
+  // Use refs to prevent duplicate calls
+  const loadingRef = useRef(false);
+  const lastParamsRef = useRef<string>('');
 
   useEffect(() => {
-    loadSalons();
-    // eslint-disable-next-line
+    // Add debounce for search term to prevent rapid API calls
+    const timeoutId = setTimeout(() => {
+      loadSalons();
+    }, searchTerm ? 300 : 0); // 300ms debounce for search, no delay for other changes
+    
+    return () => clearTimeout(timeoutId);
   }, [statusFilter, searchTerm, page, limit]);
 
   const loadSalons = async () => {
+    // Create a unique key for the current request parameters
+    const currentParams = JSON.stringify({ statusFilter, searchTerm, page, limit, ownerId });
+    
+    // Prevent duplicate calls with same parameters
+    if (loadingRef.current || lastParamsRef.current === currentParams) {
+      console.log('🔍 Salons already loading or same params, skipping duplicate call');
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
+      lastParamsRef.current = currentParams;
       setLoading(true);
+      
       const params: any = { page, limit };
       
       if (statusFilter !== 'all') {
@@ -131,6 +151,7 @@ export default function SalonsPage() {
         variant: 'destructive',
       });
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   };

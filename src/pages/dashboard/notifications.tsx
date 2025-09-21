@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -143,16 +143,68 @@ export default function NotificationsPage() {
     },
   });
   const { toast } = useToast();
+  
+  // Use refs to prevent duplicate calls
+  const loadingRef = useRef(false);
+  const lastParamsRef = useRef<string>('');
+  const templatesLoadingRef = useRef(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    loadNotifications();
-    loadTemplates();
-    // eslint-disable-next-line
+    const loadTemplates = async () => {
+      if (templatesLoadingRef.current) {
+        console.log('🔍 Templates already loading, skipping duplicate call');
+        return;
+      }
+      
+      try {
+        templatesLoadingRef.current = true;
+        const data = await fetchNotificationTemplates();
+        setTemplates(data);
+      } catch (error) {
+        console.error("Error fetching notification templates:", error);
+        toast({
+          title: "Error",
+          description:
+            "Failed to fetch notification templates. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        templatesLoadingRef.current = false;
+      }
+    };
+
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      loadTemplates();
+    }
+  }, []);
+
+  useEffect(() => {
+    // Add debounce for search term to prevent rapid API calls
+    const timeoutId = setTimeout(() => {
+      loadNotifications();
+    }, searchTerm ? 300 : 0); // 300ms debounce for search, no delay for other changes
+    
+    return () => clearTimeout(timeoutId);
   }, [typeFilter, statusFilter, searchTerm, page, limit]);
 
   const loadNotifications = async () => {
+    // Create a unique key for the current request parameters
+    const currentParams = JSON.stringify({ typeFilter, statusFilter, searchTerm, page, limit });
+    
+    // Prevent duplicate calls with same parameters
+    if (loadingRef.current || lastParamsRef.current === currentParams) {
+      console.log('🔍 Notifications already loading or same params, skipping duplicate call');
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
+      lastParamsRef.current = currentParams;
       setLoading(true);
+      
+      console.log('🔍 Notifications page: Making API call for admin notifications');
       const params: any = { page, limit };
       if (typeFilter !== "all") {
         params.type = typeFilter;
@@ -170,6 +222,7 @@ export default function NotificationsPage() {
         data.total ||
           (data.notifications ? data.notifications.length : data.length || 0)
       );
+      console.log('🔍 Notifications page: API call completed');
     } catch (error) {
       console.error("Error fetching notifications:", error);
       toast({
@@ -178,6 +231,7 @@ export default function NotificationsPage() {
         variant: "destructive",
       });
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   };

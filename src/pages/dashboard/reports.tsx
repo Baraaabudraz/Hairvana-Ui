@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -172,10 +172,18 @@ export default function ReportsPage() {
     period: "monthly",
   });
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  
+  // Use refs to prevent duplicate calls
+  const loadingRef = useRef(false);
+  const lastParamsRef = useRef<string>('');
 
   useEffect(() => {
-    fetchAll();
-    // eslint-disable-next-line
+    // Add debounce for search term to prevent rapid API calls
+    const timeoutId = setTimeout(() => {
+      fetchAll();
+    }, searchTerm ? 300 : 0); // 300ms debounce for search, no delay for other changes
+    
+    return () => clearTimeout(timeoutId);
   }, [page, limit, typeFilter, statusFilter, searchTerm]);
 
   useEffect(() => {
@@ -185,8 +193,21 @@ export default function ReportsPage() {
   }, [selectedTemplate]);
 
   const fetchAll = async () => {
-    setLoading(true);
+    // Create a unique key for the current request parameters
+    const currentParams = JSON.stringify({ page, limit, typeFilter, statusFilter, searchTerm });
+    
+    // Prevent duplicate calls with same parameters
+    if (loadingRef.current || lastParamsRef.current === currentParams) {
+      console.log('🔍 Reports already loading or same params, skipping duplicate call');
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
+      lastParamsRef.current = currentParams;
+      setLoading(true);
+      
+      console.log('🔍 Reports page: Making API calls for templates and reports');
       const [templates, reportData] = await Promise.all([
         fetchReportTemplatesApi(),
         fetchReportsApi({
@@ -214,6 +235,7 @@ export default function ReportsPage() {
             ? reportData.reports.length
             : reportData.length || 0)
       );
+      console.log('🔍 Reports page: API calls completed');
     } catch (error: any) {
       toast({
         title: "Error",
@@ -221,6 +243,7 @@ export default function ReportsPage() {
         variant: "destructive",
       });
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   };

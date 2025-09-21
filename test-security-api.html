@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Settings API Test</title>
+</head>
+<body>
+    <h1>Security Settings API Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testSecurityAPI() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                // Get token from localStorage (if available)
+                const token = localStorage.getItem('token');
+                console.log('Token from localStorage:', token);
+                
+                if (!token) {
+                    resultsDiv.innerHTML = '<p style="color: red;">No token found in localStorage. Please login first.</p>';
+                    return;
+                }
+                
+                // Test GET security settings
+                console.log('Testing GET /api/settings/security...');
+                const getResponse = await fetch('http://localhost:5000/api/settings/security', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('GET Response status:', getResponse.status);
+                const getData = await getResponse.json();
+                console.log('GET Response data:', getData);
+                
+                resultsDiv.innerHTML += `<h2>GET Security Settings</h2>`;
+                resultsDiv.innerHTML += `<p><strong>Status:</strong> ${getResponse.status}</p>`;
+                resultsDiv.innerHTML += `<p><strong>Data:</strong> <pre>${JSON.stringify(getData, null, 2)}</pre></p>`;
+                
+                // Test PUT security settings
+                console.log('Testing PUT /api/settings/security...');
+                const testData = {
+                    twoFactorRequired: true,
+                    passwordExpiry: 120,
+                    maxLoginAttempts: 3,
+                    lockoutDuration: 20,
+                    dataRetentionPeriod: 400,
+                    sslEnabled: false,
+                    auditLogging: false,
+                    ipWhitelist: ['192.168.1.1', '10.0.0.1'],
+                    encryptionLevel: 'AES-128',
+                    backupFrequency: 'weekly',
+                    backupRetention: 60
+                };
+                
+                const putResponse = await fetch('http://localhost:5000/api/settings/security', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                console.log('PUT Response status:', putResponse.status);
+                const putData = await putResponse.json();
+                console.log('PUT Response data:', putData);
+                
+                resultsDiv.innerHTML += `<h2>PUT Security Settings</h2>`;
+                resultsDiv.innerHTML += `<p><strong>Status:</strong> ${putResponse.status}</p>`;
+                resultsDiv.innerHTML += `<p><strong>Data:</strong> <pre>${JSON.stringify(putData, null, 2)}</pre></p>`;
+                
+                // Test GET again to verify the update
+                console.log('Testing GET /api/settings/security again...');
+                const getResponse2 = await fetch('http://localhost:5000/api/settings/security', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('GET Response 2 status:', getResponse2.status);
+                const getData2 = await getResponse2.json();
+                console.log('GET Response 2 data:', getData2);
+                
+                resultsDiv.innerHTML += `<h2>GET Security Settings (After Update)</h2>`;
+                resultsDiv.innerHTML += `<p><strong>Status:</strong> ${getResponse2.status}</p>`;
+                resultsDiv.innerHTML += `<p><strong>Data:</strong> <pre>${JSON.stringify(getData2, null, 2)}</pre></p>`;
+                
+            } catch (error) {
+                console.error('Error testing API:', error);
+                resultsDiv.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Run the test when page loads
+        window.onload = testSecurityAPI;
+    </script>
+</body>
+</html>

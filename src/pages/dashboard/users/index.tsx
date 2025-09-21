@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -215,6 +215,11 @@ export default function UsersPage() {
   const [rolesLoaded, setRolesLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Use refs to prevent duplicate calls
+  const loadingRef = useRef(false);
+  const lastParamsRef = useRef<string>('');
+  const rolesLoadingRef = useRef(false);
 
   // Error boundary to prevent blank page
   useEffect(() => {
@@ -231,9 +236,14 @@ export default function UsersPage() {
   // Load roles separately to avoid multiple fetches
   useEffect(() => {
     const loadRoles = async () => {
-      if (rolesLoaded) return;
+      // Prevent duplicate calls
+      if (rolesLoaded || rolesLoadingRef.current) {
+        console.log('🔍 Roles already loaded or loading, skipping duplicate call');
+        return;
+      }
       
       try {
+        rolesLoadingRef.current = true;
         console.log('Loading roles...');
         const rolesData = await fetchRoles();
         console.log('Roles loaded:', rolesData);
@@ -249,6 +259,8 @@ export default function UsersPage() {
           { id: '4', name: 'user', description: 'Regular User', color: '#6B7280' }
         ]);
         setRolesLoaded(true);
+      } finally {
+        rolesLoadingRef.current = false;
       }
     };
 
@@ -256,15 +268,30 @@ export default function UsersPage() {
   }, [rolesLoaded]);
 
   useEffect(() => {
-    // Only load users if roles are loaded (or if not filtering by role)
-    if (rolesLoaded || roleFilter === 'all') {
-    loadUsers();
-    }
-    // eslint-disable-next-line
+    // Add debounce for search term to prevent rapid API calls
+    const timeoutId = setTimeout(() => {
+      // Only load users if roles are loaded (or if not filtering by role)
+      if (rolesLoaded || roleFilter === 'all') {
+        loadUsers();
+      }
+    }, searchTerm ? 300 : 0); // 300ms debounce for search, no delay for other changes
+    
+    return () => clearTimeout(timeoutId);
   }, [roleFilter, statusFilter, searchTerm, page, limit, rolesLoaded]);
 
   const loadUsers = async () => {
+    // Create a unique key for the current request parameters
+    const currentParams = JSON.stringify({ roleFilter, statusFilter, searchTerm, page, limit, rolesLoaded });
+    
+    // Prevent duplicate calls with same parameters
+    if (loadingRef.current || lastParamsRef.current === currentParams) {
+      console.log('🔍 Users already loading or same params, skipping duplicate call');
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
+      lastParamsRef.current = currentParams;
       setLoading(true);
       console.log('Loading users with filters - roleFilter:', roleFilter, 'statusFilter:', statusFilter);
       
@@ -378,6 +405,7 @@ export default function UsersPage() {
         variant: 'destructive',
       });
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   };

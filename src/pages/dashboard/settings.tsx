@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -272,6 +272,7 @@ const getImageUrl = (filename: string | File | undefined): string => {
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('profile');
   const [loading, setLoading] = useState(false);
+  const [securityLoading, setSecurityLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [userSettings, setUserSettings] = useState<UserProfile | null>(null);
   const [platformSettings, setPlatformSettings] = useState<PlatformSettings | null>(null);
@@ -298,21 +299,43 @@ export default function SettingsPage() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [editingPaymentIndex, setEditingPaymentIndex] = useState<number | null>(null);
   const [paymentForm, setPaymentForm] = useState({ brand: '', last4: '', expiry: '' });
+  
+  // Use refs to track loading state without causing re-renders
+  const loadingRef = useRef(false);
+  const securityLoadingRef = useRef(false);
 
   useEffect(() => {
-    loadSettings();
-  }, [activeSection]);
+    // Reset loading refs when section changes
+    loadingRef.current = false;
+    securityLoadingRef.current = false;
+    
+    // Add a small delay to prevent rapid successive calls
+    const timeoutId = setTimeout(() => {
+      loadSettings();
+    }, 10);
+    
+    return () => clearTimeout(timeoutId);
+  }, [activeSection]); // Only re-run when activeSection changes
 
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
+    // Prevent duplicate calls using ref
+    if (loadingRef.current) {
+      console.log('🔍 Settings already loading, skipping duplicate call');
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
       setLoading(true);
+      console.log('🔍 Loading settings for section:', activeSection);
       
-      // Load user settings
-      if (['profile', 'security', 'notifications', 'backup', 'billing'].includes(activeSection)) {
+      // Load user settings for profile, notifications, backup, billing sections
+      if (['profile', 'notifications', 'backup', 'billing'].includes(activeSection)) {
         try {
           const data = await fetchUserSettings();
+          console.log('🔍 User settings loaded:', data);
           
-          // Set user profile - now data.profile contains both user and settings data
+          // Set user profile
           if (data.profile) {
             setUserSettings({
               id: data.profile.id || user?.id || '',
@@ -357,19 +380,6 @@ export default function SettingsPage() {
           }
           
           // Set other settings
-          if (data.security) {
-            setSecuritySettings(data.security);
-          }
-          
-          // Load security settings separately if not included in user settings
-          if (activeSection === 'security' && !data.security) {
-            try {
-              const securityData = await fetchSecuritySettings();
-              setSecuritySettings(securityData);
-            } catch (error) {
-              console.error('Error loading security settings:', error);
-            }
-          }
           if (data.notifications) {
             setNotificationPreferences(data.notifications);
           }
@@ -416,6 +426,57 @@ export default function SettingsPage() {
               lastLogin: new Date().toISOString()
             });
           }
+        }
+      }
+      
+      // Load security settings separately for security section
+      if (activeSection === 'security') {
+        // Prevent duplicate security calls using ref
+        if (securityLoadingRef.current) {
+          console.log('🔍 Security settings already loading, skipping duplicate call');
+          return;
+        }
+        
+        try {
+          securityLoadingRef.current = true;
+          setSecurityLoading(true);
+          console.log('🔍 Loading security settings for security section...');
+          console.log('🔍 Current user from auth store:', user);
+          
+          // Check JWT token to see what user ID is being sent
+          const token = localStorage.getItem('token');
+          if (token) {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              console.log('🔍 JWT token payload:', payload);
+              console.log('🔍 User ID from JWT:', payload.id);
+            } catch (e) {
+              console.log('🔍 Could not decode JWT token:', (e as Error).message);
+            }
+          }
+          
+          const securityData = await fetchSecuritySettings();
+          console.log('🔍 Security settings loaded from backend:', securityData);
+          setSecuritySettings(securityData);
+        } catch (error) {
+          console.error('Error loading security settings:', error);
+          // Set default values if API fails
+          setSecuritySettings({
+            twoFactorRequired: false,
+            passwordExpiry: 90,
+            maxLoginAttempts: 5,
+            lockoutDuration: 15,
+            dataRetentionPeriod: 365,
+            sslEnabled: true,
+            auditLogging: true,
+            ipWhitelist: [],
+            encryptionLevel: 'AES-256',
+            backupFrequency: 'daily',
+            backupRetention: 30
+          });
+        } finally {
+          securityLoadingRef.current = false;
+          setSecurityLoading(false);
         }
       }
       
@@ -481,9 +542,10 @@ export default function SettingsPage() {
         variant: 'destructive',
       });
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
-  };
+  }, [activeSection, user]); // Only depend on activeSection and user
 
   const handleSaveSettings = async (section: string) => {
     setLoading(true);
@@ -534,12 +596,24 @@ export default function SettingsPage() {
           break;
         case 'Security':
           if (securitySettings) {
-            await updateSecuritySettings({
-              two_factor_enabled: userSettings?.twoFactorEnabled,
-              password_last_changed: new Date().toISOString(),
-              login_attempts: 0,
-              session_timeout: securitySettings.lockoutDuration
-            });
+            console.log('🔍 Sending security settings:', securitySettings);
+            const securityData = {
+              twoFactorRequired: securitySettings.twoFactorRequired,
+              passwordExpiry: securitySettings.passwordExpiry,
+              maxLoginAttempts: securitySettings.maxLoginAttempts,
+              lockoutDuration: securitySettings.lockoutDuration,
+              dataRetentionPeriod: securitySettings.dataRetentionPeriod,
+              sslEnabled: securitySettings.sslEnabled,
+              auditLogging: securitySettings.auditLogging,
+              ipWhitelist: securitySettings.ipWhitelist || [],
+              encryptionLevel: securitySettings.encryptionLevel || 'AES-256',
+              backupFrequency: securitySettings.backupFrequency || 'daily',
+              backupRetention: securitySettings.backupRetention || 30
+            };
+            console.log('🔍 Security data to send:', securityData);
+            console.log('🔍 Two-Factor Required value being sent:', securityData.twoFactorRequired);
+            const result = await updateSecuritySettings(securityData);
+            console.log('🔍 Security settings save result:', result);
           }
           break;
         case 'Notifications':
@@ -963,7 +1037,22 @@ export default function SettingsPage() {
     </div>
   );
 
-  const renderSecuritySettings = () => (
+  const renderSecuritySettings = () => {
+    console.log('Rendering security settings with data:', securitySettings);
+    console.log('Security loading state:', securityLoading);
+    
+    if (securityLoading || !securitySettings) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-purple-600" />
+            <p className="text-gray-600">Loading security settings from database...</p>
+          </div>
+        </div>
+      );
+    }
+    
+    return (
     <div className="space-y-6">
       <Card className="border-0 shadow-sm">
         <CardHeader>
@@ -981,15 +1070,23 @@ export default function SettingsPage() {
               <div>
                 <p className="font-medium">Two-Factor Authentication</p>
                 <p className="text-sm text-gray-600">
-                  {userSettings?.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                  {securitySettings?.twoFactorRequired ? 'Enabled' : 'Disabled'}
                 </p>
               </div>
             </div>
             <Button 
-              variant={userSettings?.twoFactorEnabled ? 'outline' : 'default'}
-              onClick={() => setUserSettings(prev => prev ? { ...prev, twoFactorEnabled: !prev.twoFactorEnabled } : null)}
+              variant={securitySettings?.twoFactorRequired ? 'outline' : 'default'}
+              onClick={() => {
+                console.log('🔍 Two-Factor Authentication toggle clicked');
+                console.log('🔍 Current twoFactorRequired:', securitySettings?.twoFactorRequired);
+                setSecuritySettings(prev => {
+                  const newValue = !prev?.twoFactorRequired;
+                  console.log('🔍 New twoFactorRequired value:', newValue);
+                  return prev ? { ...prev, twoFactorRequired: newValue } : null;
+                });
+              }}
             >
-              {userSettings?.twoFactorEnabled ? 'Disable' : 'Enable'}
+              {securitySettings?.twoFactorRequired ? 'Disable' : 'Enable'}
             </Button>
           </div>
         </CardContent>
@@ -1010,7 +1107,11 @@ export default function SettingsPage() {
                 id="passwordExpiry"
                 type="number"
                 value={securitySettings?.passwordExpiry || 90}
-                onChange={(e) => setSecuritySettings(prev => prev ? { ...prev, passwordExpiry: parseInt(e.target.value) } : null)}
+                onChange={(e) => {
+                  const newValue = parseInt(e.target.value);
+                  console.log('Password expiry changed to:', newValue);
+                  setSecuritySettings(prev => prev ? { ...prev, passwordExpiry: newValue } : null);
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -1051,7 +1152,15 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={securitySettings?.twoFactorRequired || false}
-                onChange={(e) => setSecuritySettings(prev => prev ? { ...prev, twoFactorRequired: e.target.checked } : null)}
+                onChange={(e) => {
+                  console.log('🔍 Two factor required checkbox changed to:', e.target.checked);
+                  console.log('🔍 Current securitySettings:', securitySettings);
+                  setSecuritySettings(prev => {
+                    const newSettings = prev ? { ...prev, twoFactorRequired: e.target.checked } : null;
+                    console.log('🔍 New securitySettings after checkbox change:', newSettings);
+                    return newSettings;
+                  });
+                }}
                 className="rounded"
               />
             </div>
@@ -1081,10 +1190,29 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-between">
+            <Button 
+              variant="outline"
+              onClick={async () => {
+                try {
+                  setSecurityLoading(true);
+                  const securityData = await fetchSecuritySettings();
+                  console.log('Refreshed security settings:', securityData);
+                  setSecuritySettings(securityData);
+                } catch (error) {
+                  console.error('Error refreshing security settings:', error);
+                } finally {
+                  setSecurityLoading(false);
+                }
+              }}
+              disabled={securityLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${securityLoading ? 'animate-spin' : ''}`} />
+              {securityLoading ? 'Refreshing...' : 'Refresh Data'}
+            </Button>
             <Button 
               onClick={() => handleSaveSettings('Security')}
-              disabled={loading}
+              disabled={loading || securityLoading}
               className="bg-purple-600 hover:bg-purple-700"
             >
               <Save className="h-4 w-4 mr-2" />
@@ -1094,7 +1222,8 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
     </div>
-  );
+    );
+  };
 
   const renderNotificationSettings = () => (
     <Card className="border-0 shadow-sm">

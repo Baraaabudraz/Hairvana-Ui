@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -194,15 +194,61 @@ export default function SupportPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const { toast } = useToast();
+  
+  // Use refs to prevent duplicate calls
+  const loadingRef = useRef(false);
+  const lastParamsRef = useRef<string>('');
+  const statsLoadingRef = useRef(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    loadTickets();
-    loadStats();
+    const loadStats = async () => {
+      if (statsLoadingRef.current) {
+        console.log('🔍 Stats already loading, skipping duplicate call');
+        return;
+      }
+      
+      try {
+        statsLoadingRef.current = true;
+        const response = await apiFetch("/support/stats");
+        setStats(response.data);
+      } catch (error) {
+        console.error("Error loading stats:", error);
+      } finally {
+        statsLoadingRef.current = false;
+      }
+    };
+
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      loadStats();
+    }
+  }, []);
+
+  useEffect(() => {
+    // Add debounce for search term to prevent rapid API calls
+    const timeoutId = setTimeout(() => {
+      loadTickets();
+    }, searchTerm ? 300 : 0); // 300ms debounce for search, no delay for other changes
+    
+    return () => clearTimeout(timeoutId);
   }, [page, statusFilter, categoryFilter, priorityFilter, searchTerm]);
 
   const loadTickets = async () => {
+    // Create a unique key for the current request parameters
+    const currentParams = JSON.stringify({ page, statusFilter, categoryFilter, priorityFilter, searchTerm });
+    
+    // Prevent duplicate calls with same parameters
+    if (loadingRef.current || lastParamsRef.current === currentParams) {
+      console.log('🔍 Tickets already loading or same params, skipping duplicate call');
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
+      lastParamsRef.current = currentParams;
       setLoading(true);
+      
       const params = new URLSearchParams({
         page: page.toString(),
         limit: "10",
@@ -233,16 +279,8 @@ export default function SupportPage() {
         variant: "destructive",
       });
     } finally {
+      loadingRef.current = false;
       setLoading(false);
-    }
-  };
-
-  const loadStats = async () => {
-    try {
-      const response = await apiFetch("/support/stats");
-      setStats(response.data);
-    } catch (error) {
-      console.error("Error loading stats:", error);
     }
   };
 

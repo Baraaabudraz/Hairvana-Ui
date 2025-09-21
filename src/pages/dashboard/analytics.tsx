@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -148,19 +148,38 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState("30d");
   const [selectedMetric, setSelectedMetric] = useState("revenue");
+  
+  // Use refs to prevent duplicate calls
+  const loadingRef = useRef(false);
+  const lastParamsRef = useRef<string>('');
 
   useEffect(() => {
     fetchAnalyticsData();
   }, [timeRange]);
 
   const fetchAnalyticsData = async () => {
+    // Create a unique key for the current request parameters
+    const currentParams = JSON.stringify({ timeRange });
+    
+    // Prevent duplicate calls with same parameters
+    if (loadingRef.current || lastParamsRef.current === currentParams) {
+      console.log('🔍 Analytics already loading or same params, skipping duplicate call');
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
+      lastParamsRef.current = currentParams;
       setLoading(true);
+      
+      console.log('🔍 Analytics page: Making API call with timeRange:', timeRange);
       const data = await fetchAnalytics(timeRange);
       setAnalyticsData(data);
+      console.log('🔍 Analytics page: API call completed');
     } catch (error) {
       console.error("Error fetching analytics:", error);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   };

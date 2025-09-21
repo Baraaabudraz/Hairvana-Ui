@@ -31,7 +31,7 @@ import { createUser } from "@/api/users";
 import { fetchRoles } from "@/api/roles";
 import { Role } from "@/types/user";
 import { apiFetch } from "@/lib/api";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 const baseUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -102,6 +102,10 @@ export default function NewUserPage() {
   const [uploadedAvatar, setUploadedAvatar] = useState<string>("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null); // Store selected file
   const [roles, setRoles] = useState<Role[]>([]);
+  
+  // Use refs to prevent duplicate calls
+  const rolesLoadingRef = useRef(false);
+  const hasInitialized = useRef(false);
 
   const {
     register,
@@ -118,7 +122,14 @@ export default function NewUserPage() {
 
   useEffect(() => {
     const loadRoles = async () => {
+      if (rolesLoadingRef.current) {
+        console.log('🔍 Roles already loading, skipping duplicate call');
+        return;
+      }
+      
       try {
+        rolesLoadingRef.current = true;
+        console.log('🔍 New user page: Making API call for roles');
         const fetchedRoles = await fetchRoles();
         setRoles(fetchedRoles);
         
@@ -132,15 +143,22 @@ export default function NewUserPage() {
           setSelectedRole(defaultRole.name.toLowerCase().replace(" ", "_"));
           setValue("role", defaultRole.name.toLowerCase().replace(" ", "_") as any);
         }
+        console.log('🔍 New user page: API call completed');
       } catch (error) {
         toast({
           title: "Error fetching roles",
           description: "Could not load user roles. Please try again later.",
           variant: "destructive",
         });
+      } finally {
+        rolesLoadingRef.current = false;
       }
     };
-    loadRoles();
+
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      loadRoles();
+    }
   }, [toast, setValue]);
 
   const watchedRole = watch("role");

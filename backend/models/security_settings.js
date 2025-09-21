@@ -40,6 +40,41 @@ module.exports = (sequelize) => {
       type: DataTypes.INTEGER,
       defaultValue: 30,
     },
+    password_expiry_days: {
+      type: DataTypes.INTEGER,
+      defaultValue: 90,
+      allowNull: true,
+    },
+    data_retention_period: {
+      type: DataTypes.INTEGER,
+      defaultValue: 365,
+      allowNull: true,
+    },
+    ssl_enabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      allowNull: true,
+    },
+    encryption_level: {
+      type: DataTypes.STRING,
+      defaultValue: 'AES-256',
+      allowNull: true,
+    },
+    audit_logging: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      allowNull: true,
+    },
+    backup_frequency: {
+      type: DataTypes.STRING,
+      defaultValue: 'daily',
+      allowNull: true,
+    },
+    backup_retention: {
+      type: DataTypes.INTEGER,
+      defaultValue: 30,
+      allowNull: true,
+    },
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,

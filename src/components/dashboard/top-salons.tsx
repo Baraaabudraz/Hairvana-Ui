@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -19,10 +19,19 @@ interface Salon {
 export function TopSalons() {
   const [salons, setSalons] = useState<Salon[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
     const loadTopSalons = async () => {
+      // Prevent duplicate calls
+      if (loadingRef.current) {
+        console.log('🔍 Salons already loading, skipping duplicate call');
+        return;
+      }
+      
       try {
+        loadingRef.current = true;
         setLoading(true);
         const response = await fetchSalons({ status: 'active' });
         
@@ -36,11 +45,16 @@ export function TopSalons() {
       } catch (error) {
         console.error('Error loading top salons:', error);
       } finally {
+        loadingRef.current = false;
         setLoading(false);
       }
     };
 
-    loadTopSalons();
+    // Only load once
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      loadTopSalons();
+    }
   }, []);
 
   if (loading) {

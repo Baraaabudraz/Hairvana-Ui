@@ -35,6 +35,15 @@ exports.updateProfileSettings = async (req, res, next) => {
   }
 };
 
+exports.getSecuritySettings = async (req, res, next) => {
+  try {
+    const settings = await settingsService.getSecuritySettings(req.user.id);
+    res.json(settings);
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.updateSecuritySettings = async (req, res, next) => {
   try {
     const result = await settingsService.updateSecuritySettings(req.user.id, req.body);

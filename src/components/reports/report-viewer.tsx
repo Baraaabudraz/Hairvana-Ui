@@ -132,7 +132,7 @@ export function ReportViewer({ reportData, onClose }: ReportViewerProps) {
   const handleExportExcel = async () => {
     try {
       setIsExporting(true);
-      await exportReportToExcel(reportData as ExportReportData);
+      await exportReportToExcel(reportData as unknown as ExportReportData);
     } catch (error) {
       console.error('Error exporting to Excel:', error);
       alert('Failed to export to Excel. Please try again.');
@@ -144,7 +144,7 @@ export function ReportViewer({ reportData, onClose }: ReportViewerProps) {
   const handleExportPDF = async () => {
     try {
       setIsExporting(true);
-      await exportReportToPDF(reportData as ExportReportData);
+      await exportReportToPDF(reportData as unknown as ExportReportData);
     } catch (error) {
       console.error('Error exporting to PDF:', error);
       alert('Failed to export to PDF. Please try again.');
@@ -157,9 +157,9 @@ export function ReportViewer({ reportData, onClose }: ReportViewerProps) {
     try {
       setIsExporting(true);
       if (exportOptions.format === 'excel') {
-        await exportReportToExcel(reportData as ExportReportData);
+        await exportReportToExcel(reportData as unknown as ExportReportData);
       } else {
-        await exportReportToPDF(reportData as ExportReportData);
+        await exportReportToPDF(reportData as unknown as ExportReportData);
       }
       setExportDialogOpen(false);
     } catch (error) {

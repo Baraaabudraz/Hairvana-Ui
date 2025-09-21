@@ -63,6 +63,15 @@ export async function updateProfileSettings(profileData: any) {
   }
 }
 
+export async function fetchSecuritySettings() {
+  try {
+    return await apiFetch('/settings/security');
+  } catch (error) {
+    console.error('Error fetching security settings:', error);
+    throw error;
+  }
+}
+
 export async function updateSecuritySettings(securityData: any) {
   try {
     return await apiFetch('/settings/security', {

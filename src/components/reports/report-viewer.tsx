@@ -52,7 +52,7 @@ import {
   Star
 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
-import { exportReportToExcel, exportReportToPDF, ReportData } from '@/lib/report-export';
+import { exportReportToExcel, exportReportToPDF, ReportData as ExportReportData } from '@/lib/report-export';
 import {
   Dialog,
   DialogContent,
@@ -132,7 +132,7 @@ export function ReportViewer({ reportData, onClose }: ReportViewerProps) {
   const handleExportExcel = async () => {
     try {
       setIsExporting(true);
-      await exportReportToExcel(reportData as ReportData);
+      await exportReportToExcel(reportData as ExportReportData);
     } catch (error) {
       console.error('Error exporting to Excel:', error);
       alert('Failed to export to Excel. Please try again.');
@@ -144,7 +144,7 @@ export function ReportViewer({ reportData, onClose }: ReportViewerProps) {
   const handleExportPDF = async () => {
     try {
       setIsExporting(true);
-      await exportReportToPDF(reportData as ReportData);
+      await exportReportToPDF(reportData as ExportReportData);
     } catch (error) {
       console.error('Error exporting to PDF:', error);
       alert('Failed to export to PDF. Please try again.');
@@ -157,9 +157,9 @@ export function ReportViewer({ reportData, onClose }: ReportViewerProps) {
     try {
       setIsExporting(true);
       if (exportOptions.format === 'excel') {
-        await exportReportToExcel(reportData as ReportData);
+        await exportReportToExcel(reportData as ExportReportData);
       } else {
-        await exportReportToPDF(reportData as ReportData);
+        await exportReportToPDF(reportData as ExportReportData);
       }
       setExportDialogOpen(false);
     } catch (error) {
@@ -484,7 +484,7 @@ export function ReportViewer({ reportData, onClose }: ReportViewerProps) {
               Popular Services
             </h4>
             <div className="space-y-3">
-              {data.popularServices.map((service, index) => (
+              {data.popularServices.map((service: any, index: number) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border">
                   <div>
                     <p className="font-medium text-purple-900">{service.name}</p>
@@ -507,7 +507,7 @@ export function ReportViewer({ reportData, onClose }: ReportViewerProps) {
               Peak Booking Times
             </h4>
             <div className="space-y-3">
-              {data.peakTimes.map((time, index) => (
+              {data.peakTimes.map((time: any, index: number) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border">
                   <div>
                     <p className="font-medium text-indigo-900">{time.timeLabel}</p>
@@ -530,7 +530,7 @@ export function ReportViewer({ reportData, onClose }: ReportViewerProps) {
               Seasonal Patterns
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {data.seasonalPatterns.slice(-6).map((pattern, index) => (
+              {data.seasonalPatterns.slice(-6).map((pattern: any, index: number) => (
                 <div key={index} className="text-center p-3 bg-white rounded-lg border">
                   <p className="text-lg font-bold text-teal-900">{pattern.bookings}</p>
                   <p className="text-sm text-teal-700">{pattern.month}</p>
@@ -547,7 +547,7 @@ export function ReportViewer({ reportData, onClose }: ReportViewerProps) {
               Service Preferences
             </h4>
             <div className="space-y-3">
-              {data.servicePreferences.slice(0, 5).map((pref, index) => (
+              {data.servicePreferences.slice(0, 5).map((pref: any, index: number) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border">
                   <div>
                     <p className="font-medium text-pink-900">{pref.serviceName}</p>

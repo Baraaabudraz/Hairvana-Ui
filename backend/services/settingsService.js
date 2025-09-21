@@ -19,9 +19,25 @@ exports.updateProfileSettings = async (userId, profileData) => {
   }
 };
 
+exports.getSecuritySettings = async (userId) => {
+  if (!userId) throw new Error('User ID is required');
+  
+  try {
+    return await settingsRepository.getSecuritySettings(userId);
+  } catch (err) {
+    throw new Error('Failed to get security settings: ' + err.message);
+  }
+};
+
 exports.updateSecuritySettings = async (userId, data) => {
   if (!userId) throw new Error('User ID is required');
-  throw new Error('Not implemented: updateSecuritySettings');
+  if (!data || typeof data !== 'object') throw new Error('Security settings data is required');
+  
+  try {
+    return await settingsRepository.updateSecuritySettings(userId, data);
+  } catch (err) {
+    throw new Error('Failed to update security settings: ' + err.message);
+  }
 };
 
 exports.getNotificationPreferences = async (userId) => {

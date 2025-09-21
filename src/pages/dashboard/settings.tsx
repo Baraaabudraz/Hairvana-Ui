@@ -67,6 +67,7 @@ import {
 import { 
   fetchUserSettings, 
   updateProfileSettings, 
+  fetchSecuritySettings,
   updateSecuritySettings, 
   updateNotificationPreferences, 
   updateBillingSettings, 
@@ -358,6 +359,16 @@ export default function SettingsPage() {
           // Set other settings
           if (data.security) {
             setSecuritySettings(data.security);
+          }
+          
+          // Load security settings separately if not included in user settings
+          if (activeSection === 'security' && !data.security) {
+            try {
+              const securityData = await fetchSecuritySettings();
+              setSecuritySettings(securityData);
+            } catch (error) {
+              console.error('Error loading security settings:', error);
+            }
           }
           if (data.notifications) {
             setNotificationPreferences(data.notifications);

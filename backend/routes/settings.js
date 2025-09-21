@@ -31,6 +31,7 @@ router.put("/profile",
   uploadUserFiles.single('avatar'),
   settingsController.updateProfileSettings
 );
+router.get("/security", settingsController.getSecuritySettings);
 router.put("/security", settingsController.updateSecuritySettings);
 router.get("/notifications", settingsController.getNotificationPreferences);
 router.put("/notifications", settingsController.updateNotificationPreferences);

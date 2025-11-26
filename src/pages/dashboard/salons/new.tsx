@@ -255,8 +255,8 @@ export default function NewSalonPage() {
       formData.append('business_license', data.businessLicense);
       formData.append('tax_id', data.taxId);
       formData.append('status', 'pending');
-      // Append services
-      selectedServices.forEach(service => formData.append('services', service));
+      // Append services as JSON array for backend association sync
+      formData.append('services', JSON.stringify(selectedServices));
       // Append hours as JSON string
       formData.append('hours', JSON.stringify(formattedHours));
       // Append images

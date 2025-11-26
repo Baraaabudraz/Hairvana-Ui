@@ -84,6 +84,15 @@ export async function updateSecuritySettings(securityData: any) {
   }
 }
 
+export async function fetchNotificationPreferences() {
+  try {
+    return await apiFetch('/settings/notifications');
+  } catch (error) {
+    console.error('Error fetching notification preferences:', error);
+    throw error;
+  }
+}
+
 export async function updateNotificationPreferences(notificationData: any) {
   try {
     return await apiFetch('/settings/notifications', {

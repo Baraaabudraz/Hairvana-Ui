@@ -200,7 +200,31 @@ const createSalonValidation = [
   
   body('services')
     .optional()
-    .isArray()
+    .custom((value) => {
+      if (value === undefined || value === null) {
+        return true; // Optional field
+      }
+      
+      // If it's a string, try to parse as JSON
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (!Array.isArray(parsed)) {
+            throw new Error('Services must be an array');
+          }
+          return true;
+        } catch (e) {
+          throw new Error('Services must be a valid JSON array if provided as string');
+        }
+      }
+      
+      // If it's already an array, validate it
+      if (Array.isArray(value)) {
+        return true;
+      }
+      
+      throw new Error('Services must be an array');
+    })
     .withMessage('Services must be an array'),
   
   body('amenities')
@@ -343,7 +367,31 @@ const updateSalonValidation = [
   
   body('services')
     .optional()
-    .isArray()
+    .custom((value) => {
+      if (value === undefined || value === null) {
+        return true; // Optional field
+      }
+      
+      // If it's a string, try to parse as JSON
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (!Array.isArray(parsed)) {
+            throw new Error('Services must be an array');
+          }
+          return true;
+        } catch (e) {
+          throw new Error('Services must be a valid JSON array if provided as string');
+        }
+      }
+      
+      // If it's already an array, validate it
+      if (Array.isArray(value)) {
+        return true;
+      }
+      
+      throw new Error('Services must be an array');
+    })
     .withMessage('Services must be an array'),
   
   body('amenities')

@@ -5,6 +5,10 @@ const { getFileInfo } = require('../helpers/uploadHelper');
 const { buildAvatarUrl } = require('../helpers/urlHelper');
 const fs = require('fs');
 const path = require('path');
+const { Role, SalonOwner, Salon, Customer } = require('../models');
+
+const normalizeRoleName = (roleName) =>
+  typeof roleName === 'string' ? roleName.toLowerCase().trim() : '';
 
 exports.getAllUsers = async (query, req) => {
   try {
@@ -105,6 +109,14 @@ exports.createUser = async (userData, req) => {
   if (!userData || typeof userData !== 'object') throw new Error('User data is required');
   if (!userData.password) throw new Error('Password is required');
   try {
+    // Resolve role name based on role_id if not explicitly provided
+    let roleName = userData.role;
+    if ((!roleName || typeof roleName !== 'string') && userData.role_id) {
+      const roleRecord = await Role.findByPk(userData.role_id);
+      roleName = roleRecord ? roleRecord.name : null;
+    }
+    const normalizedRole = normalizeRoleName(roleName);
+
     // Handle avatar upload
     if (req.file) {
       userData.avatar = req.file.filename;
@@ -115,27 +127,28 @@ exports.createUser = async (userData, req) => {
     delete userData.password;
     userData.status = 'active';
     const newUser = await userRepository.create(userData);
+
     // Role-specific logic (still in service)
-          if (userData.role === 'salon owner') {
-      const { SalonOwner, Salon } = require('../models');
+    if (normalizedRole.includes('salon')) {
       await SalonOwner.create({
-        userId: newUser.id,
-        totalSalons: 0,
-        totalRevenue: 0,
-        totalBookings: 0
+        user_id: newUser.id,
+        total_salons: 0,
+        total_revenue: 0,
+        total_bookings: 0
       });
+
       if (userData.salonName) {
         await Salon.create({
           name: userData.salonName,
           email: userData.email,
           phone: userData.phone || null,
-          address: userData.salonAddress,
-          ownerId: newUser.id,
-          status: 'pending'
+          owner_id: newUser.id,
+          business_license: userData.businessLicense || null,
+          status: 'pending',
+          description: `Primary salon for ${userData.name}`,
         });
       }
-          } else if (userData.role === 'customer') {
-      const { Customer } = require('../models');
+    } else if (normalizedRole.includes('customer')) {
       await Customer.create({
         user_id: newUser.id,
         total_spent: 0,

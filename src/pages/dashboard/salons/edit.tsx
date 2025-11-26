@@ -96,7 +96,6 @@ interface Salon {
   hours: Record<string, { open: string; close: string; closed: boolean }>;
   images?: string[];
   status: 'active' | 'pending' | 'suspended';
-  subscription: 'Basic' | 'Standard' | 'Premium';
   avatar?: string; // Added avatar to interface
 }
 
@@ -357,10 +356,8 @@ export default function EditSalonPage() {
         }
       });
 
-      // Add services
-      selectedServices.forEach(service => {
-        formData.append('services[]', service);
-      });
+      // Add services as JSON payload so backend can sync associations
+      formData.append('services', JSON.stringify(selectedServices));
 
       // Add hours as JSON string
       const formattedHours: Record<string, string> = {};

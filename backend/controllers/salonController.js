@@ -37,6 +37,15 @@ exports.createSalon = async (req, res, next) => {
   try {
     const salonData = { ...req.body };
 
+    // Parse services if it's a JSON string
+    if (salonData.services && typeof salonData.services === 'string') {
+      try {
+        salonData.services = JSON.parse(salonData.services);
+      } catch (e) {
+        // If parsing fails, keep as is (validation will catch it)
+      }
+    }
+
     // Handle avatar upload
     if (req.files && req.files['avatar'] && req.files['avatar'][0]) {
       salonData.avatar = req.files['avatar'][0].filename;
@@ -59,6 +68,15 @@ exports.updateSalon = async (req, res, next) => {
   try {
     // Combine body data with file info if present
     const salonData = { ...req.body };
+
+    // Parse services if it's a JSON string
+    if (salonData.services && typeof salonData.services === 'string') {
+      try {
+        salonData.services = JSON.parse(salonData.services);
+      } catch (e) {
+        // If parsing fails, keep as is (validation will catch it)
+      }
+    }
 
     // Handle avatar upload
     if (req.files && req.files['avatar'] && req.files['avatar'][0]) {

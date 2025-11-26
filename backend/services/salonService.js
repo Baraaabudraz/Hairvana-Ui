@@ -1,8 +1,124 @@
 const salonRepository = require('../repositories/salonRepository');
 const addressService = require('./addressService');
 const { serializeSalon } = require('../serializers/salonSerializer');
+const { Service, Salon, Sequelize } = require('../models');
+const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
+
+const DEFAULT_SERVICE_PRICE = 0;
+const DEFAULT_SERVICE_DURATION = 60;
+
+const normalizeServiceName = (name) =>
+  typeof name === 'string' ? name.trim() : '';
+
+const parseServiceInputValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.flatMap(parseServiceInputValue);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.flatMap(parseServiceInputValue);
+      }
+    } catch (_) {
+      // Not JSON, fall through
+    }
+
+    if (trimmed.includes(',')) {
+      return trimmed.split(',').map((item) => item.trim());
+    }
+
+    return [trimmed];
+  }
+
+  return [];
+};
+
+const extractServicesFromPayload = (payload = {}) => {
+  const keys = ['services', 'services[]', 'selectedServices'];
+  const sources = [];
+
+  keys.forEach((key) => {
+    if (payload[key] !== undefined) {
+      sources.push(payload[key]);
+    }
+  });
+
+  if (sources.length === 0) return null;
+
+  const names = sources
+    .flatMap(parseServiceInputValue)
+    .map(normalizeServiceName)
+    .filter(Boolean);
+
+  const uniqueNames = [];
+  const seen = new Set();
+
+  names.forEach((name) => {
+    const lower = name.toLowerCase();
+    if (seen.has(lower)) return;
+    seen.add(lower);
+    uniqueNames.push(name);
+  });
+
+  return uniqueNames;
+};
+
+const removeServicePayloadKeys = (payload = {}) => {
+  delete payload.services;
+  delete payload['services[]'];
+  delete payload.selectedServices;
+};
+
+const buildDefaultServicePayload = (name) => ({
+  name,
+  description: `${name} service`,
+  price: DEFAULT_SERVICE_PRICE,
+  duration: DEFAULT_SERVICE_DURATION,
+  status: 'active'
+});
+
+const syncSalonServicesByNames = async (salonId, serviceNames) => {
+  if (!Array.isArray(serviceNames) || salonId === undefined || salonId === null) {
+    return;
+  }
+
+  const salon = await Salon.findByPk(salonId);
+  if (!salon) return;
+
+  if (serviceNames.length === 0) {
+    await salon.setServices([]);
+    return;
+  }
+
+  const normalizedLower = [...new Set(serviceNames.map((name) => name.toLowerCase()))];
+
+  const existingServices = await Service.findAll({
+    where: Sequelize.where(
+      Sequelize.fn('LOWER', Sequelize.col('name')),
+      { [Op.in]: normalizedLower }
+    )
+  });
+
+  const existingNameSet = new Set(existingServices.map((service) => service.name.toLowerCase()));
+  const missingNames = serviceNames.filter((name) => !existingNameSet.has(name.toLowerCase()));
+
+  if (missingNames.length > 0) {
+    const createdServices = await Service.bulkCreate(
+      missingNames.map((name) => buildDefaultServicePayload(name)),
+      { returning: true }
+    );
+    existingServices.push(...createdServices);
+  }
+
+  await salon.setServices(existingServices);
+};
 
 exports.getAllSalons = async (query, req) => {
   const { rows, count } = await salonRepository.findAll(query);
@@ -57,6 +173,8 @@ exports.getAllSalonsByOwnerId = async (ownerId, req) => {
 
 exports.createSalon = async (req) => {
   const salonData = req.body;
+  const selectedServices = extractServicesFromPayload(salonData);
+  removeServicePayloadKeys(salonData);
   
   // Ensure owner_id is set
   if (!salonData.owner_id) {
@@ -187,10 +305,18 @@ exports.createSalon = async (req) => {
   }
   
   const newSalon = await salonRepository.create(cleanSalonData);
-  return serializeSalon(newSalon, { req });
+
+  if (selectedServices !== null) {
+    await syncSalonServicesByNames(newSalon.id, selectedServices);
+  }
+
+  const hydratedSalon = await salonRepository.findById(newSalon.id);
+  return serializeSalon(hydratedSalon || newSalon, { req });
 };
 
 exports.updateSalon = async (id, data, req) => {
+  const selectedServices = extractServicesFromPayload(data);
+  removeServicePayloadKeys(data);
   // Get the old salon before updating
   const oldSalon = await salonRepository.findById(id);
   // Handle image uploads and existing gallery
@@ -292,8 +418,62 @@ exports.updateSalon = async (id, data, req) => {
     // If hours is already an object, keep it as is
   }
   
-  const updatedSalon = await salonRepository.update(id, data);
-  return updatedSalon ? serializeSalon(updatedSalon, { req }) : null;
+  // Handle address update
+  let addressId = oldSalon ? oldSalon.address_id : null;
+  if (data.street_address && data.city && data.state) {
+    const addressData = {
+      street_address: data.street_address,
+      city: data.city,
+      state: data.state,
+      zip_code: data.zip_code || '',
+      country: data.country || 'US'
+    };
+    
+    try {
+      // Check if salon already has an address
+      if (addressId) {
+        // Update existing address
+        console.log('Debug - Updating existing address:', addressId);
+        await addressService.updateAddress(addressId, addressData);
+      } else {
+        // Create new address
+        console.log('Debug - Creating new address for salon');
+        const newAddress = await addressService.createAddress(addressData);
+        addressId = newAddress.id;
+        console.log('Debug - Address created successfully:', addressId);
+      }
+    } catch (error) {
+      console.error('Debug - Address update/create failed:', error.message);
+      throw new Error(`Failed to update address: ${error.message}`);
+    }
+  }
+  
+  // Remove address fields from salon data before updating
+  const {
+    street_address,
+    city,
+    state,
+    zip_code,
+    country,
+    ...cleanSalonData
+  } = data;
+  
+  // Set address_id if it was updated or created
+  if (addressId) {
+    cleanSalonData.address_id = addressId;
+  }
+  
+  let updatedSalon = await salonRepository.update(id, cleanSalonData);
+  if (!updatedSalon) {
+    return null;
+  }
+
+  if (selectedServices !== null) {
+    await syncSalonServicesByNames(id, selectedServices);
+    updatedSalon = await salonRepository.findById(id);
+  }
+
+  return serializeSalon(updatedSalon, { req });
 };
 
 exports.updateSalonProfile = async (id, data, req) => {

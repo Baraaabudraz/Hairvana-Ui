@@ -3,7 +3,7 @@ const salonService = require('../../../services/salonService');
 
 /**
  * Create subscription payment intent
- * POST /backend/api/v0/salon/subscription/payment/create-intent
+ * POST /backend/api/v1/salon/subscription/payment/create-intent
  */
 exports.createSubscriptionPaymentIntent = async (req, res, next) => {
   try {
@@ -28,7 +28,7 @@ exports.createSubscriptionPaymentIntent = async (req, res, next) => {
 
 /**
  * Get subscription payment by ID
- * GET /backend/api/v0/salon/subscription/payment/:paymentId
+ * GET /backend/api/v1/salon/subscription/payment/:paymentId
  */
 exports.getSubscriptionPaymentById = async (req, res, next) => {
   try {
@@ -48,7 +48,7 @@ exports.getSubscriptionPaymentById = async (req, res, next) => {
 
 /**
  * Get subscription payments for a salon
- * GET /backend/api/v0/salon/subscription/payment/salon/:salonId
+ * GET /backend/api/v1/salon/subscription/payment/salon/:salonId
  */
 exports.getSubscriptionPaymentsByOwnerId = async (req, res, next) => {
   try {
@@ -68,7 +68,7 @@ exports.getSubscriptionPaymentsByOwnerId = async (req, res, next) => {
 
 /**
  * Cancel subscription payment
- * POST /backend/api/v0/salon/subscription/payment/:paymentId/cancel
+ * POST /backend/api/v1/salon/subscription/payment/:paymentId/cancel
  */
 exports.cancelSubscriptionPayment = async (req, res, next) => {
   try {
@@ -89,7 +89,7 @@ exports.cancelSubscriptionPayment = async (req, res, next) => {
 
 /**
  * Check payment status and get subscription if paid
- * GET /backend/api/v0/salon/subscription/payment/:paymentId/status
+ * GET /backend/api/v1/salon/subscription/payment/:paymentId/status
  */
 exports.checkPaymentStatus = async (req, res, next) => {
   try {
@@ -135,7 +135,7 @@ exports.checkPaymentStatus = async (req, res, next) => {
 
 /**
  * Create upgrade/downgrade payment intent
- * POST /backend/api/v0/salon/subscription/payment/create-upgrade-intent
+ * POST /backend/api/v1/salon/subscription/payment/create-upgrade-intent
  */
 exports.createUpgradePaymentIntent = async (req, res, next) => {
   try {
@@ -163,7 +163,7 @@ exports.createUpgradePaymentIntent = async (req, res, next) => {
 
 /**
  * Create downgrade payment intent
- * POST /backend/api/v0/salon/subscription/payment/create-downgrade-intent
+ * POST /backend/api/v1/salon/subscription/payment/create-downgrade-intent
  */
 exports.createDowngradePaymentIntent = async (req, res, next) => {
   try {
@@ -191,7 +191,7 @@ exports.createDowngradePaymentIntent = async (req, res, next) => {
 
 /**
  * Send invoice email for a payment
- * POST /backend/api/v0/salon/subscription/payment/:paymentId/send-invoice
+ * POST /backend/api/v1/salon/subscription/payment/:paymentId/send-invoice
  */
 exports.sendInvoiceEmail = async (req, res, next) => {
   try {
@@ -216,7 +216,7 @@ exports.sendInvoiceEmail = async (req, res, next) => {
 
 /**
  * Backfill billing history for all existing payments
- * POST /backend/api/v0/salon/subscription/payment/backfill-billing-history
+ * POST /backend/api/v1/salon/subscription/payment/backfill-billing-history
  */
 exports.backfillBillingHistory = async (req, res, next) => {
   try {
@@ -238,7 +238,7 @@ exports.backfillBillingHistory = async (req, res, next) => {
 
 /**
  * Refund a subscription payment (separate from cancellation)
- * POST /backend/api/v0/salon/subscription/payment/:paymentId/refund
+ * POST /backend/api/v1/salon/subscription/payment/:paymentId/refund
  */
 exports.refundSubscriptionPayment = async (req, res, next) => {
   try {

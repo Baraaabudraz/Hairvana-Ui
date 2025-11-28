@@ -107,17 +107,17 @@ exports.subscribeToPlan = async (req, res, next) => {
             {
               type: 'upgrade',
               description: 'Upgrade to a higher tier plan',
-              endpoint: 'POST /backend/api/v0/salon/subscription/upgrade'
+              endpoint: 'POST /backend/api/v1/salon/subscription/upgrade'
             },
             {
               type: 'downgrade',
               description: 'Downgrade to a lower tier plan',
-              endpoint: 'POST /backend/api/v0/salon/subscription/downgrade'
+              endpoint: 'POST /backend/api/v1/salon/subscription/downgrade'
             },
             {
               type: 'cancel',
               description: 'Cancel current subscription',
-              endpoint: 'POST /backend/api/v0/salon/subscription/cancel'
+              endpoint: 'POST /backend/api/v1/salon/subscription/cancel'
             }
           ]
         }
@@ -146,7 +146,7 @@ exports.subscribeToPlan = async (req, res, next) => {
           description: plan.description,
           price: billingCycle === 'yearly' ? plan.yearly_price : plan.price
         },
-        nextStep: 'Create payment intent using POST /backend/api/v0/salon/subscription/payment/create-intent',
+        nextStep: 'Create payment intent using POST /backend/api/v1/salon/subscription/payment/create-intent',
         paymentRequestData: {
           planId: planId,
           billingCycle: billingCycle || plan.billing_period || 'monthly'
@@ -257,7 +257,7 @@ exports.upgradeSubscription = async (req, res, next) => {
         },
         upgradeCost: upgradeCost,
         billingCycle: billingCycle || currentSubscription.billingCycle,
-        nextStep: 'Create payment intent using POST /backend/api/v0/salon/subscription/payment/create-upgrade-intent',
+        nextStep: 'Create payment intent using POST /backend/api/v1/salon/subscription/payment/create-upgrade-intent',
         paymentRequestData: upgradePaymentData
       }
     });
@@ -355,7 +355,7 @@ exports.downgradeSubscription = async (req, res, next) => {
         },
         downgradeAdjustment: downgradeAdjustment,
         billingCycle: billingCycle || currentSubscription.billingCycle,
-        nextStep: 'Create payment intent using POST /backend/api/v0/salon/subscription/payment/create-downgrade-intent',
+        nextStep: 'Create payment intent using POST /backend/api/v1/salon/subscription/payment/create-downgrade-intent',
         paymentRequestData: downgradePaymentData
       }
     });
@@ -399,13 +399,13 @@ exports.cancelSubscription = async (req, res, next) => {
             {
               type: 'reactivate',
               description: 'Reactivate your subscription before it expires',
-              endpoint: 'POST /backend/api/v0/salon/subscription/reactivate'
+              endpoint: 'POST /backend/api/v1/salon/subscription/reactivate'
             }
           ] : [
             {
               type: 'subscribe',
               description: 'Subscribe to a new plan',
-              endpoint: 'POST /backend/api/v0/salon/subscription/subscribe'
+              endpoint: 'POST /backend/api/v1/salon/subscription/subscribe'
             }
           ]
         }

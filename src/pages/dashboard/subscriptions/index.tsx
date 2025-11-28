@@ -241,7 +241,16 @@ export default function SubscriptionsPage() {
         setPlansLoading(true);
         setPlansError(null);
         const data = await fetchSubscriptionPlans();
-        setPlans(data);
+        // Transform plans to ensure camelCase, handle yearly_price, and parse string prices to numbers
+        const plansArray = Array.isArray(data) ? data : (data.plans || data.data || []);
+        const transformedPlans = plansArray.map((plan: any) => ({
+          ...plan,
+          price: typeof plan.price === 'string' ? parseFloat(plan.price) : (plan.price || 0),
+          yearlyPrice: typeof plan.yearly_price === 'string' 
+            ? parseFloat(plan.yearly_price) 
+            : (plan.yearlyPrice ?? plan.yearly_price ?? null),
+        }));
+        setPlans(transformedPlans);
       } catch (error: any) {
         setPlansError("Failed to load plans");
         toast({
@@ -721,16 +730,55 @@ export default function SubscriptionsPage() {
                         {plan.name}
                       </h3>
                       <p className="text-gray-600 mt-2">{plan.description}</p>
-                      <div className="mt-4">
-                        <span className="text-3xl font-bold text-gray-900">
-                          ${plan.price}
-                        </span>
-                        <span className="text-gray-600">/month</span>
+                      <div className="mt-6 space-y-4">
+                        {/* Monthly Price */}
+                        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                            Monthly Billing
+                          </p>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-4xl font-bold text-gray-900">
+                              ${typeof plan.price === 'number' ? plan.price.toFixed(2) : plan.price || '0.00'}
+                            </span>
+                            <span className="text-lg text-gray-600 font-medium">/month</span>
+                          </div>
+                        </div>
+                        
+                        {/* Yearly Price */}
+                        {plan.yearlyPrice != null && typeof plan.yearlyPrice === 'number' && (
+                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-200 relative overflow-hidden">
+                            {typeof plan.price === 'number' && plan.price > 0 && (
+                              <div className="absolute top-2 right-2">
+                                <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">
+                                  BEST VALUE
+                                </span>
+                              </div>
+                            )}
+                            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">
+                              Yearly Billing
+                            </p>
+                            <div className="flex items-baseline gap-1 mb-2">
+                              <span className="text-3xl font-bold text-gray-900">
+                                ${plan.yearlyPrice.toFixed(2)}
+                              </span>
+                              <span className="text-base text-gray-600 font-medium">/year</span>
+                            </div>
+                            {typeof plan.price === 'number' && plan.price > 0 && (
+                              <div className="space-y-1 mt-2 pt-2 border-t border-blue-200">
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800">
+                                    💰 Save ${((plan.price * 12) - plan.yearlyPrice).toFixed(2)}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-600 font-medium">
+                                  <span className="text-gray-900">${(plan.yearlyPrice / 12).toFixed(2)}</span>
+                                  <span className="text-gray-500">/month when billed annually</span>
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">
-                        or ${plan.yearlyPrice}/year (save $
-                        {(plan.price * 12 - plan.yearlyPrice).toFixed(2)})
-                      </p>
                     </div>
                     <ul className="mt-6 space-y-3">
                       {plan.features.map((feature, index) => (

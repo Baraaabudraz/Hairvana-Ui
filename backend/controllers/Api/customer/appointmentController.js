@@ -75,17 +75,29 @@ exports.getAvailability = async (req, res) => {
 
     // Helper function to generate time slots
     const generateSlots = (start, end) => {
+      // Validate inputs
+      if (!start || !end) {
+        return [];
+      }
+
       const slots = [];
-      const [startHour, startMin, startPeriod] = start.match(/(\d+):(\d+) (AM|PM)/).slice(1);
-      const [endHour, endMin, endPeriod] = end.match(/(\d+):(\d+) (AM|PM)/).slice(1);
+      const startMatch = start.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      const endMatch = end.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      
+      if (!startMatch || !endMatch) {
+        return [];
+      }
+
+      const [, startHour, startMin, startPeriod] = startMatch;
+      const [, endHour, endMin, endPeriod] = endMatch;
       
       let startHourNum = parseInt(startHour, 10);
       let endHourNum = parseInt(endHour, 10);
       
-      if (startPeriod === 'PM' && startHourNum !== 12) startHourNum += 12;
-      if (endPeriod === 'PM' && endHourNum !== 12) endHourNum += 12;
-      if (startPeriod === 'AM' && startHourNum === 12) startHourNum = 0;
-      if (endPeriod === 'AM' && endHourNum === 12) endHourNum = 0;
+      if (startPeriod.toUpperCase() === 'PM' && startHourNum !== 12) startHourNum += 12;
+      if (endPeriod.toUpperCase() === 'PM' && endHourNum !== 12) endHourNum += 12;
+      if (startPeriod.toUpperCase() === 'AM' && startHourNum === 12) startHourNum = 0;
+      if (endPeriod.toUpperCase() === 'AM' && endHourNum === 12) endHourNum = 0;
       
       for (let h = startHourNum; h < endHourNum; h++) {
         slots.push((h < 10 ? '0' : '') + h + ':00');
@@ -108,8 +120,32 @@ exports.getAvailability = async (req, res) => {
         };
       }
 
-      const [start, end] = dayHours.split(' - ');
-      const possibleSlots = generateSlots(start, end);
+      // Handle different hour formats (with or without spaces around dash)
+      const hourParts = dayHours.split(/\s*-\s*/); // Flexible split: handles " - ", "-", " -", "- "
+      const [start, end] = hourParts;
+      
+      // Validate that we have both start and end times
+      if (!start || !end) {
+        return {
+          date: dateStr,
+          times: [],
+          status: 'error',
+          message: 'Invalid hours format for this day'
+        };
+      }
+
+      // Validate time format before parsing
+      const timeFormatRegex = /(\d+):(\d+)\s*(AM|PM)/i;
+      if (!timeFormatRegex.test(start.trim()) || !timeFormatRegex.test(end.trim())) {
+        return {
+          date: dateStr,
+          times: [],
+          status: 'error',
+          message: 'Invalid time format. Expected format: "9:00 AM - 5:00 PM"'
+        };
+      }
+
+      const possibleSlots = generateSlots(start.trim(), end.trim());
 
       // Filter out booked slots
       const availableTimes = possibleSlots.filter(slotTime => {
